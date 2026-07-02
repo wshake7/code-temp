@@ -496,7 +496,12 @@ export function isAllowedDictDataPlatform(v: unknown): v is DictDataPlatform {
 
 /**
  * 字典项允许的 tag_type 取值（与 schema v9 注释 + 前端 TAG_TYPE_OPTIONS 对齐）。
- * 写入/修改时校验，非法值 400。
+ *
+ * 与前端的字面量联合类型对齐：前端 `DictData.tagType` 声明为
+ * `LiteralUnion<PresetColorType | PresetStatusColorType>`（antd `<Tag color>` 的
+ * 官方签名），可取 antd 13 项 preset 色 + 13 项 inverse 色（`*-inverse`）+ 5 项
+ * 状态色（default / primary / success / warning / error / processing）。本枚举是
+ * 它们的 17 项子集（不含 inverse），写入/修改时校验，非法值 400。
  */
 export const ALLOWED_TAG_TYPES = [
   "default",

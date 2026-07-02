@@ -22,6 +22,7 @@ import {
 import type {
   CreateDictDataRequest,
   DictData,
+  DictTagType,
 } from '@/api/rest/types';
 import {
   getCurrentPlatform,
@@ -50,8 +51,8 @@ interface FormValues {
   platform?: string;
   /** 是否开启预设样式（默认开；编辑回显由 row.tagType 决定） */
   usePresetStyle?: boolean;
-  /** 预设样式标识；关闭时强制 'default' */
-  tagType?: string;
+  /** 预设样式标识；关闭时强制 'default'；与 antd `<Tag color>` 签名一致 */
+  tagType?: DictTagType;
   isEnabled?: boolean;
   remark?: string;
 }

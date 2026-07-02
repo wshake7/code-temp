@@ -105,6 +105,26 @@ export interface MenuItem {
 // 字段对齐 backend-mock-template 的 schema；软删 deleted_at: 0=未删
 // ============================================================
 
+/**
+ * 与 antd `_util/type` 内 `LiteralUnion` 等价的最小实现。
+ *
+ * antd 入口未 re-export LiteralUnion，因此在本文件内联；语义与 antd 官方
+ * `T | (U & Record<never, never>)` 一致：
+ *  - T 部分给 IDE auto-complete（命中预设字面量时收窄）
+ *  - 任意 string 仍可传入，避免丢失向后兼容
+ */
+export type LiteralUnion<T, U extends string = string> =
+  | T
+  | (U & Record<never, never>);
+
+/**
+ * 预设样式联合类型：与 antd `<Tag color>` prop 的官方签名一致。
+ * 从 antd `_util/colors` 子路径取类型，避免依赖入口是否 re-export。
+ */
+export type DictTagType = LiteralUnion<
+  import('antd/_util/colors').PresetColorType | import('antd/_util/colors').PresetStatusColorType
+>;
+
 export interface DictType {
   id: number;
   code: string;
@@ -127,8 +147,16 @@ export interface DictData {
   isDefault: 0 | 1;
   /** 归属平台：general / react-admin / vue-admin；与 schema v8 对齐 */
   platform: string;
-  /** 预设样式标识：default / primary / success / warning 等；与 schema v9 对齐 */
-  tagType: string;
+  /**
+   * 预设样式标识：与 antd `<Tag color>` 签名一致
+   * （LiteralUnion<PresetColorType | PresetStatusColorType>）。
+   * 可选值集合收敛到 13 项 preset 色 + 13 项 inverse + 5 项状态色
+   * （default / primary / success / warning / error / processing
+   *  / magenta / red / volcano / orange / gold / lime / green
+   *  / cyan / blue / geekblue / purple / 各自 -inverse）。
+   * 与 backend-mock 的 ALLOWED_TAG_TYPES（17 项无 inverse）完全相容。
+   */
+  tagType: DictTagType;
   isEnabled: 0 | 1;
   deletedAt: number;
   remark: string;
@@ -188,7 +216,7 @@ export interface CreateDictDataRequest {
   /** 归属平台；缺省 mock 层回退到 'general' */
   platform?: string;
   /** 预设样式标识；缺省 mock 层回退到 'default' */
-  tagType?: string;
+  tagType?: DictTagType;
   isEnabled?: 0 | 1;
   remark?: string;
 }
@@ -200,7 +228,7 @@ export interface UpdateDictDataRequest {
   sort?: number;
   isDefault?: 0 | 1;
   platform?: string;
-  tagType?: string;
+  tagType?: DictTagType;
   isEnabled?: 0 | 1;
   remark?: string;
 }
