@@ -13,7 +13,8 @@
     "@commitlint/config-conventional": "catalog:",
     "commitlint": "catalog:",
     "lefthook": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "cspell": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"

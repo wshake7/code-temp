@@ -25,6 +25,7 @@ catalog:
   "@faker-js/faker": latest
   jsonwebtoken: latest
   nitropack: latest
+  cspell: latest
   commitlint: latest
   "@commitlint/config-conventional": latest
 overrides:
