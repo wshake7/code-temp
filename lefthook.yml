@@ -28,6 +28,13 @@ pre-commit:
     typecheck:react-admin:
       glob: "apps/react-admin/**/*.{ts,tsx}"
       run: pnpm -C apps/react-admin typecheck
+    # 拼写校验。根 cspell.json 已排除 vue-vben-admin / react-admin 两个子应用
+    # (它们各自有独立 cspell.json),所以 glob 只对 backend-mock 与根 markdown
+    # 触发。跑全量而非仅 staged:覆盖文件<100,cspell 单次 <1s,比 sed 管道
+    # 解析 LEFTHOOK_STAGED_FILES 更可靠。同时扫 yml(覆盖 lefthook.yml 等配置改动)。
+    cspell:staged:
+      glob: "{apps/backend-mock-template/**/*.{ts,tsx},*.md,*.yml}"
+      run: pnpm exec cspell lint --no-progress 'apps/backend-mock-template/**/*.ts' '*.md' '*.yml'
     # 暂存文件密钥扫描。未安装 gitleaks 时自动跳过(brew install gitleaks / scoop install gitleaks)。
     # 用 exec 短路确保 gitleaks 找到密钥时返回非零退出码(让 hook 失败),而不是被 || 误判为"skip"。
     secret-scan:
