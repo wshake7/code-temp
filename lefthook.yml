@@ -88,3 +88,13 @@ commit-msg:
   commands:
     commitlint:
       run: pnpm exec commitlint --edit "$1"
+
+post-commit:
+  # 静默增量重建 GitNexus 索引。`run_async` 让 analyze 在后台跑、不阻塞 commit;
+  # `fail: false` 兜底任何分析失败(网络、锁、daemon 撞锁等)都不会回滚本次提交。
+  # command -v 短路是为了未安装 gitnexus 的环境直接 skip,不刷错误噪音。
+  commands:
+    index:gitnexus:
+      run_async: true
+      fail: false
+      run: sh -c 'command -v gitnexus >/dev/null 2>&1 && gitnexus analyze || echo skip:gitnexus-not-installed'
