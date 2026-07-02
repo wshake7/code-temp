@@ -12,9 +12,9 @@
   "devDependencies": {
     "@commitlint/config-conventional": "catalog:",
     "commitlint": "catalog:",
+    "cspell": "catalog:",
     "lefthook": "catalog:",
-    "vite-plus": "catalog:",
-    "cspell": "catalog:"
+    "vite-plus": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"
