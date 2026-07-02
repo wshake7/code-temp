@@ -5,38 +5,13 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "hooks": {
-    "SessionStart": [],
-    "PreToolUse": [
-      {
-        "matcher": "Grep|Glob|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node '/Users/wshake/.claude/hooks/gitnexus/gitnexus-hook.cjs'",
-            "timeout": 10,
-            "statusMessage": "Enriching with GitNexus graph context..."
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node '/Users/wshake/.claude/hooks/gitnexus/gitnexus-hook.cjs'",
-            "timeout": 10,
-            "statusMessage": "Checking GitNexus index freshness..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": []
-  },
   "enabledPlugins": {
     "claude-hud@claude-hud": true,
     "pro-workflow@pro-workflow": true
-  }
+  },
+  "enabledMcpjsonServers": [
+    "codegraph",
+    "playwright",
+    "gitnexus"
+  ]
 }
