@@ -1,6 +1,7 @@
 import type { AppRouteObject } from '@/core/router/types';
 import UserPage from '@/pages/app/system/user';
 import DictPage from '@/pages/app/system/dict';
+import I18nPage from '@/pages/app/system/i18n';
 
 /**
  * 系统管理路由配置
@@ -35,6 +36,16 @@ export const systemRoutes: AppRouteObject[] = [
           title: 'routes:dict',
           icon: 'lucide:book-marked',
           order: 2,
+        },
+      },
+      {
+        name: 'i18n',
+        path: 'i18n',
+        element: <I18nPage />,
+        meta: {
+          title: 'routes:i18n',
+          icon: 'lucide:languages',
+          order: 3,
         },
       },
     ],

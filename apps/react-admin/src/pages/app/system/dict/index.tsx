@@ -257,12 +257,14 @@ function buildDataColumns(
       dataIndex: 'isDefault',
       width: 80,
       search: false,
-      render: (_, r) =>
-        r.isDefault === 1 ? (
-          <span style={{ color: '#1677ff' }}>默认</span>
-        ) : (
-          <span style={{ color: '#999' }}>-</span>
-        ),
+      render: (_, r) => {
+        const tagType = dictLookups.lookupDefaultTagType(r.isDefault);
+        return (
+          <Tag color={tagType && tagType !== 'default' ? tagType : undefined}>
+            {dictLookups.lookupDefaultLabel(r.isDefault)}
+          </Tag>
+        );
+      },
     },
     {
       title: '状态',

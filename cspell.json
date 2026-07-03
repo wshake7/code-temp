@@ -50,6 +50,7 @@
     "vitest",
     "vueuse",
     "vxe-table",
+    "wshake",
     "zhipu"
   ],
   "ignorePaths": [

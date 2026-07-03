@@ -185,6 +185,10 @@ export interface DictLookups {
   lookupSwitchLabel: (n: 0 | 1 | number) => string;
   /** 返回 dict 的 tagType;命中失败按 n 走 'success' / 'default'。不预过滤白名单。 */
   lookupSwitchTagType: (n: 0 | 1 | number) => string | undefined;
+  /** 把 isDefault 0/1 翻译成 dict label;命中失败返回 '默认' / '-' */
+  lookupDefaultLabel: (n: 0 | 1 | number) => string;
+  /** 返回 dict 的 tagType;命中失败按 n 走 'processing' / 'default'。 */
+  lookupDefaultTagType: (n: 0 | 1 | number) => string | undefined;
   /** 把 platform code 翻译成 dict label;命中失败返回原 platform（p 未传返回 '-'） */
   lookupPlatformLabel: (platform: string | undefined) => string;
   /** 返回 dict 的 tagType;命中失败返回 undefined */
@@ -198,7 +202,7 @@ export interface DictLookups {
 }
 
 export interface UseDictLookupsOptions {
-  /** 要拉的字典类型；默认 ['sys_switch_status', 'sys_platform'] */
+  /** 要拉的字典类型；默认 ['sys_switch_status', 'sys_default_status', 'sys_platform'] */
   typeCodes?: string[];
   /** 是否包含 general 平台；默认 true */
   includeGeneral?: boolean;
@@ -206,16 +210,30 @@ export interface UseDictLookupsOptions {
   platformLabels?: Record<string, string>;
 }
 
-const DEFAULT_TYPE_CODES = ['sys_switch_status', 'sys_platform'];
+const DEFAULT_TYPE_CODES = [
+  'sys_switch_status',
+  'sys_default_status',
+  'sys_platform',
+];
 const SWITCH_LABEL_FALLBACK: Record<0 | 1, string> = { 1: '启用', 0: '禁用' };
 const SWITCH_TAG_TYPE_FALLBACK: Record<0 | 1, string> = { 1: 'success', 0: 'default' };
+const DEFAULT_LABEL_FALLBACK: Record<0 | 1, string> = { 1: '默认', 0: '-' };
+const DEFAULT_TAG_TYPE_FALLBACK: Record<0 | 1, string> = { 1: 'processing', 0: 'default' };
 const IS_ENABLED_KEY: Record<0 | 1, 'enabled' | 'disabled'> = {
   1: 'enabled',
   0: 'disabled',
 };
+const IS_DEFAULT_KEY: Record<0 | 1, 'default' | 'not-default'> = {
+  1: 'default',
+  0: 'not-default',
+};
 
 function isEnabledKey(n: number): 'enabled' | 'disabled' {
   return IS_ENABLED_KEY[(n === 1 ? 1 : 0)];
+}
+
+function isDefaultKey(n: number): 'default' | 'not-default' {
+  return IS_DEFAULT_KEY[(n === 1 ? 1 : 0)];
 }
 
 /**
@@ -255,16 +273,19 @@ export function useDictLookups(
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
 
   // 1) 按 typeCode + value 拆桶，2) 每桶用 pickPreferred 选最优一条
-  const { switchHits, platformHits } = useMemo(() => {
+  const { switchHits, defaultHits, platformHits } = useMemo(() => {
     const switchByValue = new Map<string, DictData[]>();
+    const defaultByValue = new Map<string, DictData[]>();
     const platformByValue = new Map<string, DictData[]>();
     for (const d of items) {
       const bucket =
         d.typeCode === 'sys_switch_status'
           ? switchByValue
-          : d.typeCode === 'sys_platform'
-            ? platformByValue
-            : null;
+          : d.typeCode === 'sys_default_status'
+            ? defaultByValue
+            : d.typeCode === 'sys_platform'
+              ? platformByValue
+              : null;
       if (!bucket) continue;
       const arr = bucket.get(d.value) ?? [];
       arr.push(d);
@@ -280,6 +301,7 @@ export function useDictLookups(
     };
     return {
       switchHits: pick(switchByValue),
+      defaultHits: pick(defaultByValue),
       platformHits: pick(platformByValue),
     };
   }, [items]);
@@ -292,6 +314,14 @@ export function useDictLookups(
   const lookupSwitchTagType = (n: 0 | 1 | number): string | undefined => {
     const hit = switchHits.get(isEnabledKey(n));
     return hit?.tagType ?? SWITCH_TAG_TYPE_FALLBACK[n === 1 ? 1 : 0];
+  };
+  const lookupDefaultLabel = (n: 0 | 1 | number): string => {
+    const hit = defaultHits.get(isDefaultKey(n));
+    return hit?.label ?? DEFAULT_LABEL_FALLBACK[n === 1 ? 1 : 0];
+  };
+  const lookupDefaultTagType = (n: 0 | 1 | number): string | undefined => {
+    const hit = defaultHits.get(isDefaultKey(n));
+    return hit?.tagType ?? DEFAULT_TAG_TYPE_FALLBACK[n === 1 ? 1 : 0];
   };
   const lookupPlatformLabel = (p: string | undefined): string => {
     if (!p) return '-';
@@ -331,6 +361,8 @@ export function useDictLookups(
   return {
     lookupSwitchLabel,
     lookupSwitchTagType,
+    lookupDefaultLabel,
+    lookupDefaultTagType,
     lookupPlatformLabel,
     lookupPlatformTagType,
     switchValueEnum,

@@ -5,13 +5,13 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "enabledPlugins": {
-    "claude-hud@claude-hud": true,
-    "pro-workflow@pro-workflow": true
-  },
   "enabledMcpjsonServers": [
     "codegraph",
     "playwright",
     "gitnexus"
-  ]
+  ],
+  "enabledPlugins": {
+    "claude-hud@claude-hud": true,
+    "pro-workflow@pro-workflow": true
+  }
 }

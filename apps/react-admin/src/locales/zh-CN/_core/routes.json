@@ -29,6 +29,7 @@
   "tasks": "任务管理",
   "login-policies": "登录策略",
   "languages": "语言管理",
+  "i18n": "国际化",
   "auth": "认证",
   "login": "登录",
   "register": "注册",

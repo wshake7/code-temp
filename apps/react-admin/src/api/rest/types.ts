@@ -232,3 +232,94 @@ export interface UpdateDictDataRequest {
   isEnabled?: 0 | 1;
   remark?: string;
 }
+
+// ============================================================
+// I18n（i18n_locale / i18n_translation）
+// 字段对齐 backend-mock-template 的 schema；软删 deleted_at: 0=未删
+// ============================================================
+
+export interface I18nLocale {
+  id: number;
+  code: string;
+  name: string;
+  isDefault: 0 | 1;
+  sort: number;
+  remark: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: number;
+  updatedBy: number;
+}
+
+export interface I18nTranslation {
+  id: number;
+  localeId: number;
+  translationKey: string;
+  value: string;
+  remark: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: number;
+  updatedBy: number;
+  /** 关联语言编码（仅 list 接口 join 后返回） */
+  localeCode?: string;
+}
+
+export interface I18nLocaleQuery {
+  page?: number;
+  pageSize?: number;
+  code?: string | string[];
+  name?: string;
+  status?: 0 | 1;
+}
+
+export interface I18nTranslationQuery {
+  page?: number;
+  pageSize?: number;
+  /** 精确匹配语言 ID（与 localeCode 二选一；都传以 localeId 优先） */
+  localeId?: number;
+  /** 按语言编码过滤（前端选中左表行时使用） */
+  localeCode?: string;
+  /** 模糊匹配 key 或 value */
+  value?: string;
+  status?: 0 | 1;
+}
+
+export interface CreateI18nLocaleRequest {
+  code: string;
+  name: string;
+  sort?: number;
+  remark?: string;
+  isDefault?: 0 | 1;
+  isEnabled?: 0 | 1;
+}
+
+export interface UpdateI18nLocaleRequest {
+  id: number;
+  code?: string;
+  name?: string;
+  sort?: number;
+  remark?: string;
+  isDefault?: 0 | 1;
+  isEnabled?: 0 | 1;
+}
+
+export interface CreateI18nTranslationRequest {
+  localeId: number;
+  translationKey: string;
+  value: string;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export interface UpdateI18nTranslationRequest {
+  id: number;
+  translationKey?: string;
+  value?: string;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
