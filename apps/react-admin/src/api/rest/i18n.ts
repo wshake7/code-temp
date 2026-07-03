@@ -5,6 +5,9 @@ import type {
   I18nLocale,
   I18nLocaleQuery,
   I18nTranslation,
+  I18nTranslationBatchUpsertByKeyRequest,
+  I18nTranslationBatchUpsertByKeyResponse,
+  I18nTranslationByKeyResponse,
   I18nTranslationQuery,
   PageResult,
   UpdateI18nLocaleRequest,
@@ -110,6 +113,23 @@ export function batchI18nTranslationApi(body: {
 }) {
   return post<{ action: string; affected: number; ids: number[] }>(
     '/system/i18n-translation/batch',
+    body,
+  );
+}
+
+/** 按 translation_key 聚合查询（多语言编辑抽屉打开时） */
+export function getI18nTranslationByKeyApi(key: string) {
+  return get<I18nTranslationByKeyResponse>(
+    `/system/i18n-translation/by-key/${encodeURIComponent(key)}`,
+  );
+}
+
+/** 单 key 多语言事务化 upsert（多语言编辑抽屉保存时） */
+export function batchUpsertI18nTranslationByKeyApi(
+  body: I18nTranslationBatchUpsertByKeyRequest,
+) {
+  return post<I18nTranslationBatchUpsertByKeyResponse>(
+    '/system/i18n-translation/batch-upsert-by-key',
     body,
   );
 }

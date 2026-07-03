@@ -27,7 +27,7 @@ import type {
 } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import I18nLocaleDrawer from './modules/locale-drawer';
-import I18nTranslationDrawer from './modules/translation-drawer';
+import I18nTranslationKeyDrawer from './modules/translation-key-drawer';
 
 type BulkAction = 'enable' | 'disable' | 'delete';
 
@@ -64,6 +64,7 @@ const I18nPage = () => {
   const [translationDrawerOpen, setTranslationDrawerOpen] = useState(false);
   const [editingTranslation, setEditingTranslation] =
     useState<I18nTranslation | null>(null);
+  const [newTranslationKey, setNewTranslationKey] = useState<string>('');
 
   // 列定义
   const localeColumns: ProColumns<I18nLocale>[] = [
@@ -94,6 +95,7 @@ const I18nPage = () => {
       title: '状态',
       dataIndex: 'isEnabled',
       width: 90,
+      search: false,
       valueType: 'select',
       valueEnum: {
         1: { text: '启用' },
@@ -186,6 +188,7 @@ const I18nPage = () => {
       dataIndex: 'translationKey',
       width: 200,
       ellipsis: true,
+      search: false,
     },
     {
       title: '翻译值',
@@ -199,6 +202,7 @@ const I18nPage = () => {
       dataIndex: 'isEnabled',
       width: 90,
       valueType: 'select',
+      search: false,
       valueEnum: {
         1: { text: '启用' },
         0: { text: '禁用' },
@@ -447,6 +451,7 @@ const I18nPage = () => {
       icon={<PlusOutlined />}
       onClick={() => {
         setEditingTranslation(null);
+        setNewTranslationKey('');
         setTranslationDrawerOpen(true);
       }}
     >
@@ -674,10 +679,11 @@ const I18nPage = () => {
         onClose={() => setLocaleDrawerOpen(false)}
         onSaved={onLocaleSaved}
       />
-      <I18nTranslationDrawer
+      <I18nTranslationKeyDrawer
         open={translationDrawerOpen}
-        row={editingTranslation}
-        defaultLocaleId={selectedLocaleId ?? undefined}
+        sourceRow={editingTranslation}
+        defaultLocaleCode={entryLocaleCodeRef.current ?? 'zh-CN'}
+        initialKey={newTranslationKey}
         onClose={() => setTranslationDrawerOpen(false)}
         onSaved={onTranslationSaved}
       />

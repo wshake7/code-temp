@@ -7,11 +7,13 @@ import {
 import {
   batchI18nLocaleApi,
   batchI18nTranslationApi,
+  batchUpsertI18nTranslationByKeyApi,
   createI18nLocaleApi,
   createI18nTranslationApi,
   deleteI18nLocaleApi,
   deleteI18nTranslationApi,
   getI18nLocaleApi,
+  getI18nTranslationByKeyApi,
   listAllI18nLocaleApi,
   listI18nLocaleApi,
   listI18nTranslationApi,
@@ -25,6 +27,9 @@ import type {
   I18nLocale,
   I18nLocaleQuery,
   I18nTranslation,
+  I18nTranslationBatchUpsertByKeyRequest,
+  I18nTranslationBatchUpsertByKeyResponse,
+  I18nTranslationByKeyResponse,
   I18nTranslationQuery,
   UpdateI18nLocaleRequest,
   UpdateI18nTranslationRequest,
@@ -178,6 +183,38 @@ export function useBatchI18nTranslation(
 ) {
   return useMutation({
     mutationFn: (body) => batchI18nTranslationApi(body),
+    ...options,
+  });
+}
+
+/**
+ * 按 translation_key 聚合查询：用于多语言编辑抽屉打开时加载 values。
+ * key 为空或 undefined 时禁用查询。
+ */
+export function useGetI18nTranslationByKey(
+  key: string | null | undefined,
+  options?: UseQueryOptions<I18nTranslationByKeyResponse, Error>,
+) {
+  return useQuery({
+    queryKey: ['getI18nTranslationByKey', key],
+    queryFn: () => getI18nTranslationByKeyApi(key as string),
+    enabled: typeof key === 'string' && key.length > 0,
+    ...options,
+  });
+}
+
+/**
+ * 单 key 多语言事务化 upsert：用于多语言编辑抽屉保存。
+ */
+export function useBatchUpsertI18nTranslationByKey(
+  options?: UseMutationOptions<
+    I18nTranslationBatchUpsertByKeyResponse,
+    Error,
+    I18nTranslationBatchUpsertByKeyRequest
+  >,
+) {
+  return useMutation({
+    mutationFn: (body) => batchUpsertI18nTranslationByKeyApi(body),
     ...options,
   });
 }

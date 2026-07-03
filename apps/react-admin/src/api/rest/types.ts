@@ -323,3 +323,53 @@ export interface UpdateI18nTranslationRequest {
   remark?: string;
   isEnabled?: 0 | 1;
 }
+
+/**
+ * 按 translation_key 聚合返回的多语言版本（GET /system/i18n-translation/by-key/:key）。
+ * 缺失 key 时 values 为空数组。
+ */
+export interface I18nTranslationByKeyValue {
+  id: number;
+  localeId: number;
+  localeCode?: string;
+  value: string;
+  isEnabled: 0 | 1;
+}
+
+export interface I18nTranslationByKeyResponse {
+  translationKey: string;
+  values: I18nTranslationByKeyValue[];
+}
+
+/**
+ * 单 key 多语言事务化 upsert（POST /system/i18n-translation/batch-upsert-by-key）。
+ * 处理顺序：rename → delete → upsert，任一阶段失败即返回 errors，不继续后续阶段。
+ */
+export interface I18nTranslationBatchUpsertByKeyItem {
+  localeId: number;
+  value: string;
+  isEnabled?: 0 | 1;
+}
+
+export interface I18nTranslationBatchUpsertByKeyRequest {
+  translationKey: string;
+  /** 可选：仅「剩 1 row」时才提供 */
+  newTranslationKey?: string;
+  items: I18nTranslationBatchUpsertByKeyItem[];
+  /** 可选：随本次保存一起删除的 row id */
+  deletedIds?: number[];
+}
+
+export interface I18nTranslationBatchUpsertError {
+  code: string;
+  message: string;
+  localeId?: number;
+  id?: number;
+}
+
+export interface I18nTranslationBatchUpsertByKeyResponse {
+  ok: boolean;
+  affected?: { renamed: number; created: number; updated: number; deleted: number };
+  values?: I18nTranslationByKeyValue[];
+  errors?: I18nTranslationBatchUpsertError[];
+}

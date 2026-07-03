@@ -1,0 +1,472 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Col,
+  Drawer,
+  Form,
+  Input,
+  Row,
+  Space,
+  Switch,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+} from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
+import {
+  useBatchUpsertI18nTranslationByKey,
+  useGetI18nTranslationByKey,
+  useListAllI18nLocale,
+  useListI18nTranslationByLocaleCode,
+} from '@/api/hooks/i18n';
+import type {
+  I18nLocale,
+  I18nTranslation,
+  I18nTranslationBatchUpsertByKeyItem,
+} from '@/api/rest/types';
+
+interface Props {
+  open: boolean;
+  /** 编辑入口：传入原 row 时进入编辑模式；新建时传 null */
+  sourceRow: I18nTranslation | null;
+  /** 默认语言编码（来自双表选中态或 i18n default）；用于拉取 keys 与标星 */
+  defaultLocaleCode?: string;
+  /** 新建场景预填的 translation_key */
+  initialKey?: string;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+interface BaseRow {
+  localeId: number;
+  localeCode?: string;
+  localeName: string;
+  isDefault: boolean;
+  serverValue: string;
+  serverEnabled: boolean;
+  existingId?: number;
+}
+
+interface FormValues {
+  translationKey: string;
+  globalEnabled: boolean;
+  [k: `value_${number}`]: string;
+  [k: `enabled_${number}`]: boolean;
+}
+
+const KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9._-]{0,254}$/;
+
+const I18nTranslationKeyDrawer = ({
+  open,
+  sourceRow,
+  defaultLocaleCode,
+  initialKey,
+  onClose,
+  onSaved,
+}: Props) => {
+  const [form] = Form.useForm<FormValues>();
+  const isEdit = !!sourceRow;
+  const initKey = sourceRow?.translationKey ?? initialKey ?? '';
+
+  // 拉全语种（作为列头）
+  const localesQuery = useListAllI18nLocale(
+    { status: 1 },
+    { enabled: open },
+  );
+  const locales = useMemo(
+    () => (localesQuery.data ?? []) as I18nLocale[],
+    [localesQuery.data],
+  );
+
+  // 编辑模式：按 translation_key 拉 values
+  const editingKey = isEdit ? sourceRow.translationKey : '';
+  const byKeyQuery = useGetI18nTranslationByKey(editingKey, { enabled: open });
+
+  // 新建模式：按 default locale 拉 keys，做实时去重提示
+  const byLocaleQuery = useListI18nTranslationByLocaleCode(
+    defaultLocaleCode,
+    { enabled: open && !isEdit },
+  );
+  const existingKeys = useMemo(
+    () => new Set((byLocaleQuery.data ?? []).map((r) => r.translationKey)),
+    [byLocaleQuery.data],
+  );
+
+  // 服务端原始 rows（不放在 state，用 useMemo 派生）
+  const baseRows: BaseRow[] = useMemo(() => {
+    if (locales.length === 0) return [];
+    if (isEdit && byKeyQuery.isLoading) return [];
+    return locales.map((l) => {
+      const found = byKeyQuery.data?.values.find((v) => v.localeId === l.id);
+      return {
+        localeId: l.id,
+        localeCode: l.code,
+        localeName: l.name,
+        isDefault: l.isDefault === 1,
+        serverValue: found?.value ?? '',
+        serverEnabled: found?.isEnabled === 1,
+        existingId: found?.id,
+      };
+    });
+  }, [locales, isEdit, byKeyQuery.data, byKeyQuery.isLoading]);
+
+  // 用户操作层（删除 / enabled 覆盖）
+  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
+  const [enabledOverrides, setEnabledOverrides] = useState<
+    Record<number, boolean>
+  >({});
+  const [errors, setErrors] = useState<string[]>([]);
+  const [translationKeyInput, setTranslationKeyInput] = useState(initKey);
+
+  // 渲染期同步初始化 form：每次 baseRows 变化即重置
+  // 用 form 的 initialValues + destroyOnClose 保证打开即挂载时拿到最新值
+  const initialFormValues: FormValues = useMemo(() => {
+    const formValues: FormValues = {
+      translationKey: initKey,
+      globalEnabled: baseRows.some(
+        (r) => r.serverEnabled && (!r.existingId || !deletedIds.has(r.existingId)),
+      ),
+    } as FormValues;
+    for (const r of baseRows) {
+      (formValues as Record<string, unknown>)[`value_${r.localeId}`] =
+        r.serverValue;
+      (formValues as Record<string, unknown>)[`enabled_${r.localeId}`] =
+        r.serverEnabled;
+    }
+    return formValues;
+    // deletedIds 是初值参考之一；其余依赖为服务端数据
+  }, [baseRows, initKey, deletedIds]);
+
+  // 抽屉首次打开或数据首次就绪时,把表单重置为初值
+  useEffect(() => {
+    if (!open) return;
+    if (initialFormValues.translationKey === undefined && baseRows.length === 0) {
+      return;
+    }
+    form.setFieldsValue(initialFormValues);
+  }, [open, initialFormValues, baseRows.length, form]);
+
+  // 合成最终 rows（不含已删除的）
+  const rows = useMemo(
+    () =>
+      baseRows
+        .filter((r) => !r.existingId || !deletedIds.has(r.existingId))
+        .map((r) => ({
+          ...r,
+          enabled:
+            r.localeId in enabledOverrides
+              ? enabledOverrides[r.localeId]
+              : r.serverEnabled,
+        })),
+    [baseRows, deletedIds, enabledOverrides],
+  );
+
+  const handleGlobalEnabledChange = (next: boolean) => {
+    const nextOverrides: Record<number, boolean> = {};
+    for (const r of baseRows) {
+      if (!r.existingId || !deletedIds.has(r.existingId)) {
+        nextOverrides[r.localeId] = next;
+      }
+    }
+    setEnabledOverrides(nextOverrides);
+    form.setFieldsValue(nextOverrides as unknown as Partial<FormValues>);
+  };
+
+  const handleRowEnabledChange = (localeId: number, next: boolean) => {
+    setEnabledOverrides((prev) => ({ ...prev, [localeId]: next }));
+    form.setFieldValue(`enabled_${localeId}`, next);
+  };
+
+  const handleRowDelete = (localeId: number, existingId?: number) => {
+    if (existingId !== undefined) {
+      setDeletedIds((prev) => {
+        const next = new Set(prev);
+        next.add(existingId);
+        return next;
+      });
+    }
+    form.setFieldValue(`value_${localeId}`, '');
+    form.setFieldValue(`enabled_${localeId}`, false);
+  };
+
+  const visibleCount = baseRows.filter(
+    (r) => !r.existingId || !deletedIds.has(r.existingId),
+  ).length;
+  const keyEditable = !isEdit || visibleCount === 1;
+  const enabledCount = rows.filter((r) => r.enabled).length;
+  const totalLocales = baseRows.length;
+
+  const batchUpsertMut = useBatchUpsertI18nTranslationByKey({
+    onSuccess: (res) => {
+      if (!res.ok) {
+        const msgs = (res.errors ?? []).map(
+          (e) => `[${e.code}] ${e.message}`,
+        );
+        setErrors(msgs);
+        message.error(`保存失败：${msgs.join('；') || '未知错误'}`);
+        return;
+      }
+      setErrors([]);
+      const a = res.affected ?? {
+        renamed: 0,
+        created: 0,
+        updated: 0,
+        deleted: 0,
+      };
+      message.success(
+        `已保存（新增 ${a.created} / 更新 ${a.updated} / 删除 ${a.deleted}${a.renamed ? ' / 改名' : ''}）`,
+      );
+      onSaved();
+      onClose();
+    },
+    onError: (err) => {
+      setErrors([(err as Error).message ?? '未知错误']);
+      message.error(`保存失败：${(err as Error).message ?? '未知错误'}`);
+    },
+  });
+
+  const submitting = batchUpsertMut.isPending;
+
+  const handleOk = async () => {
+    try {
+      const values = await form.validateFields();
+      setErrors([]);
+
+      const finalKey = (values.translationKey ?? '').trim();
+      if (!finalKey) {
+        setErrors(['请输入翻译键']);
+        return;
+      }
+      if (!KEY_PATTERN.test(finalKey)) {
+        setErrors(['翻译键需字母开头，仅含字母数字 . _ -']);
+        return;
+      }
+
+      const deletedIdList = Array.from(deletedIds);
+
+      const items: I18nTranslationBatchUpsertByKeyItem[] = baseRows
+        .filter(
+          (r) =>
+            (!r.existingId || !deletedIds.has(r.existingId)) &&
+            String(values[`value_${r.localeId}`] ?? '').trim() !== '',
+        )
+        .map((r) => {
+          const enabled =
+            r.localeId in enabledOverrides
+              ? enabledOverrides[r.localeId]
+              : r.serverEnabled;
+          return {
+            localeId: r.localeId,
+            value: String(values[`value_${r.localeId}`]).trim(),
+            isEnabled: enabled ? 1 : 0,
+          };
+        });
+
+      const defaultRow = baseRows.find(
+        (r) => r.isDefault && (!r.existingId || !deletedIds.has(r.existingId)),
+      );
+      if (defaultRow) {
+        const defaultValue = String(
+          values[`value_${defaultRow.localeId}`] ?? '',
+        ).trim();
+        if (!defaultValue) {
+          setErrors(['默认语言（★）必须填写']);
+          return;
+        }
+      }
+      if (
+        items.length === 0 &&
+        deletedIdList.length === 0 &&
+        isEdit &&
+        finalKey === sourceRow.translationKey
+      ) {
+        message.warning('没有需要保存的修改');
+        return;
+      }
+
+      const newTranslationKey =
+        isEdit && finalKey !== sourceRow.translationKey
+          ? finalKey
+          : undefined;
+
+      batchUpsertMut.mutate({
+        translationKey: sourceRow?.translationKey ?? finalKey,
+        newTranslationKey,
+        items,
+        deletedIds: deletedIdList,
+      });
+    } catch {
+      // antd 校验失败：不提交
+    }
+  };
+
+  const keyDuplicate =
+    !isEdit &&
+    translationKeyInput.length > 0 &&
+    existingKeys.has(translationKeyInput);
+
+  return (
+    <Drawer
+      title={isEdit ? '编辑翻译' : '新建翻译'}
+      open={open}
+      onClose={onClose}
+      size={640}
+      destroyOnClose
+      footer={
+        <Space style={{ float: 'right' }}>
+          <Button onClick={onClose} disabled={submitting}>
+            取消
+          </Button>
+          <Button type="primary" onClick={handleOk} loading={submitting}>
+            保存
+          </Button>
+        </Space>
+      }
+    >
+      {errors.length > 0 && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={errors.join('；')}
+        />
+      )}
+
+      <Form
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={initialFormValues}
+        onValuesChange={(changed) => {
+          if (typeof changed.translationKey === 'string') {
+            setTranslationKeyInput(changed.translationKey);
+          }
+        }}
+      >
+        <Form.Item
+          label={
+            <Space size={6}>
+              <span>翻译键</span>
+              {!isEdit && keyDuplicate && (
+                <Tag color="warning">该 key 在默认语言已存在</Tag>
+              )}
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                建议使用点分命名空间（如 menu.user.create），提交时会按
+                "key + 各语言值"批量写入 i18n_translation
+              </Typography.Text>
+            </Space>
+          }
+          name="translationKey"
+          rules={[
+            { required: true, message: '请输入翻译键' },
+            { max: 255 },
+            {
+              pattern: KEY_PATTERN,
+              message: '字母开头，仅含字母数字 . _ -',
+            },
+          ]}
+        >
+          <Input
+            placeholder="例如 menu.user.create"
+            disabled={isEdit && !keyEditable}
+          />
+        </Form.Item>
+
+        <Form.Item label="状态">
+          <Space size={12} align="center">
+            <Form.Item
+              name="globalEnabled"
+              valuePropName="checked"
+              noStyle
+              getValueFromEvent={(v) => !!v}
+              getValueProps={(v) => ({ checked: v !== false })}
+            >
+              <Switch
+                checkedChildren="启用"
+                unCheckedChildren="禁用"
+                onChange={handleGlobalEnabledChange}
+              />
+            </Form.Item>
+            <Typography.Text type="secondary">
+              各语言值 · 共 {totalLocales} 种语言 · 启用{' '}
+              <strong>{enabledCount}</strong> 种
+            </Typography.Text>
+          </Space>
+        </Form.Item>
+
+        <Form.Item label="各语言值">
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            {rows.map((r) => (
+              <Row key={r.localeId} gutter={8} align="middle">
+                <Col span={5}>
+                  <Space size={4} align="center">
+                    <span>{r.localeCode}</span>
+                    <Typography.Text>{r.localeName}</Typography.Text>
+                    {r.isDefault && <Tag color="blue">★</Tag>}
+                  </Space>
+                </Col>
+                <Col span={13}>
+                  <Form.Item
+                    name={`value_${r.localeId}`}
+                    noStyle
+                    rules={
+                      r.isDefault
+                        ? [{ required: true, message: '默认语言必须填写' }]
+                        : undefined
+                    }
+                  >
+                    <Input
+                      placeholder={
+                        r.isDefault ? '默认语言必填' : '翻译值（留空跳过）'
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={4}>
+                  <Form.Item
+                    name={`enabled_${r.localeId}`}
+                    noStyle
+                    valuePropName="checked"
+                    getValueFromEvent={(v) => !!v}
+                    getValueProps={(v) => ({ checked: v !== false })}
+                  >
+                    <Switch
+                      checkedChildren="启用"
+                      unCheckedChildren="禁用"
+                      onChange={(next) =>
+                        handleRowEnabledChange(r.localeId, next)
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={2}>
+                  <Tooltip title="删除该语言行">
+                    <Button
+                      danger
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        handleRowDelete(r.localeId, r.existingId)
+                      }
+                    />
+                  </Tooltip>
+                </Col>
+              </Row>
+            ))}
+          </Space>
+        </Form.Item>
+      </Form>
+
+      <Typography.Paragraph
+        type="secondary"
+        style={{ fontSize: 12, marginTop: 16 }}
+      >
+        填了的语言会写入对应行；留空则跳过。默认语言（★）必须。
+      </Typography.Paragraph>
+    </Drawer>
+  );
+};
+
+export default I18nTranslationKeyDrawer;
