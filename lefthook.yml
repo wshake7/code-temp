@@ -29,7 +29,7 @@ pre-commit:
       glob: "apps/react-admin/**/*.{ts,tsx}"
       run: pnpm -C apps/react-admin typecheck
     # 拼写校验。根 cspell.json 已排除 vue-vben-admin / react-admin 两个子应用
-    # (它们各自有独立 cspell.json),所以 glob 只对 backend-mock 与根 markdown
+    # (它们各自有独立 cspell.json),所以 glob 只对 backend-mock-template 与根 markdown
     # 触发。跑全量而非仅 staged:覆盖文件<100,cspell 单次 <1s,比 sed 管道
     # 解析 LEFTHOOK_STAGED_FILES 更可靠。同时扫 yml(覆盖 lefthook.yml 等配置改动)。
     cspell:staged:
