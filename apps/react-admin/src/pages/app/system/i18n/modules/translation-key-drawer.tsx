@@ -165,13 +165,15 @@ const I18nTranslationKeyDrawer = ({
 
   const handleGlobalEnabledChange = (next: boolean) => {
     const nextOverrides: Record<number, boolean> = {};
+    const fieldUpdates: Partial<FormValues> = {};
     for (const r of baseRows) {
       if (!r.existingId || !deletedIds.has(r.existingId)) {
         nextOverrides[r.localeId] = next;
+        fieldUpdates[`enabled_${r.localeId}`] = next;
       }
     }
     setEnabledOverrides(nextOverrides);
-    form.setFieldsValue(nextOverrides as unknown as Partial<FormValues>);
+    form.setFieldsValue(fieldUpdates);
   };
 
   const handleRowEnabledChange = (localeId: number, next: boolean) => {
@@ -193,8 +195,9 @@ const I18nTranslationKeyDrawer = ({
 
   // 翻译键始终可编辑（包括编辑模式）：修改 key 会通过后端 batch-upsert
   // 的 rename 阶段同步影响所有语言版本的同一 key 行。
+  // 「启用 X 种」基于可见行 (排除被删除), 与总开关 + 各行联动一致。
   const enabledCount = rows.filter((r) => r.enabled).length;
-  const totalLocales = baseRows.length;
+  const totalLocales = rows.length;
 
   const batchUpsertMut = useBatchUpsertI18nTranslationByKey({
     onSuccess: (res) => {
@@ -369,7 +372,16 @@ const I18nTranslationKeyDrawer = ({
           <Input placeholder="例如 menu.user.create" />
         </Form.Item>
 
-        <Form.Item label="状态">
+        <Form.Item
+          label={
+            <Space size={6}>
+              <span>状态</span>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                （总开关会联动所有语言行）
+              </Typography.Text>
+            </Space>
+          }
+        >
           <Space size={12} align="center">
             <Form.Item
               name="globalEnabled"
