@@ -191,10 +191,8 @@ const I18nTranslationKeyDrawer = ({
     form.setFieldValue(`enabled_${localeId}`, false);
   };
 
-  const visibleCount = baseRows.filter(
-    (r) => !r.existingId || !deletedIds.has(r.existingId),
-  ).length;
-  const keyEditable = !isEdit || visibleCount === 1;
+  // 翻译键始终可编辑（包括编辑模式）：修改 key 会通过后端 batch-upsert
+  // 的 rename 阶段同步影响所有语言版本的同一 key 行。
   const enabledCount = rows.filter((r) => r.enabled).length;
   const totalLocales = baseRows.length;
 
@@ -353,8 +351,8 @@ const I18nTranslationKeyDrawer = ({
                 <Tag color="warning">该 key 在默认语言已存在</Tag>
               )}
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                建议使用点分命名空间（如 menu.user.create），提交时会按
-                "key + 各语言值"批量写入 i18n_translation
+                建议使用点分命名空间（如 menu.user.create），修改 key 会
+                同步影响所有语言版本的同一 key 行
               </Typography.Text>
             </Space>
           }
@@ -368,10 +366,7 @@ const I18nTranslationKeyDrawer = ({
             },
           ]}
         >
-          <Input
-            placeholder="例如 menu.user.create"
-            disabled={isEdit && !keyEditable}
-          />
+          <Input placeholder="例如 menu.user.create" />
         </Form.Item>
 
         <Form.Item label="状态">
