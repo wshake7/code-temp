@@ -14,7 +14,6 @@ import {
   Typography,
   message,
 } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
 import {
   useBatchUpsertI18nTranslationByKey,
   useGetI18nTranslationByKey,
@@ -349,14 +348,11 @@ const I18nTranslationKeyDrawer = ({
         <Form.Item
           label={
             <Space size={6}>
+              <span style={{ color: '#ff4d4f' }}>*</span>
               <span>翻译键</span>
               {!isEdit && keyDuplicate && (
                 <Tag color="warning">该 key 在默认语言已存在</Tag>
               )}
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                建议使用点分命名空间（如 menu.user.create），修改 key 会
-                同步影响所有语言版本的同一 key 行
-              </Typography.Text>
             </Space>
           }
           name="translationKey"
@@ -371,18 +367,16 @@ const I18nTranslationKeyDrawer = ({
         >
           <Input placeholder="例如 menu.user.create" />
         </Form.Item>
-
-        <Form.Item
-          label={
-            <Space size={6}>
-              <span>状态</span>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                （总开关会联动所有语言行）
-              </Typography.Text>
-            </Space>
-          }
+        <Typography.Paragraph
+          type="secondary"
+          style={{ fontSize: 12, marginTop: -16, marginBottom: 16 }}
         >
-          <Space size={12} align="center">
+          建议使用点分命名空间（如 menu.user.create），修改 key 会
+          同步影响所有语言版本的同一 key 行
+        </Typography.Paragraph>
+
+        <Form.Item label="状态">
+          <Space size={16} align="center" wrap>
             <Form.Item
               name="globalEnabled"
               valuePropName="checked"
@@ -396,21 +390,64 @@ const I18nTranslationKeyDrawer = ({
                 onChange={handleGlobalEnabledChange}
               />
             </Form.Item>
-            <Typography.Text type="secondary">
-              各语言值 · 共 {totalLocales} 种语言 · 启用{' '}
-              <strong>{enabledCount}</strong> 种
-            </Typography.Text>
+            <Tag
+              color={
+                enabledCount === totalLocales && totalLocales > 0
+                  ? 'success'
+                  : 'default'
+              }
+            >
+              {enabledCount} / {totalLocales} 启用
+            </Tag>
           </Space>
         </Form.Item>
+        <Typography.Paragraph
+          type="secondary"
+          style={{ fontSize: 12, marginTop: -16, marginBottom: 16 }}
+        >
+          总开关会联动所有可见语言行；混合态保持原值
+        </Typography.Paragraph>
 
         <Form.Item label="各语言值">
-          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+          <Space direction="vertical" style={{ width: '100%' }} size={10}>
             {rows.map((r) => (
-              <Row key={r.localeId} gutter={8} align="middle">
+              <Row
+                key={r.localeId}
+                gutter={12}
+                align="middle"
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 6,
+                  border: '1px solid #f0f0f0',
+                  background: r.isDefault
+                    ? 'rgba(24,144,255,0.04)'
+                    : '#fafafa',
+                }}
+              >
                 <Col span={5}>
-                  <Space size={4} align="center">
-                    <span>{r.localeCode}</span>
-                    <Typography.Text>{r.localeName}</Typography.Text>
+                  <Space size={6} align="center">
+                    <Tag
+                      color={r.isDefault ? 'blue' : 'default'}
+                      style={{
+                        margin: 0,
+                        fontFamily:
+                          'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        fontSize: 12,
+                      }}
+                    >
+                      {r.localeCode}
+                    </Tag>
+                    <Typography.Text
+                      ellipsis
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                      }}
+                    >
+                      {r.localeName}
+                    </Typography.Text>
                     {r.isDefault && <Tag color="blue">★</Tag>}
                   </Space>
                 </Col>
@@ -448,16 +485,18 @@ const I18nTranslationKeyDrawer = ({
                     />
                   </Form.Item>
                 </Col>
-                <Col span={2}>
+                <Col span={2} style={{ textAlign: 'right' }}>
                   <Tooltip title="删除该语言行">
                     <Button
                       danger
                       type="text"
-                      icon={<DeleteOutlined />}
+                      shape="circle"
                       onClick={() =>
                         handleRowDelete(r.localeId, r.existingId)
                       }
-                    />
+                    >
+                      ×
+                    </Button>
                   </Tooltip>
                 </Col>
               </Row>
@@ -466,12 +505,19 @@ const I18nTranslationKeyDrawer = ({
         </Form.Item>
       </Form>
 
-      <Typography.Paragraph
-        type="secondary"
-        style={{ fontSize: 12, marginTop: 16 }}
+      <div
+        style={{
+          padding: '10px 12px',
+          marginTop: 16,
+          fontSize: 12,
+          color: 'rgba(0,0,0,0.65)',
+          background: 'rgb(24 144 255 / 4%)',
+          borderLeft: '3px solid #1677ff',
+          borderRadius: 4,
+        }}
       >
         填了的语言会写入对应行；留空则跳过。默认语言（★）必须。
-      </Typography.Paragraph>
+      </div>
     </Drawer>
   );
 };
