@@ -81,9 +81,13 @@ const I18nTranslationKeyDrawer = ({
     [localesQuery.data],
   );
 
-  // 编辑模式：按 translation_key 拉 values
-  const editingKey = isEdit ? sourceRow.translationKey : '';
-  const byKeyQuery = useGetI18nTranslationByKey(editingKey, { enabled: open });
+  // 编辑模式：按 translation_key 拉 values。
+  // 新建模式传 null: hook 内部 enabled 检查会让请求不发起,
+  // byKeyQuery.data 保持 undefined,避免空 key 误请求导致 data.values 缺失崩。
+  const editingKey = isEdit ? sourceRow!.translationKey : null;
+  const byKeyQuery = useGetI18nTranslationByKey(editingKey, {
+    enabled: isEdit && open,
+  });
 
   // 新建模式：按 default locale 拉 keys，做实时去重提示
   const byLocaleQuery = useListI18nTranslationByLocaleCode(
@@ -100,7 +104,9 @@ const I18nTranslationKeyDrawer = ({
     if (locales.length === 0) return [];
     if (isEdit && byKeyQuery.isLoading) return [];
     return locales.map((l) => {
-      const found = byKeyQuery.data?.values.find((v) => v.localeId === l.id);
+      const found = (byKeyQuery.data?.values ?? []).find(
+        (v) => v.localeId === l.id,
+      );
       return {
         localeId: l.id,
         localeCode: l.code,
