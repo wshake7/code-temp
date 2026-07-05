@@ -13,6 +13,7 @@ import {
   Tooltip,
   Typography,
   message,
+  theme as antdTheme,
 } from 'antd';
 import {
   useBatchUpsertI18nTranslationByKey,
@@ -66,6 +67,7 @@ const I18nTranslationKeyDrawer = ({
   onSaved,
 }: Props) => {
   const [form] = Form.useForm<FormValues>();
+  const { token } = antdTheme.useToken();
   const isEdit = !!sourceRow;
   const initKey = sourceRow?.translationKey ?? initialKey ?? '';
 
@@ -418,10 +420,10 @@ const I18nTranslationKeyDrawer = ({
                 style={{
                   padding: '10px 12px',
                   borderRadius: 6,
-                  border: '1px solid #f0f0f0',
+                  border: `1px solid ${token.colorBorderSecondary}`,
                   background: r.isDefault
-                    ? 'rgba(24,144,255,0.04)'
-                    : '#fafafa',
+                    ? token.colorPrimaryBg
+                    : token.colorFillQuaternary,
                 }}
               >
                 <Col span={5}>
@@ -510,9 +512,9 @@ const I18nTranslationKeyDrawer = ({
           padding: '10px 12px',
           marginTop: 16,
           fontSize: 12,
-          color: 'rgba(0,0,0,0.65)',
-          background: 'rgb(24 144 255 / 4%)',
-          borderLeft: '3px solid #1677ff',
+          color: token.colorTextSecondary,
+          background: token.colorPrimaryBg,
+          borderLeft: `3px solid ${token.colorPrimary}`,
           borderRadius: 4,
         }}
       >
