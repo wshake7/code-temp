@@ -3,7 +3,6 @@ import {
   Button,
   message,
   Modal,
-  Radio,
   Select,
   Space,
   Typography,
@@ -153,16 +152,22 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
         <div>
           <Text>导入格式</Text>
           <div style={{ marginTop: 4 }}>
-            <Radio.Group
-              value={importType}
-              onChange={(e) => setImportType(e.target.value)}
-              optionType="button"
+          <Space size={8}>
+            <Button
+              size="small"
+              type={importType === 'simple' ? 'primary' : 'default'}
+              onClick={() => setImportType('simple')}
             >
-              <Radio.Button value="simple">
-                Simple（纯翻译 key-value）
-              </Radio.Button>
-              <Radio.Button value="raw">Raw（表格原始数据）</Radio.Button>
-            </Radio.Group>
+              Simple
+            </Button>
+            <Button
+              size="small"
+              type={importType === 'raw' ? 'primary' : 'default'}
+              onClick={() => setImportType('raw')}
+            >
+              Raw
+            </Button>
+          </Space>
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
             Simple 适合导入纯翻译文案；Raw 可同时导入语言定义和翻译数据
