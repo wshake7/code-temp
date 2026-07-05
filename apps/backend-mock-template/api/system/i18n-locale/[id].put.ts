@@ -55,7 +55,13 @@ export default defineEventHandler(async (event) => {
     patch.name = name;
   }
   if ("code" in patch) {
-    const nextCode = String(patch.code ?? "").trim();
+    const rawCode = patch.code;
+    const nextCode =
+      typeof rawCode === "string"
+        ? rawCode.trim()
+        : typeof rawCode === "number"
+          ? String(rawCode).trim()
+          : "";
     if (!CODE_PATTERN.test(nextCode)) {
       setResponseStatus(event, 400);
       return useResponseError(

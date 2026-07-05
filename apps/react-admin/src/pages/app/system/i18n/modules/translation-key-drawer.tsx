@@ -84,7 +84,7 @@ const I18nTranslationKeyDrawer = ({
   // 编辑模式：按 translation_key 拉 values。
   // 新建模式传 null: hook 内部 enabled 检查会让请求不发起,
   // byKeyQuery.data 保持 undefined,避免空 key 误请求导致 data.values 缺失崩。
-  const editingKey = isEdit ? sourceRow!.translationKey : null;
+  const editingKey = isEdit ? sourceRow?.translationKey : null;
   const byKeyQuery = useGetI18nTranslationByKey(editingKey, {
     enabled: isEdit && open,
   });

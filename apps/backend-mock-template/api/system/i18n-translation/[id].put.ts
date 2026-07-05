@@ -38,7 +38,13 @@ export default defineEventHandler(async (event) => {
   const patch = pickCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
 
   if ("translationKey" in patch) {
-    const next = String(patch.translationKey ?? "").trim();
+    const rawKey = patch.translationKey;
+    const next =
+      typeof rawKey === "string"
+        ? rawKey.trim()
+        : typeof rawKey === "number"
+          ? String(rawKey).trim()
+          : "";
     if (!next) {
       setResponseStatus(event, 400);
       return useResponseError("BadRequest", "translationKey cannot be empty");
@@ -61,7 +67,13 @@ export default defineEventHandler(async (event) => {
     patch.translationKey = next;
   }
   if ("value" in patch) {
-    const v = String(patch.value ?? "").trim();
+    const rawVal = patch.value;
+    const v =
+      typeof rawVal === "string"
+        ? rawVal.trim()
+        : typeof rawVal === "number"
+          ? String(rawVal).trim()
+          : "";
     if (!v) {
       setResponseStatus(event, 400);
       return useResponseError("BadRequest", "value cannot be empty");
