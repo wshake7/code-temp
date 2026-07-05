@@ -3,23 +3,33 @@ import {
   Button,
   Col,
   message,
+  Modal,
   Popconfirm,
   Row,
   Space,
   Tag,
   Typography,
 } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  ImportOutlined,
+  PlusOutlined,
+  SyncOutlined,
+} from '@ant-design/icons';
 import { ProTable } from '@ant-design/pro-components';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
+import i18n from 'i18next';
 import { useDictLookups } from '@/api/hooks/dict';
 import {
   batchI18nLocaleApi,
   batchI18nTranslationApi,
   deleteI18nLocaleApi,
   deleteI18nTranslationApi,
+  exportI18nApi,
   listI18nLocaleApi,
   listI18nTranslationApi,
+  syncI18nApi,
 } from '@/api/rest/i18n';
 import type {
   I18nLocale,
@@ -27,6 +37,7 @@ import type {
 } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import I18nLocaleDrawer from './modules/locale-drawer';
+import I18nImportModal from './modules/import-modal';
 import I18nTranslationKeyDrawer from './modules/translation-key-drawer';
 
 type BulkAction = 'enable' | 'disable' | 'delete';
@@ -52,6 +63,13 @@ const I18nPage = () => {
   >([]);
   const [localeBulkLoading, setLocaleBulkLoading] = useState(false);
   const [translationBulkLoading, setTranslationBulkLoading] = useState(false);
+
+  // 导入 / 导出 / 同步
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importModalKey, setImportModalKey] = useState(0);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportType, setExportType] = useState<'raw' | 'simple'>('simple');
+  const [syncing, setSyncing] = useState(false);
 
   // 字典驱动：默认列 + 状态列走 useDictLookups，列表 load 后才显示彩色 Tag。
   // useDictLookups 内部走 useListDictData(includeGeneral=true, platform=currentPlatform)，
@@ -430,9 +448,109 @@ const I18nPage = () => {
     }
   }
 
+  // 同步 / 导入 / 导出
+  async function handleSync() {
+    setSyncing(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const storeData = (i18n.services.resourceStore as any).data ?? {};
+      const locales: Record<string, Record<string, string>> = {};
+
+      for (const [lang, nsMap] of Object.entries(storeData)) {
+        if (!nsMap || typeof nsMap !== 'object') continue;
+        const flat: Record<string, string> = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const [ns, kv] of Object.entries(nsMap as Record<string, any>)) {
+          if (!kv || typeof kv !== 'object') continue;
+          // eslint-disable-next-line max-depth
+          for (const [k, v] of Object.entries(kv)) {
+            if (typeof v !== 'string') continue;
+            flat[`${ns}.${k}`] = v;
+          }
+        }
+        if (Object.keys(flat).length > 0) {
+          locales[lang] = flat;
+        }
+      }
+
+      if (Object.keys(locales).length === 0) {
+        message.warning('未找到可同步的前端翻译数据');
+        return;
+      }
+
+      await syncI18nApi({ locales });
+      message.success('前端翻译已同步到后端');
+      translationActionRef.current?.reload?.();
+    } catch (error: unknown) {
+      message.error(`同步失败：${(error as Error).message ?? '未知错误'}`);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function openExportModal() {
+    const ids = localeSelectedRowKeys.map((k) => Number(k));
+    if (ids.length === 0) {
+      message.warning('请先勾选要导出的语言');
+      return;
+    }
+    setExportModalOpen(true);
+  }
+
+  async function confirmExport() {
+    const ids = localeSelectedRowKeys.map((k) => Number(k));
+    try {
+      const data = await exportI18nApi({ ids, type: exportType });
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `i18n-export-${exportType}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      message.success('导出成功');
+      setExportModalOpen(false);
+    } catch (error: unknown) {
+      message.error(`导出失败：${error.message ?? '未知错误'}`);
+    }
+  }
+
+  function onImportSuccess() {
+    localeActionRef.current?.reload?.();
+    translationActionRef.current?.reload?.();
+  }
+
   // 工具栏
   const localeToolbar = () => [
     <Button
+      key="sync"
+      icon={<SyncOutlined />}
+      loading={syncing}
+      onClick={handleSync}
+    >
+      前端同步
+    </Button>,
+    <Button
+      key="import"
+      icon={<ImportOutlined />}
+      onClick={() => {
+            setImportModalOpen(true);
+            setImportModalKey((k) => k + 1);
+          }}
+    >
+      导入
+    </Button>,
+    <Button
+      key="export"
+      icon={<DownloadOutlined />}
+      disabled={localeSelectedRowKeys.length === 0}
+      onClick={openExportModal}
+    >
+      导出
+    </Button>,
+     <Button
       key="create"
       type="primary"
       icon={<PlusOutlined />}
@@ -679,6 +797,40 @@ const I18nPage = () => {
         onClose={() => setLocaleDrawerOpen(false)}
         onSaved={onLocaleSaved}
       />
+      <I18nImportModal
+        key={importModalKey}
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={onImportSuccess}
+      />
+      <Modal
+        title="导出 JSON"
+        open={exportModalOpen}
+        onOk={confirmExport}
+        onCancel={() => setExportModalOpen(false)}
+        okText="导出"
+        cancelText="取消"
+        width={400}
+        destroyOnClose
+      >
+        <Space size="middle" align="center">
+          <Typography.Text type="secondary">导出格式</Typography.Text>
+          <Button
+            size="small"
+            type={exportType === 'simple' ? 'primary' : 'default'}
+            onClick={() => setExportType('simple')}
+          >
+            Simple
+          </Button>
+          <Button
+            size="small"
+            type={exportType === 'raw' ? 'primary' : 'default'}
+            onClick={() => setExportType('raw')}
+          >
+            Raw
+          </Button>
+        </Space>
+      </Modal>
       <I18nTranslationKeyDrawer
         open={translationDrawerOpen}
         sourceRow={editingTranslation}

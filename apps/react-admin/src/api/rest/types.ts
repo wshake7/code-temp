@@ -375,3 +375,57 @@ export interface I18nTranslationBatchUpsertByKeyResponse {
   values?: I18nTranslationByKeyValue[];
   errors?: I18nTranslationBatchUpsertError[];
 }
+
+// ============================================================
+// I18n 导出 / 导入 / 同步
+// ============================================================
+
+/** 导出 JSON 请求参数 */
+export interface I18nExportParams {
+  ids: number[];
+  type: 'raw' | 'simple';
+}
+
+/** raw 导出格式 */
+export interface I18nRawExport {
+  '@type': 'raw';
+  locales: I18nLocale[];
+  translations: I18nTranslation[];
+}
+
+/** simple 导出格式 */
+export interface I18nSimpleExport {
+  '@type': 'simple';
+  locales: Record<string, Record<string, string>>;
+}
+
+export type I18nExportData = I18nRawExport | I18nSimpleExport;
+
+/** 导入请求体 */
+export interface I18nImportRequest {
+  data: I18nExportData | Record<string, Record<string, string>>;
+  targetLocaleCode?: string;
+}
+
+/** 同步请求体 */
+export interface I18nSyncRequest {
+  locales: Record<string, Record<string, string>>;
+}
+
+export interface I18nImportResponse {
+  ok: boolean;
+  affected: {
+    createdLocales: number;
+    softDeleted: number;
+    createdTranslations: number;
+  };
+}
+
+export interface I18nSyncResponse {
+  ok: boolean;
+  affected: {
+    created: number;
+    updated: number;
+    softDeleted: number;
+  };
+}

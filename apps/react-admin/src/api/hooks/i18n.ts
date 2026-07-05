@@ -12,20 +12,29 @@ import {
   createI18nTranslationApi,
   deleteI18nLocaleApi,
   deleteI18nTranslationApi,
+  exportI18nApi,
   getI18nLocaleApi,
   getI18nTranslationByKeyApi,
+  importI18nApi,
   listAllI18nLocaleApi,
   listI18nLocaleApi,
   listI18nTranslationApi,
   listI18nTranslationByLocaleCodeApi,
+  syncI18nApi,
   updateI18nLocaleApi,
   updateI18nTranslationApi,
 } from '@/api/rest/i18n';
 import type {
   CreateI18nLocaleRequest,
   CreateI18nTranslationRequest,
+  I18nExportData,
+  I18nExportParams,
+  I18nImportRequest,
+  I18nImportResponse,
   I18nLocale,
   I18nLocaleQuery,
+  I18nSyncRequest,
+  I18nSyncResponse,
   I18nTranslation,
   I18nTranslationBatchUpsertByKeyRequest,
   I18nTranslationBatchUpsertByKeyResponse,
@@ -215,6 +224,37 @@ export function useBatchUpsertI18nTranslationByKey(
 ) {
   return useMutation({
     mutationFn: (body) => batchUpsertI18nTranslationByKeyApi(body),
+    ...options,
+  });
+}
+
+// =========================================================
+// 导出 / 导入 / 同步
+// =========================================================
+
+export function useExportI18n(
+  options?: UseMutationOptions<I18nExportData, Error, I18nExportParams>,
+) {
+  return useMutation({
+    mutationFn: (params) => exportI18nApi(params),
+    ...options,
+  });
+}
+
+export function useImportI18n(
+  options?: UseMutationOptions<I18nImportResponse, Error, I18nImportRequest>,
+) {
+  return useMutation({
+    mutationFn: (body) => importI18nApi(body),
+    ...options,
+  });
+}
+
+export function useSyncI18n(
+  options?: UseMutationOptions<I18nSyncResponse, Error, I18nSyncRequest>,
+) {
+  return useMutation({
+    mutationFn: (body) => syncI18nApi(body),
     ...options,
   });
 }
