@@ -34,6 +34,7 @@ import { useResponseError, useResponseSuccess } from "~/utils/response";
 interface UpsertItem {
   localeId?: number;
   value?: string;
+  remark?: string;
   isEnabled?: 0 | 1 | boolean;
 }
 
@@ -160,6 +161,7 @@ export default defineEventHandler(async (event) => {
       continue;
     }
     const value = String(rawItem.value ?? "").trim();
+    const remark = String(rawItem.remark ?? "").trim();
     if (!value) {
       // 「空白不动」语义：跳过空值
       continue;
@@ -196,6 +198,7 @@ export default defineEventHandler(async (event) => {
       list[existingIdx] = {
         ...list[existingIdx],
         value,
+        remark,
         is_enabled: isEnabled,
         updated_at: isoNow(),
         updated_by: 0,
@@ -208,7 +211,7 @@ export default defineEventHandler(async (event) => {
         locale_id: localeId,
         translation_key: effectiveKey,
         value,
-        remark: "",
+        remark,
         is_enabled: isEnabled,
         deleted_at: 0,
         created_at: now,

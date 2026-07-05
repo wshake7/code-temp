@@ -2,13 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Col,
   Drawer,
   Form,
   Input,
-  Row,
   Space,
   Switch,
+  Table,
   Tag,
   Tooltip,
   Typography,
@@ -45,6 +44,7 @@ interface BaseRow {
   localeName: string;
   isDefault: boolean;
   serverValue: string;
+  serverRemark: string;
   serverEnabled: boolean;
   existingId?: number;
 }
@@ -53,6 +53,7 @@ interface FormValues {
   translationKey: string;
   globalEnabled: boolean;
   [k: `value_${number}`]: string;
+  [k: `remark_${number}`]: string;
   [k: `enabled_${number}`]: boolean;
 }
 
@@ -113,6 +114,7 @@ const I18nTranslationKeyDrawer = ({
         localeName: l.name,
         isDefault: l.isDefault === 1,
         serverValue: found?.value ?? '',
+        serverRemark: found?.remark ?? '',
         serverEnabled: found?.isEnabled === 1,
         existingId: found?.id,
       };
@@ -139,6 +141,8 @@ const I18nTranslationKeyDrawer = ({
     for (const r of baseRows) {
       (formValues as Record<string, unknown>)[`value_${r.localeId}`] =
         r.serverValue;
+      (formValues as Record<string, unknown>)[`remark_${r.localeId}`] =
+        r.serverRemark;
       (formValues as Record<string, unknown>)[`enabled_${r.localeId}`] =
         r.serverEnabled;
     }
@@ -197,6 +201,7 @@ const I18nTranslationKeyDrawer = ({
       });
     }
     form.setFieldValue(`value_${localeId}`, '');
+    form.setFieldValue(`remark_${localeId}`, '');
     form.setFieldValue(`enabled_${localeId}`, false);
   };
 
@@ -268,6 +273,7 @@ const I18nTranslationKeyDrawer = ({
           return {
             localeId: r.localeId,
             value: String(values[`value_${r.localeId}`]).trim(),
+            remark: String(values[`remark_${r.localeId}`] ?? '').trim() || undefined,
             isEnabled: enabled ? 1 : 0,
           };
         });
@@ -320,7 +326,7 @@ const I18nTranslationKeyDrawer = ({
       title={isEdit ? '编辑翻译' : '新建翻译'}
       open={open}
       onClose={onClose}
-      size={640}
+      size={800}
       destroyOnClose
       footer={
         <Space style={{ float: 'right' }}>
@@ -417,99 +423,116 @@ const I18nTranslationKeyDrawer = ({
         </Typography.Paragraph>
 
         <Form.Item label="各语言值">
-          <Space direction="vertical" style={{ width: '100%' }} size={10}>
-            {rows.map((r) => (
-              <Row
-                key={r.localeId}
-                gutter={12}
-                align="middle"
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 6,
-                  border: `1px solid ${token.colorBorderSecondary}`,
-                  background: r.isDefault
-                    ? token.colorPrimaryBg
-                    : token.colorFillQuaternary,
-                }}
-              >
-                <Col span={5}>
-                  <Space size={6} align="center">
-                    <Tag
-                      color={r.isDefault ? 'blue' : 'default'}
-                      style={{
-                        margin: 0,
-                        fontFamily:
-                          'ui-monospace, SFMono-Regular, Menlo, monospace',
-                        fontSize: 12,
-                      }}
-                    >
-                      {r.localeCode}
-                    </Tag>
-                    <Typography.Text
-                      ellipsis
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 0,
-                      }}
-                    >
-                      {r.localeName}
-                    </Typography.Text>
-                    {r.isDefault && <Tag color="blue">★</Tag>}
-                  </Space>
-                </Col>
-                <Col span={13}>
-                  <Form.Item
-                    name={`value_${r.localeId}`}
-                    noStyle
-                    rules={
-                      r.isDefault
-                        ? [{ required: true, message: '默认语言必须填写' }]
-                        : undefined
+          <Table
+            dataSource={rows}
+            rowKey="localeId"
+            size="small"
+            pagination={false}
+            scroll={{ y: 360 }}
+          >
+            <Table.Column
+              title="语言"
+              width={180}
+              render={(_, r: BaseRow) => (
+                <Space size={6} align="center">
+                  <Tag
+                    color={r.isDefault ? 'blue' : 'default'}
+                    style={{
+                      margin: 0,
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      fontSize: 12,
+                    }}
+                  >
+                    {r.localeCode}
+                  </Tag>
+                  <Typography.Text
+                    ellipsis
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 60,
+                    }}
+                  >
+                    {r.localeName}
+                  </Typography.Text>
+                  {r.isDefault && <Tag color="blue">★</Tag>}
+                </Space>
+              )}
+            />
+            <Table.Column
+              title="翻译值"
+              minWidth={160}
+              render={(_, r: BaseRow) => (
+                <Form.Item
+                  name={`value_${r.localeId}`}
+                  noStyle
+                  rules={
+                    r.isDefault
+                      ? [{ required: true, message: '默认语言必须填写' }]
+                      : undefined
+                  }
+                >
+                  <Input
+                    placeholder={
+                      r.isDefault ? '默认语言必填' : '翻译值（留空跳过）'
+                    }
+                  />
+                </Form.Item>
+              )}
+            />
+            <Table.Column
+              title="备注"
+              width={140}
+              render={(_, r: BaseRow) => (
+                <Form.Item name={`remark_${r.localeId}`} noStyle>
+                  <Input placeholder="选填" />
+                </Form.Item>
+              )}
+            />
+            <Table.Column
+              title="启用"
+              width={72}
+              align="center"
+              render={(_, r: BaseRow) => (
+                <Form.Item
+                  name={`enabled_${r.localeId}`}
+                  noStyle
+                  valuePropName="checked"
+                  getValueFromEvent={(v) => !!v}
+                  getValueProps={(v) => ({ checked: v !== false })}
+                >
+                  <Switch
+                    size="small"
+                    onChange={(next) =>
+                      handleRowEnabledChange(r.localeId, next)
+                    }
+                  />
+                </Form.Item>
+              )}
+            />
+            <Table.Column
+              title="操作"
+              width={52}
+              align="center"
+              render={(_, r: BaseRow) => (
+                <Tooltip title="删除该语言行">
+                  <Button
+                    danger
+                    type="text"
+                    shape="circle"
+                    size="small"
+                    onClick={() =>
+                      handleRowDelete(r.localeId, r.existingId)
                     }
                   >
-                    <Input
-                      placeholder={
-                        r.isDefault ? '默认语言必填' : '翻译值（留空跳过）'
-                      }
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={4}>
-                  <Form.Item
-                    name={`enabled_${r.localeId}`}
-                    noStyle
-                    valuePropName="checked"
-                    getValueFromEvent={(v) => !!v}
-                    getValueProps={(v) => ({ checked: v !== false })}
-                  >
-                    <Switch
-                      checkedChildren="启用"
-                      unCheckedChildren="禁用"
-                      onChange={(next) =>
-                        handleRowEnabledChange(r.localeId, next)
-                      }
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={2} style={{ textAlign: 'right' }}>
-                  <Tooltip title="删除该语言行">
-                    <Button
-                      danger
-                      type="text"
-                      shape="circle"
-                      onClick={() =>
-                        handleRowDelete(r.localeId, r.existingId)
-                      }
-                    >
-                      ×
-                    </Button>
-                  </Tooltip>
-                </Col>
-              </Row>
-            ))}
-          </Space>
+                    ×
+                  </Button>
+                </Tooltip>
+              )}
+            />
+          </Table>
         </Form.Item>
       </Form>
 

@@ -333,6 +333,7 @@ export interface I18nTranslationByKeyValue {
   localeId: number;
   localeCode?: string;
   value: string;
+  remark: string;
   isEnabled: 0 | 1;
 }
 
@@ -348,6 +349,7 @@ export interface I18nTranslationByKeyResponse {
 export interface I18nTranslationBatchUpsertByKeyItem {
   localeId: number;
   value: string;
+  remark?: string;
   isEnabled?: 0 | 1;
 }
 
