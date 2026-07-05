@@ -11,6 +11,7 @@
     "gitnexus"
   ],
   "enabledPlugins": {
-    "claude-hud@claude-hud": true
+    "claude-hud@claude-hud": true,
+    "pro-workflow@pro-workflow": true
   }
 }

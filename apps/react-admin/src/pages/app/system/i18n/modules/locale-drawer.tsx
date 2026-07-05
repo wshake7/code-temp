@@ -147,12 +147,7 @@ const I18nLocaleDrawer = ({ open, row, onClose, onSaved }: Props) => {
       >
         {/* 语种名称 */}
         <Form.Item
-          label={
-            <Space size={4} align="center">
-              <span style={{ color: token.colorError }}>*</span>
-              <span>语种名称</span>
-            </Space>
-          }
+          label="语种名称"
           name="name"
           rules={[{ required: true, message: '请输入语言名称' }, { max: 64 }]}
         >
@@ -167,8 +162,7 @@ const I18nLocaleDrawer = ({ open, row, onClose, onSaved }: Props) => {
         <Form.Item
           label={
             <Space size={4} align="center">
-              <span style={{ color: token.colorError }}>*</span>
-              <span>Locale code</span>
+              <span>语言代码</span>
               {isEdit && (
                 <Tooltip title="语言代码在创建后不可修改（关联翻译键和用户偏好）">
                   <LockOutlined
