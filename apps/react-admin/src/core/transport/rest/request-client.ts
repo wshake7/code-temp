@@ -115,6 +115,10 @@ class RequestClient {
   private useTokenInterceptor(callbacks: RequestClientCallbacks) {
     this.addRequestInterceptor({
       fulfilled: (config) => {
+        // public 端点不需要登录态
+        if (config.url?.startsWith('/public/')) {
+          return config as never;
+        }
         if (callbacks.getToken) {
           const token = callbacks.getToken();
           config.headers.Authorization = this.formatToken(token);

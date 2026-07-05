@@ -3,17 +3,15 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useI18n } from './useI18n';
 import { usePreferencesStore } from '@/core/preferences';
 import type { SupportedLocale } from '@/locales';
+import { fetchBackendI18n } from '@/core/i18n/utils';
 
 export const useLocaleSync = () => {
   const { i18n } = useI18n();
-  // 使用稳定的选择器，避免每次渲染创建新对象
   const locale = usePreferencesStore((state) => state.preferences.app.locale);
   const setPreferences = usePreferencesStore((state) => state.setPreferences);
 
-  // 标记是否已初始化
   const initialized = useRef(false);
 
-  // 稳定引用 i18n，避免 i18n 实例引用变化导致 effect 重复跑
   const i18nRef = useRef(i18n);
   useEffect(() => {
     i18nRef.current = i18n;
@@ -23,7 +21,10 @@ export const useLocaleSync = () => {
   useEffect(() => {
     const i18nInstance = i18nRef.current;
     if (locale && i18nInstance.language !== locale) {
-      i18nInstance.changeLanguage(locale).catch((error) => {
+      i18nInstance.changeLanguage(locale).then(() => {
+        // 后台拉取后端翻译，不阻塞 UI
+        fetchBackendI18n(locale);
+      }).catch((error) => {
         console.error('Failed to switch language:', error);
       });
     }
