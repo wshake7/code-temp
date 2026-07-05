@@ -42,6 +42,18 @@ import I18nTranslationKeyDrawer from './modules/translation-key-drawer';
 
 type BulkAction = 'enable' | 'disable' | 'delete';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function flattenNsMap(nsMap: Record<string, any>): Record<string, string> {
+  const flat: Record<string, string> = {};
+  for (const [ns, kv] of Object.entries(nsMap)) {
+    if (!kv || typeof kv !== 'object') continue;
+    for (const [k, v] of Object.entries(kv)) {
+      if (typeof v === 'string') flat[`${ns}.${k}`] = v;
+    }
+  }
+  return flat;
+}
+
 const I18nPage = () => {
   const localeActionRef = useRef<ActionType | undefined>(undefined);
   const translationActionRef = useRef<ActionType | undefined>(undefined);
@@ -458,16 +470,8 @@ const I18nPage = () => {
 
       for (const [lang, nsMap] of Object.entries(storeData)) {
         if (!nsMap || typeof nsMap !== 'object') continue;
-        const flat: Record<string, string> = {};
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for (const [ns, kv] of Object.entries(nsMap as Record<string, any>)) {
-          if (!kv || typeof kv !== 'object') continue;
-          // eslint-disable-next-line max-depth
-          for (const [k, v] of Object.entries(kv)) {
-            if (typeof v !== 'string') continue;
-            flat[`${ns}.${k}`] = v;
-          }
-        }
+        const flat = flattenNsMap(nsMap as Record<string, any>);
         if (Object.keys(flat).length > 0) {
           locales[lang] = flat;
         }
