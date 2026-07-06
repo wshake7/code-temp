@@ -4,7 +4,7 @@
 
 <!-- style END -->
 
-<!-- Smart Search START -->
+<!-- Smart-Search START -->
 
 # Smart Search CLI
 
@@ -55,9 +55,9 @@ Use the local `smart-search` command as the default execution layer for web rese
 - Regression, packaged install checks, release lanes, and release closeout lessons: `references/regression-release.md`
 - Compatibility reference map for older instructions that mention the original monolithic file: `references/cli-contract.md`
 
-<!-- Smart Search END -->
+<!-- Smart-Search END -->
 
-<!--VITE PLUS START -->
+<!-- VITE PLUS START -->
 
 # Using Vite+, the Unified Toolchain for the Web
 
@@ -72,7 +72,7 @@ Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.de
 - [ ] Check if there are `vite.config.ts` tasks or `package.json` scripts necessary for validation, run via `vp run <script>`.
 - [ ] If setup, runtime, or package-manager behavior looks wrong, run `vp env doctor` and include its output when asking for help.
 
-<!--VITE PLUS END -->
+<!-- VITE PLUS END -->
 
 <!-- CODEGRAPH_START -->
 
