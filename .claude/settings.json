@@ -3,7 +3,7 @@
     "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1"
   },
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "acceptEdits"
   },
   "enabledMcpjsonServers": [
     "codegraph",
