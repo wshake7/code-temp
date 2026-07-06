@@ -34,12 +34,23 @@ Explore the codebase to understand the scope:
 
 Phase 1 has scored the research. Now enter the interview loop. **You** drive it:
 
-1. Open with your **first** probing question about the research direction (one question only, with your recommended answer). Then stop and wait.
-2. After the user replies, ask the next single question. Never batch. Never list multiple questions at once.
-3. Every question must come with your recommended answer up front.
+1. Open with your **first** `AskUserQuestion` call probing the research direction (**one question per turn**: the `questions` array always has length = 1). Then stop and wait.
+2. After the user replies, ask the next single question in a new turn. Always one question at a time — never batch.
+3. Every `question` must put the recommended `option` first and label it with `(Recommended)`.
 4. If a question can be answered by reading the codebase, **read the code yourself first**. Only ask the user what code cannot tell you.
-5. Push through every branch of the decision tree. Do not stop after one or two soft questions. Do not move on until the user says "proceed", "approved", "good", "next", or otherwise signals we are done.
-6. When the user signals completion, write a one-paragraph summary of the shared understanding of the research direction, then proceed to Phase 3.
+5. Push through every branch of the decision tree. Do not stop after one or two soft questions. Do not advance to Phase 3 until the user gives an explicit close-out signal such as "proceed" / "approved" / "good" / "next".
+6. When the user signals completion, write a one-paragraph summary of the shared understanding, then proceed to Phase 3.
+
+**AskUserQuestion call conventions (Research phase)**:
+
+- **One question per turn**: the `questions` array always has length = 1.
+- **Carry a `notes` follow-up**: in your reply to the user, also append a short `notes:` free-text line capturing user preference and the key takeaway of this answer (add only after the user picks an option or types free text).
+- **Carry a `preview`**: when options represent visual/UI, layout, configuration, or code style choices that benefit from side-by-side comparison, render them via `options[i].preview` as ASCII or code blocks. Previews are single-select only — do not use them with `multiSelect`.
+- Each `question` carries 2–4 `options`; **put the recommended option first and label it `(Recommended)`**.
+- Mutually exclusive decisions default to `multiSelect: false`.
+- `header` ≤ 12 characters — used as the chip tag.
+- Each `option.label` is 1–5 words; `description` explains the trade-off and impact.
+- Do not hand-write an "Other" option — the tool appends one automatically.
 
 Hard constraints while Phase 2 is active:
 - Do NOT draft a plan, file list, or any implementation artifact.
@@ -76,13 +87,23 @@ Test strategy:
 
 Phase 3 has presented the plan. Enter the interview loop. **You** drive it:
 
-1. Open with your **first** probing question about the implementation plan (one question only, with your recommended answer). Then stop and wait.
-2. After the user replies, ask the next single question. Never batch. Never list multiple questions at once.
-3. Every question must come with your recommended answer up front.
+1. Open with your **first** `AskUserQuestion` call probing the implementation plan (**one question per turn**: the `questions` array always has length = 1). Then stop and wait.
+2. After the user replies, ask the next single question in a new turn. Always one question at a time — never batch.
+3. Every `question` must put the recommended `option` first and label it with `(Recommended)`.
 4. If a question can be answered by reading the codebase, **read the code yourself first**. Only ask the user what code cannot tell you.
-5. Walk each branch of the plan's decision tree; resolve dependencies between decisions one by one.
-6. Push until every branch is resolved. Do not stop early on a soft "looks good".
-7. When the loop ends, write a one-paragraph summary of the shared understanding of the implementation approach, then ask for explicit approval to proceed to Phase 5.
+5. Walk every branch of the plan's decision tree, resolving dependencies one decision at a time. Use `AskUserQuestion` for trade-offs (library choice, scope boundaries, test depth, error UX, etc.) and plain text only for open-ended clarifications.
+6. Push all the way through. Do not stop on a soft "looks good".
+7. At close-out, write a one-paragraph shared-understanding summary and explicitly ask for approval to proceed to Phase 5.
+
+**AskUserQuestion call conventions (Plan phase)**:
+
+- **One question per turn**: the `questions` array always has length = 1.
+- **Carry a `notes` follow-up**: in your reply to the user, also append a short `notes:` free-text line capturing user preference, the trade-off behind this answer, and any related open branch (add only after the user picks an option or types free text).
+- **Carry a `preview`**: when options represent directory structure, API shape, file layout, or code snippets that benefit from side-by-side comparison, render them via `options[i].preview` as ASCII or code blocks. Previews are single-select only — do not use them with `multiSelect`.
+- The recommended option stays at `options[0]` with the `(Recommended)` suffix.
+- For "rollback / destructive / irreversible" decisions, tighten to single-select via `multiSelect: false`.
+- Use `multiSelect: true` only when options are additive (e.g. "which test scenarios to cover").
+- Constraints remain: `maxItems: 4`, `minItems: 2`, no hand-written "Other".
 
 **Wait for "proceed" or "approved" before continuing.**
 
