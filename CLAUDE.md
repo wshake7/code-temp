@@ -15,7 +15,8 @@ Code discovery protocol:
 4. Establish the project with list_projects/index_status; run index_repository if missing or stale.
 5. Use search_graph for symbols, search_code for fuzzy text, get_code_snippet for exact qualified names, trace_path for callers/callees, and query_graph for complex graph queries.
 6. Fall back to shell search/read only for docs/configs/non-code files or after MCP discovery genuinely fails.
-7. <!-- codebase-memory-mcp -->
+
+<!-- codebase-memory-mcp -->
 
 <!-- Smart-Search START -->
 
