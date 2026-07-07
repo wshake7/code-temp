@@ -44,13 +44,16 @@ Phase 1 has scored the research. Now enter the interview loop. **You** drive it:
 **AskUserQuestion call conventions (Research phase)**:
 
 - **One question per turn**: the `questions` array always has length = 1.
-- **Carry a `notes` follow-up**: in your reply to the user, also append a short `notes:` free-text line capturing user preference and the key takeaway of this answer (add only after the user picks an option or types free text).
-- **Carry a `preview`**: when options represent visual/UI, layout, configuration, or code style choices that benefit from side-by-side comparison, render them via `options[i].preview` as ASCII or code blocks. Previews are single-select only — do not use them with `multiSelect`.
-- Each `question` carries 2–4 `options`; **put the recommended option first and label it `(Recommended)`**.
-- Mutually exclusive decisions default to `multiSelect: false`.
-- `header` ≤ 12 characters — used as the chip tag.
-- Each `option.label` is 1–5 words; `description` explains the trade-off and impact.
-- Do not hand-write an "Other" option — the tool appends one automatically.
+- **Carry a `notes` follow-up**: in your reply to the user, also append a short `notes:` free-text line capturing the user's preference and the key takeaway of this answer (added only after the user picks an option or types free text).
+- **`header` constraint**: ≤ 12 characters, displayed as the chip tag; prefer short noun phrases (e.g. `Scope`, `Auth`, `UI`).
+- **`options` constraint**: 2–4 entries; the recommended option goes first and is suffixed with `(Recommended)`; `label` is 1–5 words, `description` explains the trade-off and impact; never hand-write `Other` — the tool appends one automatically.
+- **`multiSelect` value**: mutually exclusive decisions default to `false`; use `true` only when options are additive (e.g. "which test scenarios to cover").
+- **`preview` field (optional)**: when options benefit from side-by-side visual comparison, attach a `preview` to those options:
+  - **Configuration dependency**: `toolConfig.askUserQuestion.previewFormat` controls the render format — unset (default) means Claude does not generate `preview`; `"markdown"` expects ASCII art and fenced code blocks; `"html"` expects a styled `<div>` fragment.
+  - **Good fits**: UI layouts, color schemes, directory structure, API shape, configuration forms, code snippets — anything where a picture beats prose.
+  - **Poor fits**: yes/no confirmations, pure text Q&A, closed questions with a single obvious answer — keep these plain to avoid visual noise.
+  - **Constraints**: single-select only (do not pair with `multiSelect: true`); HTML previews must not contain `<script>` / `<style>` / `<!DOCTYPE>` (SDK strips these before invoking the callback).
+  - **Note**: whether `preview` is actually rendered depends on the session's `previewFormat` config; write the convention assuming it's available and do not re-explain "with/without preview" inside option descriptions.
 
 Hard constraints while Phase 2 is active:
 - Do NOT draft a plan, file list, or any implementation artifact.
@@ -98,12 +101,17 @@ Phase 3 has presented the plan. Enter the interview loop. **You** drive it:
 **AskUserQuestion call conventions (Plan phase)**:
 
 - **One question per turn**: the `questions` array always has length = 1.
-- **Carry a `notes` follow-up**: in your reply to the user, also append a short `notes:` free-text line capturing user preference, the trade-off behind this answer, and any related open branch (add only after the user picks an option or types free text).
-- **Carry a `preview`**: when options represent directory structure, API shape, file layout, or code snippets that benefit from side-by-side comparison, render them via `options[i].preview` as ASCII or code blocks. Previews are single-select only — do not use them with `multiSelect`.
+- **Carry a `notes` follow-up**: in your reply to the user, also append a short `notes:` free-text line capturing the user's preference, the trade-off behind this answer, and any related open branch (added only after the user picks an option or types free text).
+- **`preview` field (optional)**: when options involve directory structure, API shape, file layout, or code snippets that benefit from side-by-side comparison, render them via `options[i].preview` as ASCII art / fenced code blocks (`previewFormat: "markdown"`) or styled HTML fragments (`previewFormat: "html"`).
+  - **Good fits**: component trees, module splits, interface signatures, error response shapes, before/after migration diffs.
+  - **Poor fits**: yes/no confirmations, naming details, scope trimming — keep these plain text.
+  - **Constraints**: single-select only (`multiSelect: false`); HTML previews must not contain `<script>` / `<style>` / `<!DOCTYPE>`.
+  - Whether `preview` is rendered depends on the session's `previewFormat` config; follow the rule "add it when the option is worth visualizing" and do not narrate the mechanism inside the option description.
 - The recommended option stays at `options[0]` with the `(Recommended)` suffix.
-- For "rollback / destructive / irreversible" decisions, tighten to single-select via `multiSelect: false`.
+- For rollback / destructive / irreversible decisions: must use `multiSelect: false` and put the recommended option first.
 - Use `multiSelect: true` only when options are additive (e.g. "which test scenarios to cover").
-- Constraints remain: `maxItems: 4`, `minItems: 2`, no hand-written "Other".
+- Option count constraint: `minItems: 2`, `maxItems: 4`; never hand-write `Other`.
+- `header` ≤ 12 characters.
 
 **Wait for "proceed" or "approved" before continuing.**
 
