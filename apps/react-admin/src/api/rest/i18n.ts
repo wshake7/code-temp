@@ -8,8 +8,6 @@ import type {
   I18nImportResponse,
   I18nLocale,
   I18nLocaleQuery,
-  I18nSyncRequest,
-  I18nSyncResponse,
   I18nTranslation,
   I18nTranslationBatchUpsertByKeyRequest,
   I18nTranslationBatchUpsertByKeyResponse,
@@ -151,9 +149,4 @@ export function exportI18nApi(params: I18nExportParams) {
 /** 导入 JSON（raw / simple） */
 export function importI18nApi(body: I18nImportRequest) {
   return post<I18nImportResponse>('/system/i18n-translation/import', body);
-}
-
-/** 前端静态 i18n JSON 同步到后端 */
-export function syncI18nApi(body: I18nSyncRequest) {
-  return post<I18nSyncResponse>('/system/i18n-translation/sync', body);
 }

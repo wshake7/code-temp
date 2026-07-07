@@ -15,11 +15,9 @@ import {
   DownloadOutlined,
   ImportOutlined,
   PlusOutlined,
-  SyncOutlined,
 } from '@ant-design/icons';
 import { ProTable } from '@ant-design/pro-components';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import i18n from 'i18next';
 import { useDictLookups } from '@/api/hooks/dict';
 import {
   batchI18nLocaleApi,
@@ -29,7 +27,6 @@ import {
   exportI18nApi,
   listI18nLocaleApi,
   listI18nTranslationApi,
-  syncI18nApi,
 } from '@/api/rest/i18n';
 import type {
   I18nLocale,
@@ -41,18 +38,6 @@ import I18nImportModal from './modules/import-modal';
 import I18nTranslationKeyDrawer from './modules/translation-key-drawer';
 
 type BulkAction = 'enable' | 'disable' | 'delete';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function flattenNsMap(nsMap: Record<string, any>): Record<string, string> {
-  const flat: Record<string, string> = {};
-  for (const [ns, kv] of Object.entries(nsMap)) {
-    if (!kv || typeof kv !== 'object') continue;
-    for (const [k, v] of Object.entries(kv)) {
-      if (typeof v === 'string') flat[`${ns}.${k}`] = v;
-    }
-  }
-  return flat;
-}
 
 const I18nPage = () => {
   const localeActionRef = useRef<ActionType | undefined>(undefined);
@@ -76,12 +61,11 @@ const I18nPage = () => {
   const [localeBulkLoading, setLocaleBulkLoading] = useState(false);
   const [translationBulkLoading, setTranslationBulkLoading] = useState(false);
 
-  // 导入 / 导出 / 同步
+  // 导入 / 导出
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importModalKey, setImportModalKey] = useState(0);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'raw' | 'simple'>('simple');
-  const [syncing, setSyncing] = useState(false);
 
   // 字典驱动：默认列 + 状态列走 useDictLookups，列表 load 后才显示彩色 Tag。
   // useDictLookups 内部走 useListDictData(includeGeneral=true, platform=currentPlatform)，
@@ -460,38 +444,7 @@ const I18nPage = () => {
     }
   }
 
-  // 同步 / 导入 / 导出
-  async function handleSync() {
-    setSyncing(true);
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const storeData = (i18n.services.resourceStore as any).data ?? {};
-      const locales: Record<string, Record<string, string>> = {};
-
-      for (const [lang, nsMap] of Object.entries(storeData)) {
-        if (!nsMap || typeof nsMap !== 'object') continue;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const flat = flattenNsMap(nsMap as Record<string, any>);
-        if (Object.keys(flat).length > 0) {
-          locales[lang] = flat;
-        }
-      }
-
-      if (Object.keys(locales).length === 0) {
-        message.warning('未找到可同步的前端翻译数据');
-        return;
-      }
-
-      await syncI18nApi({ locales });
-      message.success('前端翻译已同步到后端');
-      translationActionRef.current?.reload?.();
-    } catch (error: unknown) {
-      message.error(`同步失败：${(error as Error).message ?? '未知错误'}`);
-    } finally {
-      setSyncing(false);
-    }
-  }
-
+  // 导入 / 导出
   function openExportModal() {
     const ids = localeSelectedRowKeys.map((k) => Number(k));
     if (ids.length === 0) {
@@ -528,14 +481,6 @@ const I18nPage = () => {
 
   // 工具栏
   const localeToolbar = () => [
-    <Button
-      key="sync"
-      icon={<SyncOutlined />}
-      loading={syncing}
-      onClick={handleSync}
-    >
-      前端同步
-    </Button>,
     <Button
       key="import"
       icon={<ImportOutlined />}

@@ -20,7 +20,6 @@ import {
   listI18nLocaleApi,
   listI18nTranslationApi,
   listI18nTranslationByLocaleCodeApi,
-  syncI18nApi,
   updateI18nLocaleApi,
   updateI18nTranslationApi,
 } from '@/api/rest/i18n';
@@ -33,8 +32,6 @@ import type {
   I18nImportResponse,
   I18nLocale,
   I18nLocaleQuery,
-  I18nSyncRequest,
-  I18nSyncResponse,
   I18nTranslation,
   I18nTranslationBatchUpsertByKeyRequest,
   I18nTranslationBatchUpsertByKeyResponse,
@@ -246,15 +243,6 @@ export function useImportI18n(
 ) {
   return useMutation({
     mutationFn: (body) => importI18nApi(body),
-    ...options,
-  });
-}
-
-export function useSyncI18n(
-  options?: UseMutationOptions<I18nSyncResponse, Error, I18nSyncRequest>,
-) {
-  return useMutation({
-    mutationFn: (body) => syncI18nApi(body),
     ...options,
   });
 }

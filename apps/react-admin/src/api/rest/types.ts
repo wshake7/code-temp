@@ -407,25 +407,11 @@ export interface I18nImportRequest {
   targetLocaleCode?: string;
 }
 
-/** 同步请求体 */
-export interface I18nSyncRequest {
-  locales: Record<string, Record<string, string>>;
-}
-
 export interface I18nImportResponse {
   ok: boolean;
   affected: {
     createdLocales: number;
     softDeleted: number;
     createdTranslations: number;
-  };
-}
-
-export interface I18nSyncResponse {
-  ok: boolean;
-  affected: {
-    created: number;
-    updated: number;
-    softDeleted: number;
   };
 }
