@@ -9,5 +9,9 @@
     "claude-hud@claude-hud": true,
     "pro-workflow@pro-workflow": true,
     "ponytail@ponytail": true
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright",
+    "codebase-memory-mcp"
+  ]
 }
