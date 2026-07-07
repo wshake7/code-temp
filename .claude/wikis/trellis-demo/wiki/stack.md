@@ -37,8 +37,6 @@
 
 ## 与本仓库深度集成的工具(本机已配置)
 
-- **CodeGraph** —— `.codegraph/` 不存在,AGENTS.md 提示需要时跑 `codegraph init`[^src-007] [^src-008]
-- **GitNexus** —— 已索引 `trellis-demo`(11446 symbols / 19880 relationships / 212 flows),改代码前必须跑 `impact`,commit 前跑 `detect_changes`[^src-008]
 - **smart-search** —— 默认 web 搜索入口;`smart-search doctor --format json` 自检。库/SDK/API 文档查询走其 `context7-library` / `context7-docs` 子命令(context7 不再作为独立 CLI 安装)[^src-008]
 
 ## 引用

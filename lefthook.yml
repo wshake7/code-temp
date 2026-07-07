@@ -4,8 +4,6 @@
 #
 # Escape hatches:
 #   - LEFTHOOK=0 git commit ...
-#   - git commit --no-verify ...
-#   - git push --no-verify ...
 #
 # Docs: https://lefthook.dev/configuration/
 
@@ -45,25 +43,16 @@ pre-commit:
       run: mvn -B -q -f backend/java-admin/pom.xml spotless:apply && git add backend/java-admin
       stage_fixed: true
 
-post-checkout:
-  # 分支切换后刷新 codegraph 索引(daemon 的文件 watcher 在常规写操作时已能跟上,
-  # 但 branch 切换 / detached HEAD 可能让 watcher 状态错位,显式 sync 一次最稳)。
-  commands:
-    index:codegraph:
-      run: codegraph sync
-
 post-merge:
   parallel: true
   commands:
-    index:codegraph:
-      run: codegraph sync
     # lockfile 变更时同步依赖;frozen=false 允许更新 catalog 间接依赖。
     deps:install:
       glob: "pnpm-lock.yaml"
       run: pnpm install --frozen-lockfile=false
 
 pre-push:
-  # 全工作区 fmt + lint + type-check,兜底 --no-verify 或未暂存改动。
+  # 全工作区 fmt + lint + type-check
   # 改用只读 check(--fix 会改 working tree,留给 pre-commit 的 stage_fixed 模式)。
   parallel: true
   commands:
@@ -88,13 +77,3 @@ commit-msg:
   commands:
     commitlint:
       run: pnpm exec commitlint --edit "$1"
-
-post-commit:
-  # 静默增量重建 GitNexus 索引。`run_async` 让 analyze 在后台跑、不阻塞 commit;
-  # `fail: false` 兜底任何分析失败(网络、锁、daemon 撞锁等)都不会回滚本次提交。
-  # command -v 短路是为了未安装 gitnexus 的环境直接 skip,不刷错误噪音。
-  commands:
-    index:gitnexus:
-      run_async: true
-      fail: false
-      run: sh -c 'command -v gitnexus >/dev/null 2>&1 && gitnexus analyze || echo skip:gitnexus-not-installed'

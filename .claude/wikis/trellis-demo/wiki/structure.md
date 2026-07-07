@@ -9,9 +9,9 @@ trellis-demo/
 ├── apps/                # 应用:web 前台 / admin / 后端 mock
 ├── packages/            # 共享库(TS 包)
 ├── backend/             # 重量级后端(目前 Java)
-├── AGENTS.md            # 项目惯例(中文输出、smart-search、Vite+、CodeGraph、GitNexus)
+├── AGENTS.md            # 项目惯例(中文输出、smart-search、Vite+)
 ├── CLAUDE.md            # 进入提示:先读 AGENTS.md
-├── Makefile             # 工具链 bootstrap(vp / codegraph;context7 通过 smart-search 子命令)
+├── Makefile             # 工具链 bootstrap(vp;context7 通过 smart-search 子命令)
 ├── package.json         # workspace 根脚本(ready / dev:*)
 ├── pnpm-workspace.yaml  # workspace 边界 + catalog
 ├── vite.config.ts       # 根 staged/fmt/lint/run 任务

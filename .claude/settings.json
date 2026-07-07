@@ -5,11 +5,6 @@
   "permissions": {
     "defaultMode": "acceptEdits"
   },
-  "enabledMcpjsonServers": [
-    "codegraph",
-    "playwright",
-    "gitnexus"
-  ],
   "enabledPlugins": {
     "claude-hud@claude-hud": true,
     "pro-workflow@pro-workflow": true,

@@ -59,13 +59,7 @@ pre-commit:
 - `format:java` 用 `stage_fixed: true` 让 spotless 重新 stage 改过的文件
 - `secret-scan` 用 `command -v && exec ...; echo skip` 模式,**故意**用 `exec` 替换 shell 进程让 gitleaks 的非零退出码不被 `||` 误吞为"skip"
 
-### post-checkout / post-merge 都跑 `codegraph sync`
-
-原因[^src-006]:
-
-> 分支切换后刷新 codegraph 索引(daemon 的文件 watcher 在常规写操作时已能跟上,但 branch 切换 / detached HEAD 可能让 watcher 状态错位,显式 sync 一次最稳)。
-
-### post-merge 还跑 deps install
+### post-merge 跑 deps install
 
 ```yaml
 post-merge:
@@ -102,13 +96,6 @@ commit-msg:
 
 `$1` 是 commit-msg 钩子入参(commit message 临时文件路径)。子仓 vue-vben-admin 在子目录 commit 时用自己 `.commitlintrc.js`(@vben/commitlint-config),根用 `@commitlint/config-conventional`[^src-006]。
 
-## 逃逸口
-
-```bash
-LEFTHOOK=0 git commit ...     # 关闭整个 lefthook
-git commit --no-verify ...    # 跳过 commit-msg 钩子
-git push --no-verify ...      # 跳过 pre-push 兜底
-```
 
 ## 反例
 

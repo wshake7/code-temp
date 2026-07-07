@@ -12,8 +12,8 @@ Hashes are SHA256 of file contents at fetch time; re-hash before citing if the f
 | src-004 | repo:file | `vite.config.ts` | Vite+ root config (staged/fmt/lint/run tasks) | `8db021f6b849a9dcb793366592fab73c72b750769f86db1825ce5dd3ce9bb46c` | 2026-07-01 |
 | src-005 | repo:file | `tsconfig.json` | Root tsconfig (noEmit, nodenext) | `e83ad93940e4b8402236d9dd194d0180173d503801ad899c506e41f0de154f89` | 2026-07-01 |
 | src-006 | repo:file | `lefthook.yml` | Root git-hooks (single source of truth) | `d0cc6e49baf52ae212833d87e60c130555418cbc1788e0f2a3d01b07d523ee05` | 2026-07-01 |
-| src-007 | repo:file | `Makefile` | Toolchain bootstrap (vp / codegraph; context7 via smart-search subcommands) | `de907404415ab327093fcb03877c6e563dc2cffd21b698f18ba6ca1a000290de` | 2026-07-01 |
-| src-008 | repo:file | `AGENTS.md` | Project conventions (Chinese output, smart-search, Vite+, CodeGraph, GitNexus) | `828890ad28a797c222a41f0da67e4f7d18ef5e87c55e30942205f10a2c8b907a` | 2026-07-01 |
+| src-007 | repo:file | `Makefile` | Toolchain bootstrap (vp; context7 via smart-search subcommands) | `de907404415ab327093fcb03877c6e563dc2cffd21b698f18ba6ca1a000290de` | 2026-07-01 |
+| src-008 | repo:file | `AGENTS.md` | Project conventions (Chinese output, smart-search, Vite+) | `828890ad28a797c222a41f0da67e4f7d18ef5e87c55e30942205f10a2c8b907a` | 2026-07-01 |
 | src-009 | repo:file | `CLAUDE.md` | Project entry rule: read AGENTS.md first | `b0341d65f3edb11c65bf09aa93e10f60c450f0bd36db0c768b445b3f720ff9cc` | 2026-07-01 |
 | src-010 | repo:file | `apps/vue-vben-admin/package.json` | vue-vben-admin monorepo root | `5efdac1609e0ac608cf7e1bd7789b2043761990c4cd070885a95d4e9a03a0b6c` | 2026-07-01 |
 | src-011 | repo:file | `apps/vue-vben-admin/pnpm-workspace.yaml` | vue-vben-admin internal workspace | `d9b17bc231ba77400eb18611b8cd9182ab3f3b188ccc01811dfad0b62529ba78` | 2026-07-01 |

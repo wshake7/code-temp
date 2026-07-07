@@ -4,7 +4,7 @@
 
 ## 一、装工具链
 
-`Makefile` 把 `vp` (Vite+) 和 `codegraph` 两个外部依赖抽成一个幂等 bootstrap。`context7` 不再单独装,它由 `smart-search` 的 `context7-library` / `context7-docs` 子命令提供[^src-007]:
+`Makefile` 把 `vp` (Vite+) 这个外部依赖抽成一个幂等 bootstrap。`context7` 不再单独装,它由 `smart-search` 的 `context7-library` / `context7-docs` 子命令提供[^src-007]:
 
 ```bash
 make install   # 别名:make i
@@ -14,7 +14,6 @@ make install   # 别名:make i
 
 1. `check-vp` —— 若 `vp` 缺失则按 OS 装(macOS/Linux 走 `curl -fsSL https://vite.plus | bash`,Windows 走 PowerShell)。
 2. `cd apps/vue-vben-admin && vp i` —— vue-vben-admin 自带独立 workspace,根 `pnpm install` 不会帮它装。
-3. `init` —— 跑 `check-vp` + `check-codegraph` + `codegraph init`(已索引则跳过)。`check-codegraph` 不在 `install` 默认流程里,只在显式 `make init` 时跑。
 
 ## 二、装依赖
 
@@ -50,15 +49,6 @@ pnpm ready          # = vp check && vp run -r test && vp run -r build
 
 > 例外:react-admin 已**主动排除**出根 workspace[^src-003],所以根的 `vp run -r` 不会扫到它,需要单独 `pnpm -C apps/react-admin lint` / `typecheck` / `build`[^src-014]。
 
-## 五、逃逸口
-
-lefthook 钩子万一误伤,有三个口子[^src-006]:
-
-```bash
-LEFTHOOK=0 git commit ...     # 关闭整个 lefthook
-git commit --no-verify ...    # 跳过 commit-msg 钩子
-git push --no-verify ...      # 跳过 pre-push 兜底
-```
 
 ## 引用
 

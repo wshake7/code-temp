@@ -1,28 +1,10 @@
 {
   "mcpServers": {
-    "codegraph": {
-      "type": "stdio",
-      "command": "codegraph",
-      "args": [
-        "serve",
-        "--mcp"
-      ]
-    },
     "playwright": {
       "command": "npx",
       "args": [
         "@playwright/mcp@latest"
       ]
-    },
-    "gitnexus": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "gitnexus@latest",
-        "mcp"
-      ],
-      "env": {}
     }
   }
 }
