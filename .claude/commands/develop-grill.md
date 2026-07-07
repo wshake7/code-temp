@@ -96,7 +96,8 @@ Phase 3 has presented the plan. Enter the interview loop. **You** drive it:
 4. If a question can be answered by reading the codebase, **read the code yourself first**. Only ask the user what code cannot tell you.
 5. Walk every branch of the plan's decision tree, resolving dependencies one decision at a time. Use `AskUserQuestion` for trade-offs (library choice, scope boundaries, test depth, error UX, etc.) and plain text only for open-ended clarifications.
 6. Push all the way through. Do not stop on a soft "looks good".
-7. At close-out, write a one-paragraph shared-understanding summary and explicitly ask for approval to proceed to Phase 5.
+7. At close-out, write a one-paragraph shared-understanding summary.
+8. Always re-output the full `PLAN: ...` block (from Phase 3, with this phase's decisions inlined) after the summary so the user sees the final plan in one place before approving.
 
 **AskUserQuestion call conventions (Plan phase)**:
 
