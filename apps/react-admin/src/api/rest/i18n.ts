@@ -2,10 +2,12 @@ import { del, get, post, put } from './request';
 import type {
   CreateI18nLocaleRequest,
   CreateI18nTranslationRequest,
-  I18nExportData,
-  I18nExportParams,
-  I18nImportRequest,
-  I18nImportResponse,
+  I18nExportBatchRequest,
+  I18nExportBatchResponse,
+  I18nImportBatchRequest,
+  I18nImportBatchResponse,
+  I18nImportPreviewRequest,
+  I18nImportPreviewResponse,
   I18nLocale,
   I18nLocaleQuery,
   I18nTranslation,
@@ -138,15 +140,26 @@ export function batchUpsertI18nTranslationByKeyApi(
   );
 }
 
-/** 导出语言+翻译（raw / simple JSON） */
-export function exportI18nApi(params: I18nExportParams) {
-  return get<I18nExportData>('/system/i18n-locale/export', {
-    ids: params.ids.join(','),
-    type: params.type,
-  } as Record<string, unknown>);
+/** 批量导入（多文件、每文件独立事务） */
+export function importI18nBatchApi(body: I18nImportBatchRequest) {
+  return post<I18nImportBatchResponse>(
+    '/system/i18n-translation/import-batch',
+    body,
+  );
 }
 
-/** 导入 JSON（raw / simple） */
-export function importI18nApi(body: I18nImportRequest) {
-  return post<I18nImportResponse>('/system/i18n-translation/import', body);
+/** 导入预览：返回 currentRows 全字段，前端自己过滤分页 */
+export function previewI18nImportApi(body: I18nImportPreviewRequest) {
+  return post<I18nImportPreviewResponse>(
+    '/system/i18n-translation/import-preview',
+    body,
+  );
+}
+
+/** 批量导出：每语言一个文件，前端用 JSZip 打包下载 */
+export function exportI18nBatchApi(body: I18nExportBatchRequest) {
+  return post<I18nExportBatchResponse>(
+    '/system/i18n-locale/export-batch',
+    body,
+  );
 }

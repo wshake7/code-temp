@@ -12,24 +12,26 @@ import {
   createI18nTranslationApi,
   deleteI18nLocaleApi,
   deleteI18nTranslationApi,
-  exportI18nApi,
+  exportI18nBatchApi,
   getI18nLocaleApi,
   getI18nTranslationByKeyApi,
-  importI18nApi,
+  importI18nBatchApi,
   listAllI18nLocaleApi,
   listI18nLocaleApi,
   listI18nTranslationApi,
   listI18nTranslationByLocaleCodeApi,
+  previewI18nImportApi,
   updateI18nLocaleApi,
   updateI18nTranslationApi,
 } from '@/api/rest/i18n';
 import type {
   CreateI18nLocaleRequest,
   CreateI18nTranslationRequest,
-  I18nExportData,
-  I18nExportParams,
-  I18nImportRequest,
-  I18nImportResponse,
+  I18nExportBatchRequest,
+  I18nExportBatchResponse,
+  I18nImportBatchRequest,
+  I18nImportBatchResponse,
+  I18nImportPreviewResponse,
   I18nLocale,
   I18nLocaleQuery,
   I18nTranslation,
@@ -229,20 +231,45 @@ export function useBatchUpsertI18nTranslationByKey(
 // 导出 / 导入 / 同步
 // =========================================================
 
-export function useExportI18n(
-  options?: UseMutationOptions<I18nExportData, Error, I18nExportParams>,
+/** 批量导入：每文件独立事务 */
+export function useImportI18nBatch(
+  options?: UseMutationOptions<
+    I18nImportBatchResponse,
+    Error,
+    I18nImportBatchRequest
+  >,
 ) {
   return useMutation({
-    mutationFn: (params) => exportI18nApi(params),
+    mutationFn: (body) => importI18nBatchApi(body),
     ...options,
   });
 }
 
-export function useImportI18n(
-  options?: UseMutationOptions<I18nImportResponse, Error, I18nImportRequest>,
+/** 导入预览：返回 currentRows 全字段，前端自己分页 */
+export function usePreviewI18nImport(
+  options?: UseQueryOptions<
+    I18nImportPreviewResponse,
+    Error
+  >,
+) {
+  return useQuery({
+    queryKey: ['previewI18nImport'],
+    queryFn: () => previewI18nImportApi({ items: [] }),
+    enabled: false,
+    ...options,
+  });
+}
+
+/** 批量导出：每语言一个文件，前端 JSZip 打包 */
+export function useExportI18nBatch(
+  options?: UseMutationOptions<
+    I18nExportBatchResponse,
+    Error,
+    I18nExportBatchRequest
+  >,
 ) {
   return useMutation({
-    mutationFn: (body) => importI18nApi(body),
+    mutationFn: (body) => exportI18nBatchApi(body),
     ...options,
   });
 }

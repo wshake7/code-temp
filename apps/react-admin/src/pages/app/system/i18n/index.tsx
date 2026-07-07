@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import JSZip from 'jszip';
 import {
   Button,
   Col,
@@ -24,7 +25,7 @@ import {
   batchI18nTranslationApi,
   deleteI18nLocaleApi,
   deleteI18nTranslationApi,
-  exportI18nApi,
+  exportI18nBatchApi,
   listI18nLocaleApi,
   listI18nTranslationApi,
 } from '@/api/rest/i18n';
@@ -457,20 +458,25 @@ const I18nPage = () => {
   async function confirmExport() {
     const ids = localeSelectedRowKeys.map((k) => Number(k));
     try {
-      const data = await exportI18nApi({ ids, type: exportType });
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: 'application/json',
-      });
+      const data = await exportI18nBatchApi({ ids, type: exportType });
+      const zip = new JSZip();
+      for (const file of data.files) {
+        const filename = `${file.code}.${file.format}.json`;
+        zip.file(filename, JSON.stringify(file.content, null, 2));
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `i18n-export-${exportType}.json`;
+      a.download = `i18n-export-${exportType}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      message.success('导出成功');
+      message.success(
+        `导出成功：${data.files.length} 个语言已打包下载`,
+      );
       setExportModalOpen(false);
     } catch (error: unknown) {
-      message.error(`导出失败：${error.message ?? '未知错误'}`);
+      message.error(`导出失败：${(error as Error).message ?? '未知错误'}`);
     }
   }
 

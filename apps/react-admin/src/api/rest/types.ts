@@ -389,29 +389,89 @@ export interface I18nExportParams {
 /** raw 导出格式 */
 export interface I18nRawExport {
   '@type': 'raw';
-  locales: I18nLocale[];
-  translations: I18nTranslation[];
+  locale: I18nLocale;
+  translations: Array<{
+    id?: number;
+    translationKey: string;
+    value: string;
+    remark?: string;
+    isEnabled?: 0 | 1;
+  }>;
 }
 
-/** simple 导出格式 */
+/** simple 导出格式：顶层为嵌套字典（unflatten 后即得到 key/value） */
 export interface I18nSimpleExport {
   '@type': 'simple';
-  locales: Record<string, Record<string, string>>;
+  [key: string]: unknown;
 }
 
 export type I18nExportData = I18nRawExport | I18nSimpleExport;
 
-/** 导入请求体 */
-export interface I18nImportRequest {
-  data: I18nExportData | Record<string, Record<string, string>>;
-  targetLocaleCode?: string;
+/* ============================================================
+ * 批量导入（多文件）— import-batch / import-preview / export-batch
+ * ============================================================ */
+
+export type I18nImportFormat = 'raw' | 'simple';
+
+export interface I18nImportBatchItem {
+  /** 文件名（用于 perFile 回显与 UI 标记） */
+  name: string;
+  /** key 前缀拼接；空或省略表示原样 */
+  prefix?: string;
+  /** 该文件的目标语言 code（simple 必填，raw 优先取文件内 locale.code） */
+  localeCode: string;
+  format: I18nImportFormat;
+  /** 已 JSON.parse 后的 payload */
+  payload: unknown;
 }
 
-export interface I18nImportResponse {
+export interface I18nImportBatchRequest {
+  items: I18nImportBatchItem[];
+}
+
+export interface I18nImportBatchPerFile {
+  name: string;
+  ok: boolean;
+  error?: string;
+  createdLocales: number;
+  softDeleted: number;
+  createdTranslations: number;
+}
+
+export interface I18nImportBatchResponse {
   ok: boolean;
   affected: {
     createdLocales: number;
     softDeleted: number;
     createdTranslations: number;
+    perFile: I18nImportBatchPerFile[];
   };
+}
+
+export interface I18nImportPreviewItem {
+  localeCode: string;
+  keys: string[];
+}
+
+export interface I18nImportPreviewRequest {
+  items: I18nImportPreviewItem[];
+}
+
+export interface I18nImportPreviewResponse {
+  currentRows: I18nTranslation[];
+}
+
+export interface I18nExportBatchRequest {
+  ids: number[];
+  format: I18nImportFormat;
+}
+
+export interface I18nExportBatchFile {
+  code: string;
+  format: I18nImportFormat;
+  content: I18nRawExport | I18nSimpleExport;
+}
+
+export interface I18nExportBatchResponse {
+  files: I18nExportBatchFile[];
 }
