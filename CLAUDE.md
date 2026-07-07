@@ -4,6 +4,19 @@
 
 <!-- style END -->
 
+<!-- codebase-memory-mcp -->
+
+Code discovery protocol:
+
+1. For source-code exploration, use codebase-memory-mcp first.
+2. If MCP tools are not callable, run tool_search for:
+   "search_graph trace_path get_code_snippet query_graph search_code index_repository codebase-memory-mcp"
+3. If an expected tool is still missing, retry tool_search with the exact tool name, for example "search_graph"; absence from the first broad result is not proof the tool is unavailable.
+4. Establish the project with list_projects/index_status; run index_repository if missing or stale.
+5. Use search_graph for symbols, search_code for fuzzy text, get_code_snippet for exact qualified names, trace_path for callers/callees, and query_graph for complex graph queries.
+6. Fall back to shell search/read only for docs/configs/non-code files or after MCP discovery genuinely fails.
+7. <!-- codebase-memory-mcp -->
+
 <!-- Smart-Search START -->
 
 # Smart Search CLI
