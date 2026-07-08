@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Input,
   message,
   Modal,
   Popconfirm,
@@ -17,7 +18,6 @@ import {
 } from 'antd';
 import {
   CheckCircleOutlined,
-  CloseCircleOutlined,
   DownloadOutlined,
   InboxOutlined,
   MinusCircleOutlined,
@@ -70,7 +70,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
   const [step, setStep] = useState(0);
   const [format, setFormat] = useState<ImportFormat>('simple');
   const [staged, setStaged] = useState<StagedFile[]>([]);
-  const [showChangedOnly, setShowChangedOnly] = useState(true);
+  const [showChangedOnly, setShowChangedOnly] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const { data: locales = [] } = useListAllI18nLocale(
@@ -148,75 +148,98 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // 解析文件并加入 staged。onChange 会带 originFileObj，是真正的 File。
-  const ingestFile = async (f: File) => {
+  // 占位/已入列文件的复合 key。name+size 足够防 antd Dragger 同一次拖拽
+  // 多次 onChange 派发的 race（每次 originFileObj 引用不同但 size 相同）。
+  const stagedKey = (s: { name: string; file: File }) => `${s.name}@${s.file.size}`;
+
+  // 解析文件并同位替换 staged 中的占位。handleUploadChange 已经同步把
+  // parseOk=false 的占位推进了 staged，这里只 fill 真实字段。
+  const ingestFile = async (f: File, key: string) => {
+    const fill = (patch: Partial<StagedFile>) => {
+      setStaged((prev) => {
+        const i = prev.findIndex((s) => stagedKey(s) === key);
+        if (i < 0) return prev; // 已被用户移除：什么都不做
+        const next = [...prev];
+        next[i] = { ...next[i], ...patch };
+        return next;
+      });
+    };
+
+    let text: string;
     try {
-      const text = await f.text();
-      let payload: unknown;
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        setStaged((prev) => [
-          ...prev,
-          {
-            name: f.name,
-            file: f,
-            format: 'simple' as ImportFormat,
-            payload: null,
-            parseOk: false,
-            errorMessage: 'JSON 解析失败',
-            localeCode: '',
-            prefix: '',
-          },
-        ]);
-        message.error(`文件 ${f.name} 解析失败`);
-        return;
-      }
-      const obj = payload as Record<string, unknown> | null;
-      const detectedFormat =
-        obj && typeof obj === 'object' && obj['@type'] === 'raw'
-          ? 'raw'
-          : ('simple' as ImportFormat);
-      if (detectedFormat !== format) {
-        message.warning(
-          `文件 ${f.name} 检测为 ${detectedFormat} 格式，与当前选定的 ${format} 不一致`,
-        );
-      }
-      const payloadLocale =
-        detectedFormat === 'raw' && obj
-          ? (obj.locale as StagedFile['payloadLocale'])
-          : undefined;
-      const localeCode =
-        detectedFormat === 'raw' && payloadLocale?.code
-          ? payloadLocale.code
-          : '';
-      setStaged((prev) => [
-        ...prev,
-        {
-          name: f.name,
-          file: f,
-          format: detectedFormat,
-          payload,
-          parseOk: true,
-          localeCode,
-          prefix: '',
-          payloadLocale,
-        },
-      ]);
+      text = await f.text();
     } catch (err: unknown) {
-      message.error(`读取文件失败：${(err as Error).message ?? '未知错误'}`);
+      fill({ parseOk: false, errorMessage: `读取文件失败：${(err as Error).message ?? '未知错误'}` });
+      message.error(`读取文件 ${f.name} 失败`);
+      return;
     }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      fill({ parseOk: false, errorMessage: 'JSON 解析失败' });
+      message.error(`文件 ${f.name} 解析失败`);
+      return;
+    }
+
+    const obj = payload as Record<string, unknown> | null;
+    const detectedFormat =
+      obj && typeof obj === 'object' && obj['@type'] === 'raw'
+        ? 'raw'
+        : ('simple' as ImportFormat);
+    if (detectedFormat !== format) {
+      message.warning(
+        `文件 ${f.name} 检测为 ${detectedFormat} 格式，与当前选定的 ${format} 不一致`,
+      );
+    }
+    const payloadLocale =
+      detectedFormat === 'raw' && obj
+        ? (obj.locale as StagedFile['payloadLocale'])
+        : undefined;
+    const localeCode =
+      detectedFormat === 'raw' && payloadLocale?.code
+        ? payloadLocale.code
+        : '';
+    fill({
+      payload,
+      parseOk: true,
+      errorMessage: undefined,
+      localeCode,
+      payloadLocale,
+    });
   };
 
   const handleUploadChange: UploadProps['onChange'] = (info) => {
     const files = info.fileList
       .map((f) => f.originFileObj)
       .filter((f): f is NonNullable<typeof f> => !!f);
+
     setStaged((prev) => {
-      const known = new Set(prev.map((s) => s.file));
-      const newFiles = files.filter((f) => !known.has(f));
-      void Promise.all(newFiles.map((f) => ingestFile(f as File)));
-      return prev;
+      // 同步写入占位 + 同帧去重：第二次 onChange 在同帧内看到 prev 已含本文件 key
+      // → 不会再 append 一次。这正是修复 antd Dragger 多次 onChange 竞态的关键。
+      const known = new Set(prev.map(stagedKey));
+      const newFiles = files.filter((f) => {
+        const k = `${f.name}@${f.size}`;
+        if (known.has(k)) return false;
+        known.add(k);
+        return true;
+      });
+      if (newFiles.length === 0) return prev;
+      const placeholders: StagedFile[] = newFiles.map((f) => ({
+        name: f.name,
+        file: f,
+        payload: null,
+        parseOk: false,
+        errorMessage: '解析中…',
+        localeCode: '',
+        prefix: '',
+      }));
+      // 同步起异步解析（不 await，UI 立即可点下一步）
+      for (const f of newFiles) {
+        void ingestFile(f, `${f.name}@${f.size}`);
+      }
+      return [...prev, ...placeholders];
     });
   };
 
@@ -340,10 +363,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
       render: (_, r) => {
         if (r.op === 'create') return <Tag color="green">新增</Tag>;
         if (r.op === 'update') return <Tag color="blue">修改</Tag>;
-        const sameValue = r.oldValue === r.newValue;
-        const unchanged = r.duplicate && sameValue && r.oldValue !== undefined;
-        if (unchanged) return <Tag>未变更</Tag>;
-        return <Tag color="red">重复</Tag>;
+        return <Tag>未变更</Tag>;
       },
     },
     {
@@ -355,9 +375,10 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     {
       title: '翻译键',
       dataIndex: 'key',
-      minWidth: 220,
+      minWidth: 200,
       render: (_, r) => (
         <Space size={4}>
+          {r.duplicate && <Tag color="red" style={{ margin: 0 }}>重复</Tag>}
           <span style={{ fontFamily: 'monospace' }}>{r.key}</span>
           {r.oldIsEnabled !== undefined &&
             (r.oldIsEnabled === 0 ? (
@@ -374,7 +395,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     },
     {
       title: '旧值 / 新值',
-      minWidth: 360,
+      minWidth: 320,
       render: (_, r) => (
         <Space direction="vertical" size={0} style={{ lineHeight: 1.5 }}>
           <span style={{ color: '#ff4d4f' }}>
@@ -387,24 +408,31 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     {
       title: '备注',
       dataIndex: 'remark',
-      minWidth: 140,
+      minWidth: 120,
       render: (v) => v || <span style={{ color: '#999' }}>-</span>,
     },
     {
       title: '来源文件',
       dataIndex: 'sourceFile',
-      minWidth: 160,
+      minWidth: 140,
       ellipsis: true,
     },
   ];
 
   // 步骤 2 列
   const fileConfigColumns: ColumnsType<FileConfigRow> = [
-    { title: '文件名', dataIndex: 'name', width: 200, ellipsis: true },
+    {
+      title: '文件名',
+      dataIndex: 'name',
+      minWidth: 200,
+      align: 'center',
+      ellipsis: true
+    },
     {
       title: '格式',
       dataIndex: 'format',
       width: 80,
+      align: 'center',
       render: (v) => (
         <Tag color={v === 'raw' ? 'blue' : 'green'}>{v}</Tag>
       ),
@@ -412,7 +440,8 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     {
       title: '语言代码',
       dataIndex: 'localeCode',
-      width: 220,
+      width: 240,
+      align: 'center',
       render: (_, r) => {
         if (r.format === 'raw' || !r.parseOk) {
           const code = r.payloadLocale?.code ?? r.localeCode;
@@ -434,7 +463,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
             placeholder="选择语言"
             showSearch
             optionFilterProp="label"
-            style={{ width: 200 }}
+            style={{ width: 220 }}
             onChange={(v) => updateStaged(r.index, { localeCode: v })}
           />
         );
@@ -444,6 +473,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
       title: '前缀',
       dataIndex: 'prefix',
       width: 180,
+      align: 'center',
       render: (_, r) => {
         if (r.format === 'raw' || !r.parseOk) {
           return (
@@ -453,19 +483,12 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
           );
         }
         return (
-          <input
-            type="text"
+          <Input
             value={r.prefix}
             placeholder="可选，如 app."
             onChange={(e) =>
               updateStaged(r.index, { prefix: normalizePrefix(e.target.value) })
             }
-            style={{
-              width: '100%',
-              padding: '4px 8px',
-              border: '1px solid #d9d9d9',
-              borderRadius: 4,
-            }}
           />
         );
       },
@@ -474,6 +497,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
       title: '状态',
       dataIndex: 'parseOk',
       width: 90,
+      align: 'center',
       render: (_, r) =>
         r.parseOk ? (
           <Tag color="success">解析成功</Tag>
@@ -484,11 +508,11 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     {
       title: '操作',
       width: 80,
+      align: 'center',
       render: (_, r) => (
         <Button
           type="text"
           danger
-          icon={<CloseCircleOutlined />}
           onClick={() => removeStaged(r.index)}
         >
           移除
@@ -741,9 +765,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
               </Space>
 
               <Table
-                rowKey={(r) =>
-                  `${r.localeCode}-${r.key}-${r.sourceFile}`
-                }
+                rowKey={(r) => r._rowKey}
                 columns={previewColumns}
                 dataSource={visiblePreviewRows}
                 size="small"
