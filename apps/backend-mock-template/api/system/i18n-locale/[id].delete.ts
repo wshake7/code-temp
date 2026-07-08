@@ -4,7 +4,7 @@ import {
   getMockI18nLocaleList,
   getMockI18nTranslationList,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -40,5 +40,5 @@ export default defineEventHandler(async (event) => {
   }
 
   list[idx] = { ...list[idx], deleted_at: Date.now() };
-  return useResponseSuccess(toCamelRow(list[idx]));
+  return useResponseSuccess(toI18nCamelRow(list[idx]));
 });

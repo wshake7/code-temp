@@ -5,7 +5,7 @@ import {
   getMockI18nTranslationList,
   type I18nTranslation,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { usePageResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
   // 注入 localeCode 给前端
   const rows = filtered.map((row) => {
     const code = locales.find((l) => l.id === row.locale_id)?.code;
-    return toCamelRow({ ...row, localeCode: code ?? row.localeCode });
+    return toI18nCamelRow({ ...row, localeCode: code ?? row.localeCode });
   });
 
   return usePageResponseSuccess(page as string, pageSize as string, rows);

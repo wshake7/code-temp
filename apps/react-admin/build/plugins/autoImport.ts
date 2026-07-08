@@ -13,6 +13,13 @@ export const autoImportPlugin = (): PluginOption => {
             'src/stores/**',
             'types/**',
         ],
+        // unimport 在 normalizeScanDirs 时,如果 glob 末尾没有扩展名(如 src/components/**),
+        // 会把原始 glob 也加入扫描范围,导致 README.md、*.mdx 等文档文件被一并扫描,
+        // 进而把文档里 ts 代码块里的 export 当成真实导出,触发 "Duplicated imports" 警告。
+        // 这里用 fileFilter 排除文档文件,只保留源码后缀。
+        dirsScanOptions: {
+            fileFilter: (file: string) => !/\.(md|markdown|mdx)$/i.test(file),
+        },
         imports: [
             'react',
             // 'react-router',

@@ -1,6 +1,6 @@
 import { defineEventHandler, getQuery } from "h3";
 import { ensureI18nSeeds, getMockI18nLocaleList, type I18nLocale } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -28,5 +28,5 @@ export default defineEventHandler(async (event) => {
     items = items.filter((x) => x.is_enabled === Number(status));
   }
   items.sort((a, b) => a.sort - b.sort || a.id - b.id);
-  return useResponseSuccess(items.map(toCamelRow));
+  return useResponseSuccess(items.map(toI18nCamelRow));
 });

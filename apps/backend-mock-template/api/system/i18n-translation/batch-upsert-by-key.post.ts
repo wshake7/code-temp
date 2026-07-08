@@ -6,7 +6,7 @@ import {
   isoNow,
   nextI18nId,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 /**
@@ -234,7 +234,7 @@ export default defineEventHandler(async (event) => {
     .sort((a, b) => a.id - b.id);
   const localeIdToCode = new Map(locales.map((l) => [l.id, l.code] as const));
   const values = refreshedRows.map((row) => ({
-    ...toCamelRow(row),
+    ...toI18nCamelRow(row),
     localeCode: localeIdToCode.get(row.locale_id),
   }));
 

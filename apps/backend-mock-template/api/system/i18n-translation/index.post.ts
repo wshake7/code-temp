@@ -6,14 +6,14 @@ import {
   isoNow,
   nextI18nId,
 } from "~/utils/mock-data";
-import { pickCamelKeys, toCamelRow } from "~/utils/i18n-camel";
+import { pickI18nCamelKeys, toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
   ensureI18nSeeds();
 
   const raw = ((await readBody(event)) ?? {}) as Record<string, unknown>;
-  const body = pickCamelKeys<{
+  const body = pickI18nCamelKeys<{
     localeId?: number;
     translationKey?: string;
     value?: string;
@@ -86,5 +86,5 @@ export default defineEventHandler(async (event) => {
     updated_by: 0,
   };
   list.unshift(newRow);
-  return useResponseSuccess(toCamelRow({ ...newRow, localeCode: locale.code }));
+  return useResponseSuccess(toI18nCamelRow({ ...newRow, localeCode: locale.code }));
 });

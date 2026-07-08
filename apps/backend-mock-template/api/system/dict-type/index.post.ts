@@ -1,6 +1,6 @@
 import { defineEventHandler, readBody, setResponseStatus } from "h3";
 import { ensureDictSeeds, getMockDictTypeList, isoNow, nextDictId } from "~/utils/mock-data";
-import { pickCamelKeys, toCamelRow } from "~/utils/dict-camel";
+import { pickDictCamelKeys, toDictCamelRow } from "~/utils/dict-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 const CODE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   // 接受 camelCase 字段；同时容忍 snake（迁移期容错）。
   const raw = ((await readBody(event)) ?? {}) as Record<string, unknown>;
-  const body = pickCamelKeys<{
+  const body = pickDictCamelKeys<{
     code?: string;
     name?: string;
     remark?: string;
@@ -68,5 +68,5 @@ export default defineEventHandler(async (event) => {
     updated_by: 0,
   };
   list.unshift(newRow);
-  return useResponseSuccess(toCamelRow(newRow));
+  return useResponseSuccess(toDictCamelRow(newRow));
 });

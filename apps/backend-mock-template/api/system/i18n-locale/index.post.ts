@@ -1,6 +1,6 @@
 import { defineEventHandler, readBody, setResponseStatus } from "h3";
 import { ensureI18nSeeds, getMockI18nLocaleList, isoNow, nextI18nId } from "~/utils/mock-data";
-import { pickCamelKeys, toCamelRow } from "~/utils/i18n-camel";
+import { pickI18nCamelKeys, toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 const CODE_PATTERN = /^[A-Za-z]{2,3}(-[A-Za-z]{2,4})?$/;
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   ensureI18nSeeds();
 
   const raw = ((await readBody(event)) ?? {}) as Record<string, unknown>;
-  const body = pickCamelKeys<{
+  const body = pickI18nCamelKeys<{
     code?: string;
     name?: string;
     sort?: number;
@@ -94,5 +94,5 @@ export default defineEventHandler(async (event) => {
     updated_by: 0,
   };
   list.unshift(newRow);
-  return useResponseSuccess(toCamelRow(newRow));
+  return useResponseSuccess(toI18nCamelRow(newRow));
 });

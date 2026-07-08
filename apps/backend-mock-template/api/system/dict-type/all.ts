@@ -1,6 +1,6 @@
 import { defineEventHandler, getQuery } from "h3";
 import { ensureDictSeeds, getMockDictTypeList, type DictType } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/dict-camel";
+import { toDictCamelRow } from "~/utils/dict-camel";
 import { useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -29,5 +29,5 @@ export default defineEventHandler(async (event) => {
     items = items.filter((x) => x.is_enabled === Number(status));
   }
   items.sort((a, b) => a.id - b.id);
-  return useResponseSuccess(items.map(toCamelRow));
+  return useResponseSuccess(items.map(toDictCamelRow));
 });

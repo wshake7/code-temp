@@ -4,8 +4,8 @@
  * 设计动机：仓库历史契约用 snake（与 DB 习惯对齐），前端 TS 类型希望用 camelCase。
  * 在 handler 边界做一次转换，避免改写 mock-data 内部存储结构。
  *
- * mock-data 内部 DictData / DictType 仍保持 snake；handler 入口用 pickCamelKeys 抽取
- * 字段（同时接受 camel 与 snake 入参），出口用 toCamelRow 转回 camel。
+ * mock-data 内部 DictData / DictType 仍保持 snake；handler 入口用 pickDictCamelKeys 抽取
+ * 字段（同时接受 camel 与 snake 入参），出口用 toDictCamelRow 转回 camel。
  */
 
 const TO_CAMEL: Record<string, string> = {
@@ -28,7 +28,7 @@ const TO_SNAKE: Record<string, string> = Object.fromEntries(
  * 从 raw body 中按 camelCase 字段名抽取允许的字段。
  * 同时接受 camel 与 snake 入参：camel 优先，缺失时回退 snake。
  */
-export function pickCamelKeys<T extends object>(
+export function pickDictCamelKeys<T extends object>(
   raw: Record<string, unknown>,
   allowed: readonly string[],
 ): Partial<T> {
@@ -47,7 +47,7 @@ export function pickCamelKeys<T extends object>(
 }
 
 /** 把内部 snake 行转成对外 camelCase 行；其他键保持原样。 */
-export function toCamelRow<T extends object>(row: T): Record<string, unknown> {
+export function toDictCamelRow<T extends object>(row: T): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row)) {
     out[TO_CAMEL[k] ?? k] = v;

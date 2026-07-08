@@ -1,6 +1,6 @@
 import { defineEventHandler, getQuery } from "h3";
 import { ensureI18nSeeds, getMockI18nLocaleList, type I18nLocale } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { usePageResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -30,5 +30,5 @@ export default defineEventHandler(async (event) => {
   }
   filtered.sort((a, b) => a.sort - b.sort || a.id - b.id);
 
-  return usePageResponseSuccess(page as string, pageSize as string, filtered.map(toCamelRow));
+  return usePageResponseSuccess(page as string, pageSize as string, filtered.map(toI18nCamelRow));
 });

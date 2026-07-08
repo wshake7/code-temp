@@ -4,7 +4,7 @@ import {
   getMockI18nLocaleList,
   getMockI18nTranslationList,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 /**
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   items.sort((a, b) => a.translation_key.localeCompare(b.translation_key));
   return useResponseSuccess(
     items.map((t) => ({
-      ...toCamelRow(t),
+      ...toI18nCamelRow(t),
       localeCode: locale.code,
     })),
   );

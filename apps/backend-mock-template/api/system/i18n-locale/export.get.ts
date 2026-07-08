@@ -4,7 +4,7 @@ import {
   getMockI18nLocaleList,
   getMockI18nTranslationList,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 /**
@@ -56,9 +56,9 @@ export default defineEventHandler(async (event) => {
 
     return useResponseSuccess({
       "@type": "raw",
-      locales: selectedLocales.map(toCamelRow),
+      locales: selectedLocales.map(toI18nCamelRow),
       translations: relatedTranslations.map((t) => ({
-        ...toCamelRow(t),
+        ...toI18nCamelRow(t),
         localeCode: localeCodeMap.get(t.locale_id),
       })),
     });

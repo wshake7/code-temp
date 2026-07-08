@@ -1,6 +1,6 @@
 import { defineEventHandler, getRouterParam, setResponseStatus } from "h3";
 import { ensureI18nSeeds, getMockI18nTranslationList } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -20,5 +20,5 @@ export default defineEventHandler(async (event) => {
     return useResponseError("NotFound", `i18n-translation ${id} not found`);
   }
   list[idx] = { ...list[idx], deleted_at: Date.now() };
-  return useResponseSuccess(toCamelRow(list[idx]));
+  return useResponseSuccess(toI18nCamelRow(list[idx]));
 });

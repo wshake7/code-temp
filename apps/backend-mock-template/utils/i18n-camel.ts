@@ -24,7 +24,7 @@ const TO_SNAKE: Record<string, string> = Object.fromEntries(
  * 从 raw body 中按 camelCase 字段名抽取允许的字段。
  * 同时接受 camel 与 snake 入参：camel 优先，缺失时回退 snake。
  */
-export function pickCamelKeys<T extends object>(
+export function pickI18nCamelKeys<T extends object>(
   raw: Record<string, unknown>,
   allowed: readonly string[],
 ): Partial<T> {
@@ -43,7 +43,7 @@ export function pickCamelKeys<T extends object>(
 }
 
 /** 把内部 snake 行转成对外 camelCase 行；其他键保持原样。 */
-export function toCamelRow<T extends object>(row: T): Record<string, unknown> {
+export function toI18nCamelRow<T extends object>(row: T): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row)) {
     out[TO_CAMEL[k] ?? k] = v;

@@ -5,7 +5,7 @@ import {
   getMockI18nTranslationList,
   type I18nTranslation,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseSuccess } from "~/utils/response";
 
 /**
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   rows.sort((a, b) => a.id - b.id);
 
   const values = rows.map((row) => ({
-    ...toCamelRow(row),
+    ...toI18nCamelRow(row),
     localeCode: localeIdToCode.get(row.locale_id),
   }));
 

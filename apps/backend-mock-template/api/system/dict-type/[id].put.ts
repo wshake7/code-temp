@@ -1,6 +1,6 @@
 import { defineEventHandler, getRouterParam, readBody, setResponseStatus } from "h3";
 import { ensureDictSeeds, getMockDictTypeList, isoNow } from "~/utils/mock-data";
-import { pickCamelKeys, toCamelRow } from "~/utils/dict-camel";
+import { pickDictCamelKeys, toDictCamelRow } from "~/utils/dict-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 const ALLOWED_KEYS = ["code", "name", "remark", "isEnabled"] as const;
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     return useResponseError("NotFound", `dict-type ${id} not found`);
   }
 
-  const patch = pickCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
+  const patch = pickDictCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
 
   // name 校验
   if ("name" in patch) {
@@ -84,5 +84,5 @@ export default defineEventHandler(async (event) => {
     updated_at: isoNow(),
     updated_by: 0,
   };
-  return useResponseSuccess(toCamelRow(list[idx]));
+  return useResponseSuccess(toDictCamelRow(list[idx]));
 });

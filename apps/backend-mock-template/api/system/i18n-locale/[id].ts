@@ -1,6 +1,6 @@
 import { defineEventHandler, getRouterParam, setResponseStatus } from "h3";
 import { ensureI18nSeeds, getMockI18nLocaleList } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -18,5 +18,5 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, 404);
     return useResponseError("NotFound", `i18n-locale ${id} not found`);
   }
-  return useResponseSuccess(toCamelRow(found));
+  return useResponseSuccess(toI18nCamelRow(found));
 });

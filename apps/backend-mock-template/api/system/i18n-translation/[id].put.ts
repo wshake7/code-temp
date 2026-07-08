@@ -5,7 +5,7 @@ import {
   getMockI18nTranslationList,
   isoNow,
 } from "~/utils/mock-data";
-import { pickCamelKeys, toCamelRow } from "~/utils/i18n-camel";
+import { pickI18nCamelKeys, toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 const ALLOWED_KEYS = ["translationKey", "value", "remark", "isEnabled"] as const;
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     return useResponseError("NotFound", `i18n-translation ${id} not found`);
   }
 
-  const patch = pickCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
+  const patch = pickI18nCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
 
   if ("translationKey" in patch) {
     const rawKey = patch.translationKey;
@@ -102,6 +102,6 @@ export default defineEventHandler(async (event) => {
   };
   const locale = getMockI18nLocaleList().find((l) => l.id === list[idx].locale_id);
   return useResponseSuccess(
-    toCamelRow({ ...list[idx], localeCode: locale?.code ?? list[idx].localeCode }),
+    toI18nCamelRow({ ...list[idx], localeCode: locale?.code ?? list[idx].localeCode }),
   );
 });

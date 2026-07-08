@@ -4,7 +4,7 @@ import {
   getMockI18nLocaleList,
   getMockI18nTranslationList,
 } from "~/utils/mock-data";
-import { toCamelRow } from "~/utils/i18n-camel";
+import { toI18nCamelRow } from "~/utils/i18n-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 /**
@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
         format: "raw" as const,
         content: {
           "@type": "raw",
-          locale: toCamelRow(locale),
+          locale: toI18nCamelRow(locale),
           translations: myTranslations,
         },
       };

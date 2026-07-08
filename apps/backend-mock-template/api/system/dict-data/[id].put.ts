@@ -6,7 +6,7 @@ import {
   isAllowedTagType,
   isoNow,
 } from "~/utils/mock-data";
-import { pickCamelKeys, toCamelRow } from "~/utils/dict-camel";
+import { pickDictCamelKeys, toDictCamelRow } from "~/utils/dict-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
 const ALLOWED_KEYS = [
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     return useResponseError("NotFound", `dict-data ${id} not found`);
   }
 
-  const patch = pickCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
+  const patch = pickDictCamelKeys<Record<string, unknown>>(raw, ALLOWED_KEYS);
 
   if ("value" in patch) {
     const rawValue = patch.value;
@@ -154,5 +154,5 @@ export default defineEventHandler(async (event) => {
     updated_at: isoNow(),
     updated_by: 0,
   };
-  return useResponseSuccess(toCamelRow(list[idx]));
+  return useResponseSuccess(toDictCamelRow(list[idx]));
 });
