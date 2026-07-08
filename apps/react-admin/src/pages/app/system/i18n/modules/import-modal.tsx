@@ -23,7 +23,6 @@ import {
   MinusCircleOutlined,
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
-import type { RcCustomRequestOptions } from 'antd/es/upload/interface';
 import type { ColumnsType } from 'antd/es/table';
 import {
   useImportI18nBatch,
@@ -149,72 +148,76 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // antd Upload 自定义：拿到 file 不真正上传，加入 staged
-  const handleUpload: UploadProps['customRequest'] = (
-    options: RcCustomRequestOptions,
-  ) => {
-    const { file, onSuccess: onUploadSuccess, onError } = options;
-    const f = file as File;
-    f.text()
-      .then((text) => {
-        let payload: unknown;
-        try {
-          payload = JSON.parse(text);
-        } catch {
-          // 解析失败也加入 staged（带 parseOk=false）
-          setStaged((prev) => [
-            ...prev,
-            {
-              name: f.name,
-              file: f,
-              payload: null,
-              parseOk: false,
-              errorMessage: 'JSON 解析失败',
-              localeCode: '',
-              prefix: '',
-            },
-          ]);
-          onError?.(new Error('JSON 解析失败'));
-          return;
-        }
-        // 检测 raw/simple
-        const obj = payload as Record<string, unknown> | null;
-        const detectedFormat =
-          obj && typeof obj === 'object' && obj['@type'] === 'raw'
-            ? 'raw'
-            : 'simple';
-        if (detectedFormat !== format) {
-          // 与当前选定格式不一致：仍加入但提示
-          message.warning(
-            `文件 ${f.name} 检测为 ${detectedFormat} 格式，与当前选定的 ${format} 不一致`,
-          );
-        }
-        const payloadLocale =
-          detectedFormat === 'raw' && obj
-            ? (obj.locale as StagedFile['payloadLocale'])
-            : undefined;
-        const localeCode =
-          detectedFormat === 'raw' && payloadLocale?.code
-            ? payloadLocale.code
-            : '';
+  // 解析文件并加入 staged。onChange 会带 originFileObj，是真正的 File。
+  const ingestFile = async (f: File) => {
+    try {
+      const text = await f.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
         setStaged((prev) => [
           ...prev,
           {
             name: f.name,
             file: f,
-            payload,
-            parseOk: true,
-            localeCode,
+            format: 'simple' as ImportFormat,
+            payload: null,
+            parseOk: false,
+            errorMessage: 'JSON 解析失败',
+            localeCode: '',
             prefix: '',
-            payloadLocale,
           },
         ]);
-        onUploadSuccess?.(payload);
-      })
-      .catch((err) => {
-        message.error(`读取文件失败：${(err as Error).message}`);
-        onError?.(err as Error);
-      });
+        message.error(`文件 ${f.name} 解析失败`);
+        return;
+      }
+      const obj = payload as Record<string, unknown> | null;
+      const detectedFormat =
+        obj && typeof obj === 'object' && obj['@type'] === 'raw'
+          ? 'raw'
+          : ('simple' as ImportFormat);
+      if (detectedFormat !== format) {
+        message.warning(
+          `文件 ${f.name} 检测为 ${detectedFormat} 格式，与当前选定的 ${format} 不一致`,
+        );
+      }
+      const payloadLocale =
+        detectedFormat === 'raw' && obj
+          ? (obj.locale as StagedFile['payloadLocale'])
+          : undefined;
+      const localeCode =
+        detectedFormat === 'raw' && payloadLocale?.code
+          ? payloadLocale.code
+          : '';
+      setStaged((prev) => [
+        ...prev,
+        {
+          name: f.name,
+          file: f,
+          format: detectedFormat,
+          payload,
+          parseOk: true,
+          localeCode,
+          prefix: '',
+          payloadLocale,
+        },
+      ]);
+    } catch (err: unknown) {
+      message.error(`读取文件失败：${(err as Error).message ?? '未知错误'}`);
+    }
+  };
+
+  const handleUploadChange: UploadProps['onChange'] = (info) => {
+    const files = info.fileList
+      .map((f) => f.originFileObj)
+      .filter((f): f is NonNullable<typeof f> => !!f);
+    setStaged((prev) => {
+      const known = new Set(prev.map((s) => s.file));
+      const newFiles = files.filter((f) => !known.has(f));
+      void Promise.all(newFiles.map((f) => ingestFile(f as File)));
+      return prev;
+    });
   };
 
   // 步骤 1 → 2 校验
@@ -629,10 +632,11 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
             <div style={{ marginTop: 8 }}>
               <Dragger
                 multiple
-                customRequest={handleUpload}
+                onChange={handleUploadChange}
                 accept=".json"
                 showUploadList={false}
                 beforeUpload={() => false}
+                fileList={[]}
               >
                 <p className="ant-upload-drag-icon">
                   <InboxOutlined />
