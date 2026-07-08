@@ -5,7 +5,7 @@ import {
   getMockI18nTranslationList,
 } from "~/utils/mock-data";
 import { computeI18nHash } from "~/utils/i18n-hash";
-import { useResponseError, useResponseSuccess } from "~/utils/response";
+import { useResponseError } from "~/utils/response";
 
 /**
  * GET /api/public/i18n/:code?hash=<hash>

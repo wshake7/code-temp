@@ -33,22 +33,6 @@ interface BatchRequest {
   format?: "raw" | "simple";
 }
 
-function unflatten(
-  obj: Record<string, unknown>,
-  prefix = "",
-): Array<{ key: string; value: string }> {
-  const out: Array<{ key: string; value: string }> = [];
-  for (const [k, v] of Object.entries(obj)) {
-    const next = prefix ? `${prefix}.${k}` : k;
-    if (v && typeof v === "object" && !Array.isArray(v)) {
-      out.push(...unflatten(v as Record<string, unknown>, next));
-    } else if (typeof v === "string") {
-      out.push({ key: next, value: v });
-    }
-  }
-  return out;
-}
-
 function flattenToDict(entries: Array<{ key: string; value: string }>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const { key, value } of entries) {
@@ -87,8 +71,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const allTranslations = getMockI18nTranslationList().filter((x) => x.deleted_at === 0);
-  const localeCodeMap = new Map(allLocales.map((l) => [l.id, l.code]));
-  const localeIdSet = new Set(selectedLocales.map((l) => l.id));
 
   const files = selectedLocales.map((locale) => {
     const code = locale.code;

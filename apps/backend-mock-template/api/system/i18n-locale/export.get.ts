@@ -17,10 +17,15 @@ export default defineEventHandler(async (event) => {
   ensureI18nSeeds();
 
   const query = getQuery(event);
-  const idsRaw = Array.isArray(query.ids) ? query.ids.join(",") : String(query.ids ?? "");
-  const type = (
-    ["raw", "simple"].includes(String(query.type ?? "")) ? String(query.type) : "simple"
-  ) as "raw" | "simple";
+  const idsRaw = Array.isArray(query.ids)
+    ? query.ids.map((v) => String(v)).join(",")
+    : typeof query.ids === "string"
+      ? query.ids
+      : "";
+  const typeRaw = typeof query.type === "string" ? query.type : "";
+  const type: "raw" | "simple" = ["raw", "simple"].includes(typeRaw)
+    ? (typeRaw as "raw" | "simple")
+    : "simple";
 
   if (!["raw", "simple"].includes(type)) {
     setResponseStatus(event, 400);
