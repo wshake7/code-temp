@@ -335,7 +335,8 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     {
       title: '变更类型',
       dataIndex: 'op',
-      width: 110,
+      align: 'center',
+      width: 80,
       render: (_, r) => {
         if (r.op === 'create') return <Tag color="green">新增</Tag>;
         if (r.op === 'update') return <Tag color="blue">修改</Tag>;
@@ -347,13 +348,14 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     },
     {
       title: '语言代码',
+      align: 'center',
       dataIndex: 'localeCode',
       width: 100,
     },
     {
       title: '翻译键',
       dataIndex: 'key',
-      width: 220,
+      minWidth: 220,
       render: (_, r) => (
         <Space size={4}>
           <span style={{ fontFamily: 'monospace' }}>{r.key}</span>
@@ -372,7 +374,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     },
     {
       title: '旧值 / 新值',
-      width: 360,
+      minWidth: 360,
       render: (_, r) => (
         <Space direction="vertical" size={0} style={{ lineHeight: 1.5 }}>
           <span style={{ color: '#ff4d4f' }}>
@@ -385,13 +387,13 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
     {
       title: '备注',
       dataIndex: 'remark',
-      width: 140,
+      minWidth: 140,
       render: (v) => v || <span style={{ color: '#999' }}>-</span>,
     },
     {
       title: '来源文件',
       dataIndex: 'sourceFile',
-      width: 160,
+      minWidth: 160,
       ellipsis: true,
     },
   ];
@@ -581,7 +583,7 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
       open={open}
       onCancel={onClose}
       footer={null}
-      width={920}
+      width={1200}
       destroyOnClose
       maskClosable={false}
     >
@@ -750,7 +752,6 @@ const I18nImportModal: React.FC<I18nImportModalProps> = ({
                   showSizeChanger: true,
                   showTotal: (t) => `共 ${t} 条`,
                 }}
-                scroll={{ y: 'calc(100vh - 460px)' }}
               />
             </>
           )}
