@@ -81,7 +81,8 @@ const ContentContainer: React.FC<ContentContainerProps> = ({
         flex: heightMode === 'fixed' ? 1 : undefined,
         height: heightMode === 'auto' ? 'auto' : undefined,
         minHeight: 0,
-        overflow: heightMode === 'fixed' ? 'hidden' : 'visible',
+        overflow:
+          heightMode === 'fixed' ? (scrollable ? 'auto' : 'hidden') : 'visible',
         // padding 和 margin 由 props 控制
         padding: typeof padding === 'number' ? `${padding}px` : padding,
         marginBottom: heightMode === 'fixed' ? bottomMarginValue : undefined,
