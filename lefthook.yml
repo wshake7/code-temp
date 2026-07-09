@@ -1,43 +1,31 @@
 # lefthook configuration
-# 取代 Vite+ 的 `vp config` 安装时注入 hook 的方式,改为单一版本受控配置。
-# vue-vben-admin 子模块自带 lefthook.yml,根 hook 不再覆盖其代码。
-#
-# Escape hatches:
-#   - LEFTHOOK=0 git commit ...
-#
+# 取代 Vite+ 的 `vp config` 安装时注入 hook,改为单一版本受控配置;vue-vben-admin 子模块自带 lefthook.yml。
+# Escape hatch: LEFTHOOK=0 git commit / git commit --no-verify
 # Docs: https://lefthook.dev/configuration/
 
 pre-commit:
-  # 对暂存文件跑 fmt + lint + type-check。
   parallel: true
   commands:
-    # vite-plus staged 流水线(覆盖根 workspace 内的 website-template、packages、tools)。
-    # react-admin 已从根 workspace 排除,另见 lint:react-admin / typecheck:react-admin。
     format:staged:
       run: pnpm exec vp staged
       stage_fixed: true
-    # react-admin 不在根 workspace,需单独跑 ESLint。
-    # 只对暂存的 ts/tsx 触发,避免 commit 时扫整个项目。
     lint:react-admin:
+      # react-admin 不在根 workspace,单独跑 ESLint。
       root: "apps/react-admin/"
       glob: "**/*.{ts,tsx}"
       run: pnpm eslint --fix {staged_files}
       stage_fixed: true
-    # react-admin 的 tsc(只在有 react-admin 暂存改动时触发)。
     typecheck:react-admin:
+      # glob 限定 react-admin 路径,只在有暂存改动时触发。
       root: "apps/react-admin/"
       glob: "apps/react-admin/**/*.{ts,tsx}"
       run: pnpm typecheck
-    # 拼写校验。根 cspell.json 已排除 vue-vben-admin / react-admin 两个子应用。
-    # glob 与 run 命令保持一致(.ts + .tsx)。
     cspell:staged:
       glob: "{apps/backend-mock-template/**/*.{ts,tsx},*.md,*.yml}"
       run: pnpm exec cspell lint --no-progress 'apps/backend-mock-template/**/*.ts' 'apps/backend-mock-template/**/*.tsx' '*.md' '*.yml'
-    # 暂存文件密钥扫描。未安装 gitleaks 时自动跳过(brew install gitleaks / scoop install gitleaks)。
-    # 用 exec 短路确保 gitleaks 找到密钥时返回非零退出码(让 hook 失败),而不是被 || 误判为"skip"。
     secret-scan:
+      # exec 短路确保 gitleaks 失败退出码不被 echo 覆盖成 0;未装则 skip。
       run: sh -c 'command -v gitleaks >/dev/null 2>&1 && exec gitleaks protect --staged --redact --no-banner; echo skip:gitleaks-not-installed'
-    # palantir-java-format 格式化暂存 *.java 并重新 stage。
     format:java:
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
       run: mvn -B -q -f backend/java-admin/pom.xml spotless:apply
@@ -46,38 +34,30 @@ pre-commit:
 post-merge:
   parallel: true
   commands:
-    # lockfile 变更时同步依赖;frozen=false 允许更新 catalog 间接依赖。
     deps:install:
       glob: "pnpm-lock.yaml"
       run: pnpm install --frozen-lockfile=false
 
 pre-push:
-  # 全工作区 fmt + lint + type-check
-  # 改用只读 check(--fix 会改 working tree,留给 pre-commit 的 stage_fixed 模式)。
   parallel: true
   commands:
     check:full:
+      # 只读 check;--fix 改 working tree 但不进 commit,留给 pre-commit 的 stage_fixed。
       run: pnpm exec vp check
-    # react-admin 不在根 workspace,需单独跑 ESLint。
-    # pre-push 没有 staged_files,用 {push_files} 代替。
-    # 不加 --fix:改 working tree 不会进 push 出去的 commit,反而污染下一次 commit。
     lint:react-admin:
       root: "apps/react-admin/"
       glob: "apps/react-admin/**/*.{ts,tsx}"
       run: pnpm eslint {push_files}
-    # 命名 / 复杂度 / 风格门禁,`mvn verify` 也会再跑一次。
     check:java-style:
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
       run: mvn -B -f backend/java-admin/pom.xml checkstyle:check
-    # 跑 `mvn compile`(含 Error Prone 2.50.0 javac 插件);WARN 不阻断 push,ERROR 阻断。
     check:java-types:
+      # WARN 不阻断,ERROR 阻断;`mvn verify` 也跑 compile 做安全网。
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
       run: mvn -B -q -f backend/java-admin/pom.xml -DskipTests compile
 
 commit-msg:
-  # Conventional Commits 门禁;vue-vben-admin 在子目录 commit 时用自己的
-  # .commitlintrc.js(@vben/commitlint-config),根 commit 用 @commitlint/config-conventional。
-  # $1 是 commit-msg 钩子的入参约定(commit message 临时文件路径)。
   commands:
     commitlint:
+      # vue-vben-admin 子目录 commit 时走自己的 .commitlintrc.js,根 commit 走 @commitlint/config-conventional。
       run: pnpm exec commitlint --edit "$1"
