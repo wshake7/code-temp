@@ -880,7 +880,7 @@ const I18nPage = () => {
   };
 
   return (
-    <ContentContainer heightMode="auto" scrollable padding="16px">
+    <ContentContainer heightMode="fixed" scrollable padding="16px">
       <Row gutter={16}>
         <Col xs={24} md={12}>
           <ProTable<I18nLocale>
@@ -896,6 +896,7 @@ const I18nPage = () => {
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 条`,
             }}
+            scroll={{ x: 'max-content' }}
             toolBarRender={localeToolbar}
             options={{
               reload: () => localeActionRef.current?.reload?.(),
@@ -948,7 +949,7 @@ const I18nPage = () => {
                 showSizeChanger: true,
                 showTotal: (total) => `共 ${total} 条`,
               }}
-              scroll={{ x: 'max-content', y: 'calc(100vh - 360px)' }}
+              scroll={{ x: 'max-content' }}
               toolBarRender={translationToolbar}
               options={{
                 reload: () => translationKeyActionRef.current?.reload?.(),
@@ -1010,7 +1011,7 @@ const I18nPage = () => {
                 showSizeChanger: true,
                 showTotal: (total) => `共 ${total} 条`,
               }}
-              scroll={{ x: 'max-content', y: 'calc(100vh - 360px)' }}
+              scroll={{ x: 'max-content' }}
               toolBarRender={translationToolbar}
               options={{
                 reload: () => translationActionRef.current?.reload?.(),
