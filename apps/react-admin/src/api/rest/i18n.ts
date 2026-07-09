@@ -14,6 +14,8 @@ import type {
   I18nTranslationBatchUpsertByKeyRequest,
   I18nTranslationBatchUpsertByKeyResponse,
   I18nTranslationByKeyResponse,
+  I18nTranslationKey,
+  I18nTranslationKeyQuery,
   I18nTranslationQuery,
   PageResult,
   UpdateI18nLocaleRequest,
@@ -84,6 +86,19 @@ export function listI18nTranslationApi(query: I18nTranslationQuery = {}) {
   return get<PageResult<I18nTranslation>>(
     '/system/i18n-translation/list',
     query as Record<string, unknown>,
+  );
+}
+
+/**
+ * 按 translationKey 聚合的主行分页（默认视图用）。
+ * 后端忽略 localeId/localeCode 参数。
+ */
+export function listI18nTranslationKeyApi(
+  query: I18nTranslationKeyQuery = {},
+) {
+  return get<PageResult<I18nTranslationKey>>(
+    '/system/i18n-translation/list',
+    { ...query, byKey: 'true' } as Record<string, unknown>,
   );
 }
 

@@ -289,6 +289,26 @@ export interface I18nTranslationQuery {
   status?: 0 | 1;
 }
 
+/**
+ * 按 translationKey 聚合的主行（list 接口加 ?byKey=true 返回）。
+ * sampleRowId 取同 key 下某一行 id，传给抽屉打开 byKeyQuery。
+ */
+export interface I18nTranslationKey {
+  translationKey: string;
+  localeCount: number;
+  sampleRowId: number;
+  sampleLocaleId: number;
+  sampleLocaleCode?: string;
+  sampleUpdatedAt: string;
+}
+
+export interface I18nTranslationKeyQuery {
+  page?: number;
+  pageSize?: number;
+  /** 模糊匹配 translationKey */
+  value?: string;
+}
+
 export interface CreateI18nLocaleRequest {
   code: string;
   name: string;

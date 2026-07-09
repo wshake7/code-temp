@@ -20,6 +20,7 @@ import {
   listI18nLocaleApi,
   listI18nTranslationApi,
   listI18nTranslationByLocaleCodeApi,
+  listI18nTranslationKeyApi,
   previewI18nImportApi,
   updateI18nLocaleApi,
   updateI18nTranslationApi,
@@ -38,6 +39,8 @@ import type {
   I18nTranslationBatchUpsertByKeyRequest,
   I18nTranslationBatchUpsertByKeyResponse,
   I18nTranslationByKeyResponse,
+  I18nTranslationKey,
+  I18nTranslationKeyQuery,
   I18nTranslationQuery,
   UpdateI18nLocaleRequest,
   UpdateI18nTranslationRequest,
@@ -122,6 +125,23 @@ export function useListI18nTranslation(
   return useQuery({
     queryKey: ['listI18nTranslation', query],
     queryFn: () => listI18nTranslationApi(query),
+    ...options,
+  });
+}
+
+/**
+ * 按 translationKey 聚合的主行分页（默认视图用）。
+ */
+export function useListI18nTranslationKey(
+  query: I18nTranslationKeyQuery = {},
+  options?: Omit<
+    UseQueryOptions<{ items: I18nTranslationKey[]; total: number }, Error>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: ['listI18nTranslationKey', query],
+    queryFn: () => listI18nTranslationKeyApi(query),
     ...options,
   });
 }
