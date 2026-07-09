@@ -482,6 +482,7 @@ const I18nPage = () => {
       title: '操作',
       key: 'childAction',
       width: 140,
+      fixed: 'right' as const,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: I18nTranslation) => {
         const parentKey = record.translationKey;
