@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "ready": "vp check && vp run -r test && vp run -r build",
+    "lint:full": "vp check && pnpm -C apps/react-admin lint && pnpm -C apps/vue-vben-admin exec eslint",
+    "format:full": "vp check --fix && pnpm -C apps/react-admin lint --fix && pnpm -C apps/vue-vben-admin exec eslint --fix",
     "dev:mock": "vp run backend-mock-template#start",
     "dev:vadmin": "pnpm -C apps/vue-vben-admin dev:antdv-next",
     "dev:radmin": "pnpm -C apps/react-admin dev"

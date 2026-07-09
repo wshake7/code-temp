@@ -15,26 +15,24 @@ pre-commit:
     # react-admin 已从根 workspace 排除,另见 lint:react-admin / typecheck:react-admin。
     format:staged:
       run: pnpm exec vp staged
+      stage_fixed: true
     # react-admin 不在根 workspace,需单独跑 ESLint。
     # 只对暂存的 ts/tsx 触发,避免 commit 时扫整个项目。
-    # 用 lefthook 的 root:自动 cd 到 apps/react-admin 并把 {staged_files} 转成
-    # 相对路径,省去手写 sed 去前缀(旧写法的嵌套 sh -c '...' 引号会被 lefthook
-    # 外层 shell 提前闭合,导致 "unexpected EOF" 而无法提交)。
     lint:react-admin:
       root: "apps/react-admin/"
       glob: "**/*.{ts,tsx}"
-      run: pnpm exec eslint {staged_files}
+      run: pnpm eslint --fix {staged_files}
+      stage_fixed: true
     # react-admin 的 tsc(只在有 react-admin 暂存改动时触发)。
     typecheck:react-admin:
+      root: "apps/react-admin/"
       glob: "apps/react-admin/**/*.{ts,tsx}"
-      run: pnpm -C apps/react-admin typecheck
-    # 拼写校验。根 cspell.json 已排除 vue-vben-admin / react-admin 两个子应用
-    # (它们各自有独立 cspell.json),所以 glob 只对 backend-mock-template 与根 markdown
-    # 触发。跑全量而非仅 staged:覆盖文件<100,cspell 单次 <1s,比 sed 管道
-    # 解析 LEFTHOOK_STAGED_FILES 更可靠。同时扫 yml(覆盖 lefthook.yml 等配置改动)。
+      run: pnpm typecheck
+    # 拼写校验。根 cspell.json 已排除 vue-vben-admin / react-admin 两个子应用。
+    # glob 与 run 命令保持一致(.ts + .tsx)。
     cspell:staged:
       glob: "{apps/backend-mock-template/**/*.{ts,tsx},*.md,*.yml}"
-      run: pnpm exec cspell lint --no-progress 'apps/backend-mock-template/**/*.ts' '*.md' '*.yml'
+      run: pnpm exec cspell lint --no-progress 'apps/backend-mock-template/**/*.ts' 'apps/backend-mock-template/**/*.tsx' '*.md' '*.yml'
     # 暂存文件密钥扫描。未安装 gitleaks 时自动跳过(brew install gitleaks / scoop install gitleaks)。
     # 用 exec 短路确保 gitleaks 找到密钥时返回非零退出码(让 hook 失败),而不是被 || 误判为"skip"。
     secret-scan:
@@ -42,7 +40,7 @@ pre-commit:
     # palantir-java-format 格式化暂存 *.java 并重新 stage。
     format:java:
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -q -f backend/java-admin/pom.xml spotless:apply && git add backend/java-admin
+      run: mvn -B -q -f backend/java-admin/pom.xml spotless:apply
       stage_fixed: true
 
 post-merge:
@@ -61,8 +59,12 @@ pre-push:
     check:full:
       run: pnpm exec vp check
     # react-admin 不在根 workspace,需单独跑 ESLint。
+    # pre-push 没有 staged_files,用 {push_files} 代替。
+    # 不加 --fix:改 working tree 不会进 push 出去的 commit,反而污染下一次 commit。
     lint:react-admin:
-      run: pnpm -C apps/react-admin lint
+      root: "apps/react-admin/"
+      glob: "apps/react-admin/**/*.{ts,tsx}"
+      run: pnpm eslint {push_files}
     # 命名 / 复杂度 / 风格门禁,`mvn verify` 也会再跑一次。
     check:java-style:
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
