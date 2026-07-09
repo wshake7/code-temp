@@ -362,7 +362,6 @@ const I18nTranslationKeyDrawer = ({
         <Form.Item
           label={
             <Space size={6}>
-              <span style={{ color: '#ff4d4f' }}>*</span>
               <span>翻译键</span>
               {!isEdit && keyDuplicate && (
                 <Tag color="warning">该 key 在默认语言已存在</Tag>
@@ -428,7 +427,6 @@ const I18nTranslationKeyDrawer = ({
             rowKey="localeId"
             size="small"
             pagination={false}
-            scroll={{ y: 360 }}
           >
             <Table.Column
               title="语言"
