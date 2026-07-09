@@ -485,24 +485,26 @@ const I18nPage = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: I18nTranslation) => {
         const parentKey = record.translationKey;
-        return [
-          <a
-            key="edit"
-            onClick={() => {
-              setEditingTranslation(record);
-              setTranslationDrawerOpen(true);
-            }}
-          >
-            编辑
-          </a>,
-          <a
-            key="delete"
-            style={{ color: '#ff4d4f' }}
-            onClick={() => deleteChildRow(parentKey, record)}
-          >
-            删除
-          </a>,
-        ];
+        return (
+          <Space size="middle">
+            <a
+              key="edit"
+              onClick={() => {
+                setEditingTranslation(record);
+                setTranslationDrawerOpen(true);
+              }}
+            >
+              编辑
+            </a>
+            <a
+              key="delete"
+              style={{ color: '#ff4d4f' }}
+              onClick={() => deleteChildRow(parentKey, record)}
+            >
+              删除
+            </a>
+          </Space>
+        );
       },
     },
   ];
@@ -977,6 +979,7 @@ const I18nPage = () => {
                     pagination={false}
                     size="small"
                     rowKey="id"
+                    scroll={{ x: 'max-content' }}
                   />
                 ),
               }}
