@@ -899,7 +899,6 @@ const I18nPage = () => {
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 条`,
             }}
-            scroll={{ x: 'max-content' }}
             toolBarRender={localeToolbar}
             options={{
               reload: () => localeActionRef.current?.reload?.(),
