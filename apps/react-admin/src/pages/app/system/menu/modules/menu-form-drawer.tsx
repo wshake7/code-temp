@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Checkbox,
+  Col,
   Collapse,
   Drawer,
   Form,
   Input,
   InputNumber,
+  Row,
   Select,
   Space,
   Switch,
@@ -58,7 +60,20 @@ interface FormValues {
   isHidden?: boolean;
   isEnabled?: boolean;
   remark?: string;
+  metadata?: string;
 }
+
+const DEFAULT_METADATA_TEXT = JSON.stringify(
+  {
+    badge: '',
+    hideInBreadcrumb: false,
+    keepAlive: true,
+    affix: false,
+    activeMenu: '',
+  },
+  null,
+  2,
+);
 
 const MenuFormDrawer = ({
   open,
@@ -125,6 +140,7 @@ const MenuFormDrawer = ({
         isHidden: row.isHidden === 1,
         isEnabled: row.isEnabled === 1,
         remark: row.remark,
+        metadata: row.metadata ? JSON.stringify(JSON.parse(row.metadata), null, 2) : '',
       });
     } else {
       form.setFieldsValue({
@@ -140,6 +156,7 @@ const MenuFormDrawer = ({
         isHidden: false,
         isEnabled: true,
         remark: '',
+        metadata: '',
       });
     }
     setActiveTab('basic');
@@ -216,8 +233,31 @@ const MenuFormDrawer = ({
     });
   };
 
+  const toggleGroup = (apis: MenuBindApiItem[], checked: boolean) => {
+    setBoundIds((prev) => {
+      const next = new Set(prev);
+      apis.forEach((a) => {
+        if (checked) next.add(a.id);
+        else next.delete(a.id);
+      });
+      return next;
+    });
+  };
+
   const handleSaveBasic = async () => {
     const values = await form.validateFields();
+
+    let metadata: string | null = null;
+    const rawMetadata = values.metadata?.trim();
+    if (rawMetadata) {
+      try {
+        metadata = JSON.stringify(JSON.parse(rawMetadata));
+      } catch {
+        message.error('前端扩展 (metadata) 不是合法 JSON');
+        return;
+      }
+    }
+
     const payload: CreateMenuRequest = {
       parentId: values.parentId ?? null,
       name: values.name,
@@ -231,6 +271,7 @@ const MenuFormDrawer = ({
       isHidden: values.isHidden ? 1 : 0,
       isEnabled: values.isEnabled ? 1 : 0,
       remark: values.remark ?? '',
+      metadata,
     };
     if (isEdit && row) {
       updateMut.mutate({ id: row.id, data: payload });
@@ -247,12 +288,143 @@ const MenuFormDrawer = ({
 
   const submitting = createMut.isPending || updateMut.isPending || setApisMut.isPending;
 
+  const renderBasicForm = () => (
+    <Form form={form} layout="vertical" preserve={false}>
+      <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 16 }}>
+        基础（{currentType === 'DIR' ? '目录' : currentType === 'MENU' ? '菜单' : '按钮'}）
+      </div>
+
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item label="父菜单" name="parentId">
+            <Select
+              allowClear
+              placeholder="— 顶级 —"
+              options={parentOptions}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            label="类型"
+            name="type"
+            rules={[{ required: true, message: '请选择类型' }]}
+          >
+            <Select
+              options={[
+                { label: 'DIR — 目录', value: 'DIR' },
+                { label: 'MENU — 菜单/路由', value: 'MENU' },
+                { label: 'BUTTON — 按钮', value: 'BUTTON' },
+              ]}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Form.Item
+        label="菜单名"
+        name="name"
+        rules={[{ required: true, message: '请输入菜单名' }, { max: 64 }]}
+      >
+        <Input placeholder="如 用户管理" />
+      </Form.Item>
+
+      {currentType === 'MENU' && (
+        <>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="路由路径"
+                name="path"
+                rules={[{ required: true, message: 'MENU 必须填写路由路径' }]}
+              >
+                <Input placeholder="如 /admin/users" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="图标" name="icon">
+                <Input placeholder="如 user" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="前端组件" name="component">
+                <Input placeholder="如 views/admin/users/index" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="重定向" name="redirect">
+                <Input placeholder="如 /admin/users/list" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="权限码" name="permissionCode">
+            <Input placeholder="如 admin:user:list" />
+          </Form.Item>
+        </>
+      )}
+
+      {currentType === 'BUTTON' && (
+        <Form.Item
+          label="权限码"
+          name="permissionCode"
+          rules={[{ required: true, message: 'BUTTON 必须填写权限码' }]}
+        >
+          <Input placeholder="如 admin:user:create" />
+        </Form.Item>
+      )}
+
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item label="排序" name="sort">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item label="前端隐藏" name="isHidden" valuePropName="checked">
+            <Switch checkedChildren="隐藏" unCheckedChildren="显示" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Form.Item label="状态" name="isEnabled" valuePropName="checked">
+        <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+      </Form.Item>
+
+      <Form.Item label="备注" name="remark">
+        <Input.TextArea rows={3} placeholder="选填" />
+      </Form.Item>
+
+      <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 16 }}>
+        前端扩展（METADATA）
+      </div>
+      <Form.Item
+        label=""
+        name="metadata"
+        style={{ marginBottom: 0 }}
+      >
+        <Input.TextArea
+          rows={8}
+          placeholder={DEFAULT_METADATA_TEXT}
+          style={{ fontFamily: 'ui-monospace, "JetBrains Mono", monospace', fontSize: 12 }}
+        />
+      </Form.Item>
+      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+        JSON 格式，用于 vue-vben-admin 等前端框架的路由元信息
+      </div>
+    </Form>
+  );
+
   return (
     <Drawer
       title={isEdit ? '编辑菜单' : '新增菜单'}
       open={open}
       onClose={onClose}
-      width={680}
+      width={640}
       destroyOnClose
       footer={
         <Space style={{ float: 'right' }}>
@@ -280,91 +452,7 @@ const MenuFormDrawer = ({
         ]}
       />
 
-      {activeTab === 'basic' && (
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item label="父菜单" name="parentId">
-            <Select
-              allowClear
-              placeholder="— 顶级 —"
-              options={parentOptions}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-          <Form.Item
-            label="类型"
-            name="type"
-            rules={[{ required: true, message: '请选择类型' }]}
-          >
-            <Select
-              options={[
-                { label: 'DIR — 目录', value: 'DIR' },
-                { label: 'MENU — 菜单/路由', value: 'MENU' },
-                { label: 'BUTTON — 按钮', value: 'BUTTON' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item
-            label="菜单名"
-            name="name"
-            rules={[{ required: true, message: '请输入菜单名' }, { max: 64 }]}
-          >
-            <Input placeholder="如 用户管理" />
-          </Form.Item>
-
-          {currentType === 'MENU' && (
-            <>
-              <Form.Item
-                label="路由路径"
-                name="path"
-                rules={currentType === 'MENU' ? [{ required: true, message: 'MENU 必须填写路由路径' }] : []}
-              >
-                <Input placeholder="如 /admin/users" />
-              </Form.Item>
-              <Form.Item label="前端组件" name="component">
-                <Input placeholder="如 views/admin/users/index" />
-              </Form.Item>
-              <Form.Item label="重定向" name="redirect">
-                <Input placeholder="如 /admin/users/list" />
-              </Form.Item>
-            </>
-          )}
-
-          {currentType !== 'BUTTON' && (
-            <Form.Item label="图标" name="icon">
-              <Input placeholder="如 user" />
-            </Form.Item>
-          )}
-
-          {currentType === 'BUTTON' ? (
-            <Form.Item
-              label="权限码"
-              name="permissionCode"
-              rules={[{ required: true, message: 'BUTTON 必须填写权限码' }]}
-            >
-              <Input placeholder="如 admin:user:create" />
-            </Form.Item>
-          ) : (
-            currentType === 'MENU' && (
-              <Form.Item label="权限码" name="permissionCode">
-                <Input placeholder="如 admin:user:list" />
-              </Form.Item>
-            )
-          )}
-
-          <Form.Item label="排序" name="sort">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="前端隐藏" name="isHidden" valuePropName="checked">
-            <Switch checkedChildren="隐藏" unCheckedChildren="显示" />
-          </Form.Item>
-          <Form.Item label="状态" name="isEnabled" valuePropName="checked">
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
-          </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={3} placeholder="选填" />
-          </Form.Item>
-        </Form>
-      )}
+      {activeTab === 'basic' && renderBasicForm()}
 
       {activeTab === 'bind' && (
         <div>
@@ -381,31 +469,47 @@ const MenuFormDrawer = ({
           </div>
           <Collapse
             defaultActiveKey={groupedApis.map((g) => g[0])}
-            items={groupedApis.map(([group, apis]) => ({
-              key: group,
-              label: `${group} · ${apis.length} 个`,
-              children: (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {apis.map((a) => (
+            items={groupedApis.map(([group, apis]) => {
+              const allSelected = apis.length > 0 && apis.every((a) => boundIds.has(a.id));
+              return {
+                key: group,
+                label: (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>
+                      {group} · {apis.length} 个
+                    </span>
                     <Checkbox
-                      key={a.id}
-                      checked={boundIds.has(a.id)}
-                      onChange={(e: CheckboxChangeEvent) => toggleApi(a.id, e.target.checked)}
+                      checked={allSelected}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e: CheckboxChangeEvent) => toggleGroup(apis, e.target.checked)}
                     >
-                      <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                        <Tag color="blue" style={{ marginRight: 6 }}>
-                          {a.method}
-                        </Tag>
-                        {a.path}
-                      </span>
-                      <span style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>
-                        {a.name}
-                      </span>
+                      全选
                     </Checkbox>
-                  ))}
-                </div>
-              ),
-            }))}
+                  </div>
+                ),
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {apis.map((a) => (
+                      <Checkbox
+                        key={a.id}
+                        checked={boundIds.has(a.id)}
+                        onChange={(e: CheckboxChangeEvent) => toggleApi(a.id, e.target.checked)}
+                      >
+                        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                          <Tag color="blue" style={{ marginRight: 6 }}>
+                            {a.method}
+                          </Tag>
+                          {a.path}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>
+                          {a.name}
+                        </span>
+                      </Checkbox>
+                    ))}
+                  </div>
+                ),
+              };
+            })}
           />
         </div>
       )}

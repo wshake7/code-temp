@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Button, Popconfirm, Space, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message } from 'antd';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import {
-  DeleteOutlined,
-  EditOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -152,13 +150,11 @@ const MenuPage = () => {
         const canHaveChild = r.type !== 'BUTTON';
         return [
           <a key="edit" onClick={() => openEdit(r)}>
-            <Space size={2}>
-              <EditOutlined /> 编辑
-            </Space>
+            编辑
           </a>,
           canHaveChild ? (
             <a key="add" onClick={() => openCreate(r.id)}>
-              添加子项
+              添加
             </a>
           ) : null,
           <Popconfirm
@@ -168,7 +164,7 @@ const MenuPage = () => {
             onConfirm={() => deleteMut.mutate(r.id)}
           >
             <a style={{ color: '#ff4d4f' }}>
-              <DeleteOutlined /> 删除
+              删除
             </a>
           </Popconfirm>,
         ];
