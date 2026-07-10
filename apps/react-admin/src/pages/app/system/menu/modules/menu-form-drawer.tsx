@@ -418,7 +418,7 @@ const MenuFormDrawer = ({
         />
       </Form.Item>
       <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-        JSON 格式，用于 vue-vben-admin 等前端框架的路由元信息
+        JSON 格式，用于前端框架的路由元信息
       </div>
     </Form>
   );
@@ -468,8 +468,7 @@ const MenuFormDrawer = ({
             style={{ marginBottom: 12 }}
           />
           <div style={{ marginBottom: 8, color: '#666' }}>
-            已选 <strong>{boundIds.size}</strong> 个接口 · 修改后点击「保存绑定」写入
-            <Tag style={{ marginLeft: 8 }}>sys_menu_api</Tag>
+            已选 <strong>{boundIds.size}</strong> 个接口
           </div>
           <Collapse
             defaultActiveKey={[]}

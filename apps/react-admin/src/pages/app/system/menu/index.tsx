@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Button, Popconfirm, Tag, message } from 'antd';
-import type { ProColumns } from '@ant-design/pro-components';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import {
+  DownOutlined,
   PlusOutlined,
-  ReloadOutlined,
+  UpOutlined,
 } from '@ant-design/icons';
-import { useDeleteMenu, useListMenus } from '@/api/hooks/menu';
+import { useDeleteMenu } from '@/api/hooks/menu';
+import { listMenusApi } from '@/api/rest/menu';
 import type { MenuType, SysMenu } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import MenuFormDrawer, { type MenuFormKind } from './modules/menu-form-drawer';
@@ -32,6 +34,21 @@ function buildTree(list: SysMenu[]): SysMenu[] {
   return roots;
 }
 
+/** 收集树中所有"可展开"节点的 id(任何有 children 的节点) */
+function collectExpandableIds(nodes: SysMenu[]): number[] {
+  const ids: number[] = [];
+  const walk = (list: SysMenu[]) => {
+    for (const n of list) {
+      if (n.children && n.children.length > 0) {
+        ids.push(n.id);
+        walk(n.children);
+      }
+    }
+  };
+  walk(nodes);
+  return ids;
+}
+
 const TYPE_TAG: Record<MenuType, { color: string; text: string }> = {
   DIR: { color: 'blue', text: 'DIR' },
   MENU: { color: 'green', text: 'MENU' },
@@ -44,21 +61,13 @@ const STATUS_TAG: Record<0 | 1, { color: string; text: string }> = {
 };
 
 const MenuPage = () => {
-  const [search, setSearch] = useState<{
-    name?: string;
-    type?: MenuType;
-    permissionCode?: string;
-    status?: 0 | 1;
-  }>({});
-  const { data, isLoading, refetch } = useListMenus({
-    page: 1,
-    pageSize: 100,
-    ...search,
-  });
+  const actionRef = useRef<ActionType | undefined>(undefined);
+  const reload = () => actionRef.current?.reload?.();
+
   const deleteMut = useDeleteMenu({
     onSuccess: () => {
       message.success('删除成功');
-      refetch();
+      reload();
     },
     onError: (err) => message.error(`删除失败：${(err as Error).message ?? '未知错误'}`),
   });
@@ -68,7 +77,19 @@ const MenuPage = () => {
   const [editing, setEditing] = useState<SysMenu | null>(null);
   const [presetParentId, setPresetParentId] = useState<number | null>(null);
 
-  const treeData = useMemo(() => buildTree(data?.items ?? []), [data]);
+  // 全部展开/折叠：受控 expandedRowKeys，与 vue 端 isExpanded 语义一致
+  const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
+
+  // ProTable 内部驱动 dataSource；onDataSourceChange 把当前页的树回传出来，
+  // 给工具栏「展开/折叠全部」按钮算可展开节点用。
+  const [currentTree, setCurrentTree] = useState<SysMenu[]>([]);
+  const allExpandableIds = useMemo(
+    () => collectExpandableIds(currentTree),
+    [currentTree],
+  );
+  const allExpanded =
+    allExpandableIds.length > 0 &&
+    allExpandableIds.every((id) => expandedKeys.includes(id));
 
   const openCreate = (parentId: number | null = null) => {
     setDrawerKind('create');
@@ -82,6 +103,31 @@ const MenuPage = () => {
     setPresetParentId(null);
     setDrawerOpen(true);
   };
+
+  /* ---------- ProTable request：与字典一致，分页由 ProTable 接管 ---------- */
+  // 后端走 /system/menu/list（已支持 page/pageSize），返回当前页的扁平菜单；
+  // 前端用 buildTree 把当前页构成本地树后回填给 ProTable。树形仅在当前页范围内生效：
+  // 父节点不在当前页时按根节点展示，不会跨页拼树——后端排序稳定，搜索结果以扁平列表展示
+  // 也合理（菜单名/权限码/类型搜索）。
+  async function fetchMenuRows(params: {
+    current?: number;
+    pageSize?: number;
+    name?: string;
+    type?: MenuType;
+    permissionCode?: string;
+    isEnabled?: 0 | 1;
+  }) {
+    const { current = 1, pageSize = 20, name, type, permissionCode, isEnabled } = params;
+    const res = await listMenusApi({
+      page: current,
+      pageSize,
+      name: name || undefined,
+      type,
+      permissionCode: permissionCode || undefined,
+      status: isEnabled,
+    });
+    return { data: buildTree(res.items), total: res.total, success: true };
+  }
 
   const columns: ProColumns<SysMenu>[] = [
     { title: 'ID', dataIndex: 'id', width: 70, search: false },
@@ -163,56 +209,66 @@ const MenuPage = () => {
             description={`确定删除「${r.name}」吗？`}
             onConfirm={() => deleteMut.mutate(r.id)}
           >
-            <a style={{ color: '#ff4d4f' }}>
-              删除
-            </a>
+            <a style={{ color: '#ff4d4f' }}>删除</a>
           </Popconfirm>,
         ];
       },
     },
   ];
 
+  const toggleExpandAll = useCallback(() => {
+    setExpandedKeys(allExpanded ? [] : allExpandableIds);
+  }, [allExpanded, allExpandableIds]);
+
   return (
-    <ContentContainer>
+    <ContentContainer scrollable>
       <ProTable<SysMenu>
         rowKey="id"
         headerTitle="菜单管理"
-        loading={isLoading}
-        dataSource={treeData}
+        actionRef={actionRef}
         columns={columns}
-        search={{ labelWidth: 'auto', defaultCollapsed: false }}
-        pagination={false}
+        request={fetchMenuRows}
+        onDataSourceChange={(ds) => setCurrentTree((ds as SysMenu[]) ?? [])}
+        search={{ labelWidth: 'auto' }}
+        pagination={{
+          // 用 defaultPageSize 代替 pageSize：与字典保持一致
+          defaultPageSize: 20,
+          showSizeChanger: true,
+          showTotal: (t) => `共 ${t} 条`,
+        }}
         scroll={{ x: 1100 }}
-        options={{ reload: () => refetch(), density: false, fullScreen: false, setting: false }}
-        toolbar={{
-          actions: [
-            <Button key="reload" icon={<ReloadOutlined />} onClick={() => refetch()}>
-              刷新
-            </Button>,
-            <Button
-              key="create"
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => openCreate(null)}
-            >
-              新增菜单
-            </Button>,
-          ],
+        toolBarRender={() => [
+          <Button
+            key="create"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => openCreate(null)}
+          >
+            新增菜单
+          </Button>,
+          <Button
+            key="toggle-expand"
+            icon={allExpanded ? <UpOutlined /> : <DownOutlined />}
+            onClick={toggleExpandAll}
+            disabled={allExpandableIds.length === 0}
+          >
+            {allExpanded ? '折叠全部' : '展开全部'}
+          </Button>,
+        ]}
+        expandable={{
+          expandedRowKeys: expandedKeys,
+          onExpand: (expanded, record) => {
+            setExpandedKeys((prev) =>
+              expanded
+                ? prev.includes(record.id)
+                  ? prev
+                  : [...prev, record.id]
+                : prev.filter((id) => id !== record.id),
+            );
+          },
         }}
-        expandable={{ defaultExpandAll: true }}
         tableAlertRender={false}
-        form={{
-          onReset: () => setSearch({}),
-          submitButtonProps: { style: { display: 'none' } },
-        }}
-        onSearch={(values) => {
-          setSearch({
-            name: values.name as string | undefined,
-            type: values.type as MenuType | undefined,
-            permissionCode: values.permissionCode as string | undefined,
-            status: values.isEnabled as 0 | 1 | undefined,
-          });
-        }}
+        dateFormatter="string"
       />
       <MenuFormDrawer
         open={drawerOpen}
@@ -220,7 +276,7 @@ const MenuPage = () => {
         row={editing}
         presetParentId={presetParentId}
         onClose={() => setDrawerOpen(false)}
-        onSaved={() => refetch()}
+        onSaved={reload}
       />
     </ContentContainer>
   );

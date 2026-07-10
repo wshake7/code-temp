@@ -1,26 +1,19 @@
-import { useState } from 'react';
-import {
-  Button,
-  Popconfirm,
-  Space,
-  Tag,
-  message,
-} from 'antd';
-import type { ProColumns } from '@ant-design/pro-components';
+import { useMemo, useRef, useState } from 'react';
+import { Button, Popconfirm, Space, Tag, message } from 'antd';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import {
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
-  ReloadOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import {
   useApiGroups,
   useDeleteApi,
-  useListApis,
   useSyncApisApi,
 } from '@/api/hooks/api';
+import { listApisApi } from '@/api/rest/api';
 import type { HttpMethod, SysApi } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import ApiFormDrawer from './modules/api-form-drawer';
@@ -41,37 +34,28 @@ const STATUS_TAG: Record<0 | 1, { color: string; text: string }> = {
 };
 
 const ApiPage = () => {
-  const [search, setSearch] = useState<{
-    name?: string;
-    path?: string;
-    method?: HttpMethod;
-    group?: string;
-    status?: 0 | 1;
-  }>({});
-  const { data, isLoading, refetch } = useListApis({
-    page: 1,
-    pageSize: 20,
-    ...search,
-  });
+  const actionRef = useRef<ActionType | undefined>(undefined);
+  const reload = () => actionRef.current?.reload?.();
+
+  // 接口列表由 ProTable 的 request 直接拉；这里只保留分组下拉（搜索框 valueEnum 用）
   const { data: groups } = useApiGroups();
   const deleteMut = useDeleteApi({
     onSuccess: () => {
       message.success('删除成功');
-      refetch();
+      reload();
     },
     onError: (err) => message.error(`删除失败：${(err as Error).message ?? '未知错误'}`),
   });
   const syncMut = useSyncApisApi({
     onSuccess: (res) => {
       message.success(`同步成功：新增 ${res.added}，跳过 ${res.skipped}，共 ${res.total}`);
-      refetch();
+      reload();
     },
     onError: (err) => message.error(`同步失败：${(err as Error).message ?? '未知错误'}`),
   });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<SysApi | null>(null);
-
   const openCreate = () => {
     setEditing(null);
     setDrawerOpen(true);
@@ -81,13 +65,36 @@ const ApiPage = () => {
     setDrawerOpen(true);
   };
 
-  const groupEnum = () => {
+  const groupEnum = useMemo(() => {
     const out: Record<string, { text: string }> = {};
     (groups ?? []).forEach((g) => {
       out[g] = { text: g };
     });
     return out;
-  };
+  }, [groups]);
+
+  /* ---------- ProTable request：与字典一致的形态 ---------- */
+  async function fetchApiRows(params: {
+    current?: number;
+    pageSize?: number;
+    name?: string;
+    path?: string;
+    method?: HttpMethod;
+    apiGroup?: string;
+    isEnabled?: 0 | 1;
+  }) {
+    const { current = 1, pageSize = 20, name, path, method, apiGroup, isEnabled } = params;
+    const res = await listApisApi({
+      page: current,
+      pageSize,
+      name: name || undefined,
+      path: path || undefined,
+      method,
+      group: apiGroup || undefined,
+      status: isEnabled,
+    });
+    return { data: res.items, total: res.total, success: true };
+  }
 
   const columns: ProColumns<SysApi>[] = [
     { title: 'ID', dataIndex: 'id', width: 70, search: false },
@@ -127,7 +134,7 @@ const ApiPage = () => {
       dataIndex: 'apiGroup',
       width: 110,
       valueType: 'select',
-      valueEnum: groupEnum(),
+      valueEnum: groupEnum,
       render: (_, r) => <Tag color="default">{r.apiGroup}</Tag>,
     },
     {
@@ -179,63 +186,46 @@ const ApiPage = () => {
       <ProTable<SysApi>
         rowKey="id"
         headerTitle="接口管理"
-        loading={isLoading}
-        dataSource={data?.items ?? []}
+        actionRef={actionRef}
         columns={columns}
-        search={{ labelWidth: 'auto', defaultCollapsed: false }}
+        request={fetchApiRows}
+        search={{ labelWidth: 'auto' }}
         pagination={{
-          current: 1,
-          pageSize: 20,
-          total: data?.total ?? 0,
+          // 用 defaultPageSize 代替 pageSize：与字典保持一致，让 antd Table 用内部受控态
+          // 维护当前分页大小，避免改变分页大小后视图不更新
+          defaultPageSize: 20,
+          showSizeChanger: true,
           showTotal: (t) => `共 ${t} 条`,
         }}
         scroll={{ x: 1200 }}
-        options={{ reload: () => refetch(), density: false, fullScreen: false, setting: false }}
-        toolbar={{
-          actions: [
-            <Button key="reload" icon={<ReloadOutlined />} onClick={() => refetch()}>
-              刷新
-            </Button>,
-            <Popconfirm
-              key="sync"
-              title="确认同步"
-              description="将从后端路由清单重新扫描并登记接口（命中则跳过）"
-              onConfirm={() => syncMut.mutate()}
-            >
-              <Button icon={<SyncOutlined />} loading={syncMut.isPending}>
-                同步接口
-              </Button>
-            </Popconfirm>,
-            <Button
-              key="create"
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreate}
-            >
-              新增接口
-            </Button>,
-          ],
-        }}
+        toolBarRender={() => [
+          <Popconfirm
+            key="sync"
+            title="确认同步"
+            description="将从后端路由清单重新扫描并登记接口（命中则跳过）"
+            onConfirm={() => syncMut.mutate()}
+          >
+            <Button icon={<SyncOutlined />} loading={syncMut.isPending}>
+              同步接口
+            </Button>
+          </Popconfirm>,
+          <Button
+            key="create"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreate}
+          >
+            新增接口
+          </Button>,
+        ]}
         tableAlertRender={false}
-        form={{
-          onReset: () => setSearch({}),
-          submitButtonProps: { style: { display: 'none' } },
-        }}
-        onSearch={(values) => {
-          setSearch({
-            name: values.name as string | undefined,
-            path: values.path as string | undefined,
-            method: values.method as HttpMethod | undefined,
-            group: values.apiGroup as string | undefined,
-            status: values.isEnabled as 0 | 1 | undefined,
-          });
-        }}
+        dateFormatter="string"
       />
       <ApiFormDrawer
         open={drawerOpen}
         row={editing}
         onClose={() => setDrawerOpen(false)}
-        onSaved={() => refetch()}
+        onSaved={reload}
       />
     </ContentContainer>
   );
