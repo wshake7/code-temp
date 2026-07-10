@@ -17,7 +17,13 @@
       "source": "vinvcn/mattpocock-skills-zh-CN",
       "sourceType": "github",
       "skillPath": "skills/productivity/grill-me/SKILL.md",
-      "computedHash": "2f357aa456a0365b55e8a55a6940a40b2f4921b0ee1a197376e9ba4b5a062f9e"
+      "computedHash": "5033d3b7bdce5de6aed018566341cdb08cff0fc13b27c0fa5f17fa350304e4c9"
+    },
+    "grilling": {
+      "source": "vinvcn/mattpocock-skills-zh-CN",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/grilling/SKILL.md",
+      "computedHash": "5cc3378ac08affaa33b3b0bb86ed7e8b64f4b7f1a635405e9dd0b144a01e3923"
     },
     "loop-me": {
       "source": "vinvcn/mattpocock-skills-zh-CN",
