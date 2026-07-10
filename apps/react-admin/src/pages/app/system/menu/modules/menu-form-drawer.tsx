@@ -322,13 +322,22 @@ const MenuFormDrawer = ({
         </Col>
       </Row>
 
-      <Form.Item
-        label="菜单名"
-        name="name"
-        rules={[{ required: true, message: '请输入菜单名' }, { max: 64 }]}
-      >
-        <Input placeholder="如 用户管理" />
-      </Form.Item>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item
+            label="菜单名"
+            name="name"
+            rules={[{ required: true, message: '请输入菜单名' }, { max: 64 }]}
+          >
+            <Input placeholder="如 用户管理" />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item label="排序" name="sort">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+        </Col>
+      </Row>
 
       {currentType === 'MENU' && (
         <>
@@ -379,12 +388,7 @@ const MenuFormDrawer = ({
       )}
 
       <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item label="排序" name="sort">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
+        <Col span={24}>
           <Form.Item label="前端隐藏" name="isHidden" valuePropName="checked">
             <Switch checkedChildren="隐藏" unCheckedChildren="显示" />
           </Form.Item>
