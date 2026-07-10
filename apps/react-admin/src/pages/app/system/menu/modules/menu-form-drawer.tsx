@@ -472,7 +472,7 @@ const MenuFormDrawer = ({
             <Tag style={{ marginLeft: 8 }}>sys_menu_api</Tag>
           </div>
           <Collapse
-            defaultActiveKey={groupedApis.map((g) => g[0])}
+            defaultActiveKey={[]}
             items={groupedApis.map(([group, apis]) => {
               const allSelected = apis.length > 0 && apis.every((a) => boundIds.has(a.id));
               return {
