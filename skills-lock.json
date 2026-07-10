@@ -19,11 +19,11 @@
       "skillPath": "skills/productivity/grill-me/SKILL.md",
       "computedHash": "2f357aa456a0365b55e8a55a6940a40b2f4921b0ee1a197376e9ba4b5a062f9e"
     },
-    "handoff": {
+    "loop-me": {
       "source": "vinvcn/mattpocock-skills-zh-CN",
       "sourceType": "github",
-      "skillPath": "skills/productivity/handoff/SKILL.md",
-      "computedHash": "b7fee9683bf9f52a286280c167d7e0e7714fa39fa03ed42d21fa2dcec90d3dd9"
+      "skillPath": "skills/in-progress/loop-me/SKILL.md",
+      "computedHash": "024322de3699d7389d8cb14d8d43bf4441deb49de71980b50a2f3efa9eb9cb60"
     },
     "tdd": {
       "source": "vinvcn/mattpocock-skills-zh-CN",
