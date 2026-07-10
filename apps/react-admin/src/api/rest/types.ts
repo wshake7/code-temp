@@ -495,3 +495,141 @@ export interface I18nExportBatchFile {
 export interface I18nExportBatchResponse {
   files: I18nExportBatchFile[];
 }
+
+// ============================================================
+// 菜单管理（sys_menu）— 字段对齐 backend-mock-template 的 sys_menu；软删 deletedAt: 0=未删
+// ============================================================
+
+export type MenuType = 'DIR' | 'MENU' | 'BUTTON';
+
+export interface SysMenu {
+  id: number;
+  parentId: number | null;
+  name: string;
+  type: MenuType;
+  path: string | null;
+  component: string | null;
+  icon: string;
+  redirect: string;
+  permissionCode: string | null;
+  /** 物化路径，如 /1/11/ */
+  treePath: string;
+  /** 前端扩展 JSON 字符串（badge/hideInBreadcrumb/keepAlive/affix/activeMenu） */
+  metadata: string | null;
+  sort: number;
+  isHidden: 0 | 1;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: number;
+  updatedBy?: number;
+}
+
+export interface MenuListQuery {
+  page?: number;
+  pageSize?: number;
+  name?: string;
+  type?: MenuType;
+  permissionCode?: string;
+  status?: 0 | 1;
+  [k: string]: unknown;
+}
+
+export interface CreateMenuRequest {
+  parentId?: number | null;
+  name: string;
+  type: MenuType;
+  path?: string | null;
+  component?: string | null;
+  icon?: string;
+  redirect?: string;
+  permissionCode?: string | null;
+  metadata?: string | null;
+  sort?: number;
+  isHidden?: 0 | 1;
+  isEnabled?: 0 | 1;
+  remark?: string;
+}
+
+export interface UpdateMenuRequest {
+  id: number;
+  data: Partial<CreateMenuRequest>;
+}
+
+// ============================================================
+// 接口管理（sys_api）— 字段对齐 backend-mock-template 的 sys_api
+// ============================================================
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';
+
+export interface SysApi {
+  id: number;
+  name: string;
+  method: HttpMethod;
+  path: string;
+  permissionCode: string;
+  apiGroup: string;
+  remark: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: number;
+  updatedBy?: number;
+}
+
+export interface ApiListQuery {
+  page?: number;
+  pageSize?: number;
+  name?: string;
+  path?: string;
+  method?: HttpMethod;
+  group?: string;
+  status?: 0 | 1;
+  [k: string]: unknown;
+}
+
+export interface CreateApiRequest {
+  name: string;
+  method: HttpMethod;
+  path: string;
+  permissionCode: string;
+  apiGroup?: string;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export interface UpdateApiRequest {
+  id: number;
+  data: Partial<CreateApiRequest>;
+}
+
+export interface ApiBatchRequest {
+  action: 'enable' | 'disable' | 'delete';
+  ids: number[];
+}
+
+export interface MenuBatchRequest {
+  action: 'enable' | 'disable' | 'delete';
+  ids: number[];
+}
+
+export interface ApiSyncResult {
+  added: number;
+  skipped: number;
+  total: number;
+}
+
+export interface MenuBindApiItem {
+  id: number;
+  name: string;
+  method: HttpMethod;
+  path: string;
+  permissionCode: string;
+  apiGroup: string;
+  isEnabled: 0 | 1;
+  /** 是否已绑定到当前菜单 */
+  bound: boolean;
+}

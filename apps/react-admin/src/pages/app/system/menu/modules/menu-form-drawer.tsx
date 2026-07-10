@@ -1,0 +1,416 @@
+/* eslint-disable react-hooks/set-state-in-effect --
+ * useEffect 同步服务端数据(boundApis)与受控 open prop 到本地 state 是合法用例;
+ * Drawer destroyOnClose 已在父层设,关闭/重开会重新挂载本组件,useState 不会残留 */
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Checkbox,
+  Collapse,
+  Drawer,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Space,
+  Switch,
+  Tabs,
+  Tag,
+  message,
+} from 'antd';
+import type { CheckboxChangeEvent } from 'antd';
+import {
+  useAllMenus,
+  useCreateMenu,
+  useMenuApis,
+  useSetMenuApis,
+  useUpdateMenu,
+} from '@/api/hooks/menu';
+import { useAllApis } from '@/api/hooks/api';
+import type {
+  CreateMenuRequest,
+  MenuBindApiItem,
+  MenuType,
+  SysMenu,
+} from '@/api/rest/types';
+
+export type MenuFormKind = 'create' | 'edit';
+
+interface Props {
+  open: boolean;
+  kind: MenuFormKind;
+  row: SysMenu | null;
+  /** 「添加子项」时预置的父菜单 id */
+  presetParentId: number | null;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+interface FormValues {
+  parentId: number | null;
+  name: string;
+  type: MenuType;
+  path?: string;
+  component?: string;
+  redirect?: string;
+  icon?: string;
+  permissionCode?: string;
+  sort?: number;
+  isHidden?: boolean;
+  isEnabled?: boolean;
+  remark?: string;
+}
+
+const MenuFormDrawer = ({
+  open,
+  kind,
+  row,
+  presetParentId,
+  onClose,
+  onSaved,
+}: Props) => {
+  const isEdit = kind === 'edit' && !!row;
+  const [form] = Form.useForm<FormValues>();
+  const [activeTab, setActiveTab] = useState('basic');
+  const [apiSearch, setApiSearch] = useState('');
+
+  const createMut = useCreateMenu({
+    onSuccess: () => {
+      message.success('创建成功');
+      onSaved();
+      onClose();
+    },
+    onError: (err) => message.error(`创建失败：${(err as Error).message ?? '未知错误'}`),
+  });
+  const updateMut = useUpdateMenu({
+    onSuccess: () => {
+      message.success('保存成功');
+      onSaved();
+      onClose();
+    },
+    onError: (err) => message.error(`保存失败：${(err as Error).message ?? '未知错误'}`),
+  });
+
+  // 父菜单下拉：DIR/MENU（BUTTON 不能作父），排除自己及其后代
+  const { data: allMenus } = useAllMenus({ enabled: open });
+  const { data: allApis } = useAllApis({ enabled: open });
+  // 编辑时拉当前菜单已绑定接口
+  const { data: boundApis, refetch: refetchBound } = useMenuApis(
+    isEdit && row ? row.id : null,
+    {
+      enabled: open && isEdit,
+    },
+  );
+  const setApisMut = useSetMenuApis({
+    onSuccess: () => message.success('接口绑定已保存'),
+    onError: (err) => message.error(`保存绑定失败：${(err as Error).message ?? '未知错误'}`),
+  });
+
+  // 绑定选中态：api_id 集合
+  const [boundIds, setBoundIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (!open) return;
+    // 基础表单初始化
+    if (isEdit && row) {
+      form.setFieldsValue({
+        parentId: row.parentId,
+        name: row.name,
+        type: row.type,
+        path: row.path ?? undefined,
+        component: row.component ?? undefined,
+        redirect: row.redirect,
+        icon: row.icon,
+        permissionCode: row.permissionCode ?? undefined,
+        sort: row.sort,
+        isHidden: row.isHidden === 1,
+        isEnabled: row.isEnabled === 1,
+        remark: row.remark,
+      });
+    } else {
+      form.setFieldsValue({
+        parentId: presetParentId ?? null,
+        name: '',
+        type: 'MENU',
+        path: '',
+        component: '',
+        redirect: '',
+        icon: '',
+        permissionCode: '',
+        sort: 0,
+        isHidden: false,
+        isEnabled: true,
+        remark: '',
+      });
+    }
+    setActiveTab('basic');
+    setApiSearch('');
+  }, [open, isEdit, row, presetParentId, form]);
+
+  // 绑定接口初始化：编辑时用 boundApis 的 bound 标记
+  useEffect(() => {
+    const initial = new Set<number>();
+    if (isEdit && boundApis) {
+      boundApis.forEach((a) => {
+        if (a.bound) initial.add(a.id);
+      });
+    }
+    setBoundIds(initial);
+  }, [boundApis, isEdit]);
+
+  // 当前 type（决定哪些字段显示）
+  const watchType = Form.useWatch('type', form) as MenuType | undefined;
+  const currentType = watchType ?? (isEdit ? row?.type : 'MENU');
+
+  // 父菜单选项：排除自己与后代（编辑时）
+  const parentOptions = useMemo(() => {
+    if (!allMenus) return [];
+    const banned = new Set<number>();
+    if (isEdit && row) {
+      banned.add(row.id);
+      // 后代：tree_path 以本节点 tree_path 开头
+      allMenus.forEach((m) => {
+        if (m.treePath.startsWith(row.treePath) && m.id !== row.id) {
+          banned.add(m.id);
+        }
+      });
+    }
+    return allMenus
+      .filter((m) => m.type !== 'BUTTON' && !banned.has(m.id))
+      .map((m) => ({
+        label: `${m.name}（${m.type}）`,
+        value: m.id,
+      }));
+  }, [allMenus, isEdit, row]);
+
+  // 接口按 api_group 分组 + 搜索过滤
+  const groupedApis = useMemo(() => {
+    const groups = new Map<string, MenuBindApiItem[]>();
+    const source: MenuBindApiItem[] = allApis
+      ? allApis.map((a) => ({
+          ...a,
+          bound: boundIds.has(a.id),
+        }))
+      : (boundApis ?? []);
+    const kw = apiSearch.trim().toLowerCase();
+    source.forEach((a) => {
+      if (kw) {
+        const hit =
+          a.name.toLowerCase().includes(kw) ||
+          a.path.toLowerCase().includes(kw) ||
+          a.permissionCode.toLowerCase().includes(kw);
+        if (!hit) return;
+      }
+      const arr = groups.get(a.apiGroup) ?? [];
+      arr.push(a);
+      groups.set(a.apiGroup, arr);
+    });
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [allApis, boundApis, boundIds, apiSearch]);
+
+  const toggleApi = (id: number, checked: boolean) => {
+    setBoundIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleSaveBasic = async () => {
+    const values = await form.validateFields();
+    const payload: CreateMenuRequest = {
+      parentId: values.parentId ?? null,
+      name: values.name,
+      type: values.type,
+      path: values.type === 'MENU' ? values.path || null : null,
+      component: values.type === 'MENU' ? values.component || null : null,
+      icon: values.icon ?? '',
+      redirect: values.redirect ?? '',
+      permissionCode: values.permissionCode || null,
+      sort: values.sort ?? 0,
+      isHidden: values.isHidden ? 1 : 0,
+      isEnabled: values.isEnabled ? 1 : 0,
+      remark: values.remark ?? '',
+    };
+    if (isEdit && row) {
+      updateMut.mutate({ id: row.id, data: payload });
+    } else {
+      createMut.mutate(payload);
+    }
+  };
+
+  const handleSaveBind = () => {
+    if (!isEdit || !row) return;
+    setApisMut.mutate({ id: row.id, apiIds: [...boundIds] });
+    refetchBound();
+  };
+
+  const submitting = createMut.isPending || updateMut.isPending || setApisMut.isPending;
+
+  return (
+    <Drawer
+      title={isEdit ? '编辑菜单' : '新增菜单'}
+      open={open}
+      onClose={onClose}
+      width={680}
+      destroyOnClose
+      footer={
+        <Space style={{ float: 'right' }}>
+          <Button onClick={onClose} disabled={submitting}>
+            取消
+          </Button>
+          {activeTab === 'basic' ? (
+            <Button type="primary" onClick={handleSaveBasic} loading={submitting}>
+              保存
+            </Button>
+          ) : (
+            <Button type="primary" onClick={handleSaveBind} loading={submitting} disabled={!isEdit}>
+              保存绑定
+            </Button>
+          )}
+        </Space>
+      }
+    >
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { key: 'basic', label: '基础信息', disabled: false },
+          { key: 'bind', label: `绑定接口（${boundIds.size}）`, disabled: !isEdit },
+        ]}
+      />
+
+      {activeTab === 'basic' && (
+        <Form form={form} layout="vertical" preserve={false}>
+          <Form.Item label="父菜单" name="parentId">
+            <Select
+              allowClear
+              placeholder="— 顶级 —"
+              options={parentOptions}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Form.Item
+            label="类型"
+            name="type"
+            rules={[{ required: true, message: '请选择类型' }]}
+          >
+            <Select
+              options={[
+                { label: 'DIR — 目录', value: 'DIR' },
+                { label: 'MENU — 菜单/路由', value: 'MENU' },
+                { label: 'BUTTON — 按钮', value: 'BUTTON' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            label="菜单名"
+            name="name"
+            rules={[{ required: true, message: '请输入菜单名' }, { max: 64 }]}
+          >
+            <Input placeholder="如 用户管理" />
+          </Form.Item>
+
+          {currentType === 'MENU' && (
+            <>
+              <Form.Item
+                label="路由路径"
+                name="path"
+                rules={currentType === 'MENU' ? [{ required: true, message: 'MENU 必须填写路由路径' }] : []}
+              >
+                <Input placeholder="如 /admin/users" />
+              </Form.Item>
+              <Form.Item label="前端组件" name="component">
+                <Input placeholder="如 views/admin/users/index" />
+              </Form.Item>
+              <Form.Item label="重定向" name="redirect">
+                <Input placeholder="如 /admin/users/list" />
+              </Form.Item>
+            </>
+          )}
+
+          {currentType !== 'BUTTON' && (
+            <Form.Item label="图标" name="icon">
+              <Input placeholder="如 user" />
+            </Form.Item>
+          )}
+
+          {currentType === 'BUTTON' ? (
+            <Form.Item
+              label="权限码"
+              name="permissionCode"
+              rules={[{ required: true, message: 'BUTTON 必须填写权限码' }]}
+            >
+              <Input placeholder="如 admin:user:create" />
+            </Form.Item>
+          ) : (
+            currentType === 'MENU' && (
+              <Form.Item label="权限码" name="permissionCode">
+                <Input placeholder="如 admin:user:list" />
+              </Form.Item>
+            )
+          )}
+
+          <Form.Item label="排序" name="sort">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="前端隐藏" name="isHidden" valuePropName="checked">
+            <Switch checkedChildren="隐藏" unCheckedChildren="显示" />
+          </Form.Item>
+          <Form.Item label="状态" name="isEnabled" valuePropName="checked">
+            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+          </Form.Item>
+          <Form.Item label="备注" name="remark">
+            <Input.TextArea rows={3} placeholder="选填" />
+          </Form.Item>
+        </Form>
+      )}
+
+      {activeTab === 'bind' && (
+        <div>
+          <Input.Search
+            placeholder="按路径或名称搜索接口..."
+            allowClear
+            value={apiSearch}
+            onChange={(e) => setApiSearch(e.target.value)}
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ marginBottom: 8, color: '#666' }}>
+            已选 <strong>{boundIds.size}</strong> 个接口 · 修改后点击「保存绑定」写入
+            <Tag style={{ marginLeft: 8 }}>sys_menu_api</Tag>
+          </div>
+          <Collapse
+            defaultActiveKey={groupedApis.map((g) => g[0])}
+            items={groupedApis.map(([group, apis]) => ({
+              key: group,
+              label: `${group} · ${apis.length} 个`,
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {apis.map((a) => (
+                    <Checkbox
+                      key={a.id}
+                      checked={boundIds.has(a.id)}
+                      onChange={(e: CheckboxChangeEvent) => toggleApi(a.id, e.target.checked)}
+                    >
+                      <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                        <Tag color="blue" style={{ marginRight: 6 }}>
+                          {a.method}
+                        </Tag>
+                        {a.path}
+                      </span>
+                      <span style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>
+                        {a.name}
+                      </span>
+                    </Checkbox>
+                  ))}
+                </div>
+              ),
+            }))}
+          />
+        </div>
+      )}
+    </Drawer>
+  );
+};
+
+export default MenuFormDrawer;

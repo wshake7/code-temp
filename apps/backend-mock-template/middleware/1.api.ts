@@ -9,6 +9,8 @@ const WRITE_WHITELIST = [
   "/api/system/dict-data",
   "/api/system/i18n-locale",
   "/api/system/i18n-translation",
+  "/api/system/menu",
+  "/api/system/api",
 ];
 
 function isWhitelisted(path: string) {
