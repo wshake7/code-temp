@@ -32,16 +32,28 @@ export interface UserInfo {
   [k: string]: unknown;
 }
 
+/** 用户列表项 — 对齐 schema sys_user + 关联角色 */
+export interface UserRoleBrief {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface UserListItem {
-  id: string;
+  id: number;
   username: string;
-  realName: string;
+  nickname: string;
   email: string;
   phone: string;
-  status: 0 | 1;
-  roles: string[];
+  avatar: string;
+  languageCode: string | null;
+  lastLoginAt: string | null;
+  lastLoginIp: string;
   remark: string;
-  createTime: string;
+  isEnabled: 0 | 1;
+  roles: UserRoleBrief[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PageResult<T> {
@@ -53,24 +65,85 @@ export interface UserListQuery {
   page?: number;
   pageSize?: number;
   username?: string;
-  realName?: string;
-  status?: 0 | 1;
+  nickname?: string;
+  isEnabled?: 0 | 1;
+  roleCode?: string;
   [k: string]: unknown;
 }
 
 export interface CreateUserRequest {
   username: string;
-  realName?: string;
+  password: string;
+  nickname?: string;
   email?: string;
   phone?: string;
-  status?: 0 | 1;
-  roles?: string[];
+  avatar?: string;
+  languageCode?: string | null;
   remark?: string;
+  isEnabled?: 0 | 1;
+  roleIds?: number[];
 }
 
 export interface UpdateUserRequest {
-  id: string;
-  data: Partial<UserListItem>;
+  id: number;
+  data: Partial<Omit<UserListItem, 'id' | 'roles' | 'createdAt' | 'updatedAt'>> & {
+    roleIds?: number[];
+  };
+}
+
+/** 角色 — 对齐 schema sys_role */
+export interface RoleListItem {
+  id: number;
+  code: string;
+  name: string;
+  parentId: number | null;
+  parentName: string | null;
+  sort: number;
+  remark: string;
+  isEnabled: 0 | 1;
+  userCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoleListQuery {
+  page?: number;
+  pageSize?: number;
+  code?: string;
+  name?: string;
+  isEnabled?: 0 | 1;
+  [k: string]: unknown;
+}
+
+export interface CreateRoleRequest {
+  code: string;
+  name: string;
+  parentId?: number | null;
+  sort?: number;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export interface UpdateRoleRequest {
+  id: number;
+  data: Partial<CreateRoleRequest>;
+}
+
+export interface RolePermissions {
+  role: RoleListItem;
+  menuIds: number[];
+  apiIds: number[];
+}
+
+export interface BatchActionRequest {
+  action: 'enable' | 'disable' | 'delete';
+  ids: number[];
+}
+
+export interface BatchActionResult {
+  action: string;
+  affected: number;
+  skipped?: number;
 }
 
 export interface MenuMeta {

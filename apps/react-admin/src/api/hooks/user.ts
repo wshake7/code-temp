@@ -4,14 +4,17 @@ import {
   useQuery,
   type UseQueryOptions,
 } from '@tanstack/react-query';
-import { queryClient } from '@/core';
 import {
+  batchUsersApi,
   createUserApi,
   deleteUserApi,
   listUsersApi,
+  resetUserPasswordApi,
   updateUserApi,
 } from '@/api/rest/user';
 import type {
+  BatchActionRequest,
+  BatchActionResult,
   CreateUserRequest,
   PageResult,
   UpdateUserRequest,
@@ -19,9 +22,6 @@ import type {
   UserListQuery,
 } from '@/api/rest/types';
 
-// =========================================
-// 列表查询
-// =========================================
 export function useListUsers(
   query: UserListQuery,
   options?: UseQueryOptions<PageResult<UserListItem>, Error>,
@@ -33,17 +33,6 @@ export function useListUsers(
   });
 }
 
-export async function fetchListUsers(query: UserListQuery) {
-  return queryClient.fetchQuery({
-    queryKey: ['listUsers', query],
-    queryFn: () => listUsersApi(query),
-    retry: 0,
-  });
-}
-
-// =========================================
-// 新建
-// =========================================
 export function useCreateUser(
   options?: UseMutationOptions<UserListItem, Error, CreateUserRequest>,
 ) {
@@ -53,9 +42,6 @@ export function useCreateUser(
   });
 }
 
-// =========================================
-// 更新
-// =========================================
 export function useUpdateUser(
   options?: UseMutationOptions<UserListItem, Error, UpdateUserRequest>,
 ) {
@@ -65,14 +51,31 @@ export function useUpdateUser(
   });
 }
 
-// =========================================
-// 删除
-// =========================================
-export function useDeleteUser(
-  options?: UseMutationOptions<unknown, Error, string>,
-) {
+export function useDeleteUser(options?: UseMutationOptions<unknown, Error, number>) {
   return useMutation({
     mutationFn: (id) => deleteUserApi(id),
+    ...options,
+  });
+}
+
+export function useBatchUsers(
+  options?: UseMutationOptions<BatchActionResult, Error, BatchActionRequest>,
+) {
+  return useMutation({
+    mutationFn: (body) => batchUsersApi(body),
+    ...options,
+  });
+}
+
+export function useResetUserPassword(
+  options?: UseMutationOptions<
+    { id: number; ok: boolean },
+    Error,
+    { id: number; password: string }
+  >,
+) {
+  return useMutation({
+    mutationFn: ({ id, password }) => resetUserPasswordApi(id, password),
     ...options,
   });
 }
