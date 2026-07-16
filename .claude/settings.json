@@ -7,7 +7,7 @@
   },
   "enabledPlugins": {
     "claude-hud@claude-hud": true,
-    "pro-workflow@pro-workflow": true,
+    "pro-workflow@pro-workflow": false,
     "ponytail@ponytail": true
   },
   "enabledMcpjsonServers": [
