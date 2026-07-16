@@ -1,62 +1,66 @@
 import type { AppRouteObject } from '@/core/router/types';
-import UserPage from '@/pages/app/permission/user';
-import RolePage from '@/pages/app/permission/role';
-import MenuPage from '@/pages/app/permission/menu';
-import ApiPage from '@/pages/app/permission/api';
+import { createLazyRoute } from '@/core/router';
 
 /**
- * 权限管理路由 — 对齐 Open Design「权限管理」分组：
- * 用户 / 角色 / 菜单 / 接口
+ * 权限管理路由配置
+ * 包括权限点管理、角色管理等页面
  */
 export const permissionRoutes: AppRouteObject[] = [
   {
     name: 'permission',
-    path: 'permission',
+    path: 'permission', // 相对路径，会自动拼接到父路由 '/'
     meta: {
       title: 'routes:permission',
-      icon: 'lucide:shield-check',
+      icon: 'lucide:shield-check', // Iconify 格式
       order: 2002,
-      keepAlive: true,
+      keepAlive: true, // 保持组件状态
+      // permission: 'sys:platform_admin', // 平台管理员或租户管理员权限（开发阶段暂时注释）
     },
     children: [
       {
-        name: 'permission-user',
-        path: 'user',
-        element: <UserPage />,
+        name: 'permission-codes',
+        path: 'codes', // 相对路径，最终为 /permission/codes
+        element: createLazyRoute(() => import('@/pages/app/permission/permission')),
         meta: {
-          title: 'routes:users',
-          icon: 'lucide:user-cog',
+          title: 'routes:permission-codes',
+          icon: 'lucide:shield-ellipsis', // Iconify 格式
           order: 1,
+          // permission: 'sys:platform_admin', // 仅平台管理员权限（开发阶段暂时注释）
         },
       },
+
       {
-        name: 'permission-role',
-        path: 'role',
-        element: <RolePage />,
-        meta: {
-          title: 'routes:roles',
-          icon: 'lucide:shield-user',
-          order: 2,
-        },
-      },
-      {
-        name: 'permission-menu',
-        path: 'menu',
-        element: <MenuPage />,
+        name: 'menus',
+        path: 'menus', // 相对路径，最终为 /system/menus
+        element: createLazyRoute(() => import('@/pages/app/permission/menu')),
         meta: {
           title: 'routes:menus',
-          icon: 'lucide:menu',
-          order: 3,
+          icon: 'lucide:square-menu', // Iconify 格式
+          order: 2,
+          // permission: 'sys:platform_admin', // 仅平台管理员权限（开发阶段暂时注释）
         },
       },
       {
-        name: 'permission-api',
-        path: 'api',
-        element: <ApiPage />,
+        name: 'apis',
+        path: 'apis', // 相对路径，最终为 /system/apis
+        element: createLazyRoute(() => import('@/pages/app/permission/api')),
         meta: {
           title: 'routes:apis',
-          icon: 'lucide:terminal',
+          icon: 'lucide:route', // Iconify 格式
+          order: 3,
+          // permission: 'sys:platform_admin', // 仅平台管理员权限（开发阶段暂时注释）
+        },
+      },
+
+      {
+        name: 'roles',
+        path: 'roles', // 相对路径，最终为 /permission/roles
+        element: createLazyRoute(() => import('@/pages/app/permission/role')),
+        meta: {
+          title: 'routes:roles',
+          icon: 'lucide:shield-user', // Iconify 格式
           order: 4,
+          // permission: 'sys:platform_admin', // 平台管理员或租户管理员权限（开发阶段暂时注释）
         },
       },
     ],

@@ -16,45 +16,45 @@ export function getAllMenusApi() {
 
 /** 分页列出菜单（sys_menu） */
 export function listMenusApi(query: MenuListQuery) {
-  return get<PageResult<SysMenu>>('/permission/menu/list', query as Record<string, unknown>);
+  return get<PageResult<SysMenu>>('/system/menu/list', query as Record<string, unknown>);
 }
 
 /** 全量菜单（供父菜单下拉与前端组树） */
 export function listAllMenusApi(params?: { type?: string; status?: 0 | 1 }) {
-  return get<SysMenu[]>('/permission/menu/all', (params ?? {}) as Record<string, unknown>);
+  return get<SysMenu[]>('/system/menu/all', (params ?? {}) as Record<string, unknown>);
 }
 
 /** 新建菜单 */
 export function createMenuApi(body: CreateMenuRequest) {
-  return post<SysMenu>('/permission/menu', body);
+  return post<SysMenu>('/system/menu', body);
 }
 
 /** 更新菜单 */
 export function updateMenuApi({ id, data }: UpdateMenuRequest) {
-  return put<SysMenu>(`/permission/menu/${id}`, data);
+  return put<SysMenu>(`/system/menu/${id}`, data);
 }
 
 /** 删除菜单 */
 export function deleteMenuApi(id: number) {
-  return del<unknown>(`/permission/menu/${id}`);
+  return del<unknown>(`/system/menu/${id}`);
 }
 
 /** 批量操作菜单 */
 export function batchMenuApi(body: MenuBatchRequest) {
   return post<{ action: string; affected: number; ids: number[] }>(
-    '/permission/menu/batch',
+    '/system/menu/batch',
     body,
   );
 }
 
 /** 读取某菜单已绑定接口（带 bound 标记） */
 export function getMenuApisApi(id: number) {
-  return get<MenuBindApiItem[]>(`/permission/menu/${id}/apis`);
+  return get<MenuBindApiItem[]>(`/system/menu/${id}/apis`);
 }
 
 /** 全量替换某菜单的接口绑定 */
 export function setMenuApisApi(id: number, apiIds: number[]) {
-  return post<{ menuId: number; apiIds: number[] }>(`/permission/menu/${id}/apis`, {
+  return post<{ menuId: number; apiIds: number[] }>(`/system/menu/${id}/apis`, {
     apiIds,
   });
 }
