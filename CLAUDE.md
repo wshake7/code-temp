@@ -4,19 +4,33 @@
 
 <!-- style END -->
 
-<!-- codebase-memory-mcp -->
+<!-- codebase-memory-mcp:start -->
 
-Code discovery protocol:
+# Codebase Knowledge Graph (codebase-memory-mcp)
 
-1. For source-code exploration, use codebase-memory-mcp first.
-2. If MCP tools are not callable, run tool_search for:
-   "search_graph trace_path get_code_snippet query_graph search_code index_repository codebase-memory-mcp"
-3. If an expected tool is still missing, retry tool_search with the exact tool name, for example "search_graph"; absence from the first broad result is not proof the tool is unavailable.
-4. Establish the project with list_projects/index_status; run index_repository if missing or stale.
-5. Use search_graph for symbols, search_code for fuzzy text, get_code_snippet for exact qualified names, trace_path for callers/callees, and query_graph for complex graph queries.
-6. Fall back to shell search/read only for docs/configs/non-code files or after MCP discovery genuinely fails.
+This project uses codebase-memory-mcp to maintain a knowledge graph of the codebase.
+ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
 
-<!-- codebase-memory-mcp -->
+## Priority Order
+
+1. `search_graph` — find functions, classes, routes, variables by pattern
+2. `trace_path` — trace who calls a function or what it calls
+3. `get_code_snippet` — read specific function/class source code
+4. `query_graph` — run Cypher queries for complex patterns
+5. `get_architecture` — high-level project summary
+
+## When to fall back to grep/glob
+
+- Searching for string literals, error messages, config values
+- Searching non-code files (Dockerfiles, shell scripts, configs)
+- When MCP tools return insufficient results
+
+## Examples
+
+- Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
+- Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
+- Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
+<!-- codebase-memory-mcp:end -->
 
 <!-- Smart-Search START -->
 
