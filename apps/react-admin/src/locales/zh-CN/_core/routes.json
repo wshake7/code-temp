@@ -40,5 +40,15 @@
   "offline": "离线",
   "coming-soon": "即将上线",
   "not-found": "404",
-  "home": "首页"
+  "home": "首页",
+  "page.dashboard.title": "概览",
+  "page.dashboard.analytics": "分析页",
+  "page.dashboard.workspace": "工作台",
+  "system.title": "系统管理",
+  "system.user.title": "用户管理",
+  "system.role.title": "角色管理",
+  "system.dict.title": "字典管理",
+  "system.i18n.title": "国际化",
+  "system.menu.title": "菜单管理",
+  "system.api.title": "接口管理"
 }

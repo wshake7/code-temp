@@ -2,7 +2,7 @@ import type {Preferences} from "../types";
 
 const defaultPreferences: Preferences = {
     app: {
-        accessMode: "frontend",
+        accessMode: (import.meta.env.VITE_ACCESS_MODE as 'frontend' | 'backend' | 'mixed') || 'frontend',
         authPageLayout: "panel-right",
         checkUpdatesInterval: 1,
         colorGrayMode: false,

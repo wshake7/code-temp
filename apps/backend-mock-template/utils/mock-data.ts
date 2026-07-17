@@ -12,24 +12,28 @@ export interface TimezoneOption {
   timezone: string;
 }
 
+/**
+ * 统一用户数据源：登录 + 用户管理共用。
+ * password_hash 使用 demo$bcrypt$ 前缀占位，登录验证时提取后缀比对明文。
+ */
 export const MOCK_USERS: UserInfo[] = [
   {
-    id: 0,
+    id: 1,
     password: "123456",
     realName: "Vben",
     roles: ["super"],
     username: "vben",
   },
   {
-    id: 1,
+    id: 2,
     password: "123456",
     realName: "Admin",
     roles: ["admin"],
     username: "admin",
-    homePath: "/workspace",
+    homePath: "/system/user",
   },
   {
-    id: 2,
+    id: 3,
     password: "123456",
     realName: "Jack",
     roles: ["user"],
@@ -55,6 +59,8 @@ export const MOCK_CODES = [
     username: "jack",
   },
 ];
+
+// ─── 动态菜单（按角色分配 Dashboard + System）─────────────────
 
 const dashboardMenus = [
   {
@@ -87,106 +93,137 @@ const dashboardMenus = [
   },
 ];
 
-const createDemosMenus = (role: "admin" | "super" | "user") => {
-  const roleWithMenus = {
-    admin: {
-      component: "/demos/access/admin-visible",
+const systemMenus = (level: "full" | "partial") => {
+  const fullChildren = [
+    {
+      name: "SystemUser",
+      path: "/system/user",
+      component: "/system/user/index",
       meta: {
-        icon: "mdi:button-cursor",
-        title: "demos.access.adminVisible",
+        icon: "lucide:user-cog",
+        order: 1,
+        title: "system.user.title",
       },
-      name: "AccessAdminVisibleDemo",
-      path: "/demos/access/admin-visible",
     },
-    super: {
-      component: "/demos/access/super-visible",
+    {
+      name: "SystemRole",
+      path: "/system/role",
+      component: "/system/role/index",
       meta: {
-        icon: "mdi:button-cursor",
-        title: "demos.access.superVisible",
+        icon: "lucide:shield-user",
+        order: 2,
+        title: "system.role.title",
       },
-      name: "AccessSuperVisibleDemo",
-      path: "/demos/access/super-visible",
     },
-    user: {
-      component: "/demos/access/user-visible",
+    {
+      name: "SystemDict",
+      path: "/system/dict",
+      component: "/system/dict/index",
       meta: {
-        icon: "mdi:button-cursor",
-        title: "demos.access.userVisible",
+        icon: "lucide:book-marked",
+        order: 3,
+        title: "system.dict.title",
       },
-      name: "AccessUserVisibleDemo",
-      path: "/demos/access/user-visible",
     },
-  };
-
+    {
+      name: "SystemI18n",
+      path: "/system/i18n",
+      component: "/system/i18n/index",
+      meta: {
+        icon: "lucide:languages",
+        order: 4,
+        title: "system.i18n.title",
+      },
+    },
+    {
+      name: "SystemMenu",
+      path: "/system/menu",
+      component: "/system/menu/index",
+      meta: {
+        icon: "lucide:menu",
+        order: 5,
+        title: "system.menu.title",
+      },
+    },
+    {
+      name: "SystemApi",
+      path: "/system/api",
+      component: "/system/api/index",
+      meta: {
+        icon: "lucide:terminal",
+        order: 6,
+        title: "system.api.title",
+      },
+    },
+  ];
+  const partialChildren = [
+    {
+      name: "SystemUser",
+      path: "/system/user",
+      component: "/system/user/index",
+      meta: {
+        icon: "lucide:user-cog",
+        order: 1,
+        title: "system.user.title",
+      },
+    },
+    {
+      name: "SystemRole",
+      path: "/system/role",
+      component: "/system/role/index",
+      meta: {
+        icon: "lucide:shield-user",
+        order: 2,
+        title: "system.role.title",
+      },
+    },
+    {
+      name: "SystemDict",
+      path: "/system/dict",
+      component: "/system/dict/index",
+      meta: {
+        icon: "lucide:book-marked",
+        order: 3,
+        title: "system.dict.title",
+      },
+    },
+    {
+      name: "SystemI18n",
+      path: "/system/i18n",
+      component: "/system/i18n/index",
+      meta: {
+        icon: "lucide:languages",
+        order: 4,
+        title: "system.i18n.title",
+      },
+    },
+  ];
   return [
     {
       meta: {
-        icon: "ic:baseline-view-in-ar",
-        keepAlive: true,
-        order: 1000,
-        title: "demos.title",
+        icon: "lucide:settings",
+        order: 2005,
+        title: "system.title",
       },
-      name: "Demos",
-      path: "/demos",
-      redirect: "/demos/access",
-      children: [
-        {
-          name: "AccessDemos",
-          path: "/demosaccess",
-          meta: {
-            icon: "mdi:cloud-key-outline",
-            title: "demos.access.backendPermissions",
-          },
-          redirect: "/demos/access/page-control",
-          children: [
-            {
-              name: "AccessPageControlDemo",
-              path: "/demos/access/page-control",
-              component: "/demos/access/index",
-              meta: {
-                icon: "mdi:page-previous-outline",
-                title: "demos.access.pageAccess",
-              },
-            },
-            {
-              name: "AccessButtonControlDemo",
-              path: "/demos/access/button-control",
-              component: "/demos/access/button-control",
-              meta: {
-                icon: "mdi:button-cursor",
-                title: "demos.access.buttonControl",
-              },
-            },
-            {
-              name: "AccessMenuVisible403Demo",
-              path: "/demos/access/menu-visible-403",
-              component: "/demos/access/menu-visible-403",
-              meta: {
-                authority: ["no-body"],
-                icon: "mdi:button-cursor",
-                menuVisibleWithForbidden: true,
-                title: "demos.access.menuVisible403",
-              },
-            },
-            roleWithMenus[role],
-          ],
-        },
-      ],
+      name: "System",
+      path: "/system",
+      redirect: "/system/user",
+      children: level === "full" ? fullChildren : partialChildren,
     },
   ];
 };
 
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus("super")],
+    menus: [...dashboardMenus, ...systemMenus("full")],
     username: "vben",
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus("admin")],
+    menus: [...dashboardMenus, ...systemMenus("partial")],
     username: "admin",
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus("user")],
+    menus: [...dashboardMenus],
     username: "jack",
   },
 ];
@@ -2426,7 +2463,7 @@ function clearRoleApis(roleId: number): void {
 
 // ─── 种子 ───────────────────────────────────────────────────
 
-/** 种子：角色（对齐 Open Design admin.js DATA.roles，9 个）。 */
+/** 种子：角色（3 个，对齐 MOCK_USERS 三用户）。 */
 function buildSysRoleSeeds(): SysRole[] {
   const now = "2025-01-10T08:00:00.000Z";
   const defs: SysRole[] = [
@@ -2450,7 +2487,7 @@ function buildSysRoleSeeds(): SysRole[] {
       name: "系统管理员",
       parent_id: 1,
       sort: 10,
-      remark: "可管理用户/角色/菜单",
+      remark: "可管理用户/角色/字典/国际化",
       is_enabled: 1,
       deleted_at: 0,
       created_at: now,
@@ -2460,95 +2497,11 @@ function buildSysRoleSeeds(): SysRole[] {
     },
     {
       id: 3,
-      code: "ops",
-      name: "运营",
-      parent_id: 1,
-      sort: 20,
-      remark: "运营后台",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 4,
-      code: "finance",
-      name: "财务",
-      parent_id: 1,
-      sort: 30,
-      remark: "财务模块",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 5,
-      code: "auditor",
-      name: "审计",
-      parent_id: 1,
-      sort: 40,
-      remark: "只读全部 + 日志",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 6,
-      code: "developer",
-      name: "开发",
-      parent_id: 1,
-      sort: 50,
-      remark: "API/任务模块",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 7,
-      code: "support",
-      name: "客服",
-      parent_id: 1,
-      sort: 60,
-      remark: "工单/用户",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 8,
-      code: "marketing",
-      name: "市场",
-      parent_id: 1,
-      sort: 70,
-      remark: "营销活动",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 9,
-      code: "viewer",
-      name: "只读访客",
+      code: "user",
+      name: "普通用户",
       parent_id: 1,
       sort: 99,
-      remark: "无写权限",
+      remark: "仅看仪表盘",
       is_enabled: 1,
       deleted_at: 0,
       created_at: now,
@@ -2560,16 +2513,16 @@ function buildSysRoleSeeds(): SysRole[] {
   return defs;
 }
 
-/** 种子：用户（对齐 Open Design admin.js DATA.users，8 个）。 */
+/** 种子：用户（3 个，与 MOCK_USERS 对齐）。 */
 function buildSysUserSeeds(): SysUser[] {
   const now = "2025-01-10T08:00:00.000Z";
   const defs: SysUser[] = [
     {
       id: 1,
-      username: "admin",
-      password_hash: placeholderHash("admin123"),
-      nickname: "超级管理员",
-      email: "admin@trellis.cloud",
+      username: "vben",
+      password_hash: placeholderHash("123456"),
+      nickname: "Vben",
+      email: "vben@trellis.cloud",
       phone: "13800000001",
       avatar: "",
       language_code: "zh-CN",
@@ -2585,10 +2538,10 @@ function buildSysUserSeeds(): SysUser[] {
     },
     {
       id: 2,
-      username: "operator",
-      password_hash: placeholderHash("operator123"),
-      nickname: "李运营",
-      email: "li.ops@trellis.cloud",
+      username: "admin",
+      password_hash: placeholderHash("123456"),
+      nickname: "Admin",
+      email: "admin@trellis.cloud",
       phone: "13800000002",
       avatar: "",
       language_code: "zh-CN",
@@ -2604,13 +2557,13 @@ function buildSysUserSeeds(): SysUser[] {
     },
     {
       id: 3,
-      username: "finance01",
-      password_hash: placeholderHash("finance123"),
-      nickname: "王财务",
-      email: "wang.fin@trellis.cloud",
+      username: "jack",
+      password_hash: placeholderHash("123456"),
+      nickname: "Jack",
+      email: "jack@trellis.cloud",
       phone: "13800000003",
       avatar: "",
-      language_code: "zh-CN",
+      language_code: "en-US",
       last_login_at: "2026-06-19T09:42:01.000Z",
       last_login_ip: "10.0.1.108",
       remark: "",
@@ -2621,117 +2574,17 @@ function buildSysUserSeeds(): SysUser[] {
       created_by: 0,
       updated_by: 0,
     },
-    {
-      id: 4,
-      username: "auditor",
-      password_hash: placeholderHash("auditor123"),
-      nickname: "赵审计",
-      email: "zhao.aud@trellis.cloud",
-      phone: "13800000004",
-      avatar: "",
-      language_code: "zh-CN",
-      last_login_at: "2026-06-19T06:20:55.000Z",
-      last_login_ip: "10.0.1.201",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: "2025-06-20T01:00:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 5,
-      username: "dev_lead",
-      password_hash: placeholderHash("dev123456"),
-      nickname: "陈开发",
-      email: "chen.dev@trellis.cloud",
-      phone: "13800000005",
-      avatar: "",
-      language_code: "en-US",
-      last_login_at: "2026-06-20T02:01:00.000Z",
-      last_login_ip: "10.0.0.78",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: "2025-04-01T06:00:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 6,
-      username: "support01",
-      password_hash: placeholderHash("support123"),
-      nickname: "林客服",
-      email: "lin.cs@trellis.cloud",
-      phone: "13800000006",
-      avatar: "",
-      language_code: "zh-CN",
-      last_login_at: "2026-06-19T23:30:21.000Z",
-      last_login_ip: "10.0.2.55",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: "2025-08-15T08:00:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 7,
-      username: "market01",
-      password_hash: placeholderHash("market123"),
-      nickname: "周市场",
-      email: "zhou.mkt@trellis.cloud",
-      phone: "13800000007",
-      avatar: "",
-      language_code: "zh-CN",
-      last_login_at: "2025-05-12T03:08:43.000Z",
-      last_login_ip: "10.0.2.180",
-      remark: "已停用",
-      is_enabled: 0,
-      deleted_at: 0,
-      created_at: "2025-09-20T02:00:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 8,
-      username: "guest_view",
-      password_hash: placeholderHash("guest1234"),
-      nickname: "访客只读",
-      email: "",
-      phone: "",
-      avatar: "",
-      language_code: "zh-CN",
-      last_login_at: "2026-06-18T07:00:00.000Z",
-      last_login_ip: "10.0.3.10",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: "2026-01-15T01:00:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
   ];
   return defs;
 }
 
-/** 种子：用户-角色关联（对齐 admin.js users.roles）。 */
+/** 种子：用户-角色关联（3 用户对齐 MOCK_USERS）。 */
 function buildSysUserRoleSeeds(): SysUserRole[] {
   const now = "2025-01-10T08:00:00.000Z";
   const pairs: Array<[number, number[]]> = [
-    [1, [1]], // admin → super_admin
-    [2, [3, 9]], // operator → ops, viewer
-    [3, [4, 9]], // finance01 → finance, viewer
-    [4, [5]], // auditor → auditor
-    [5, [6, 9]], // dev_lead → developer, viewer
-    [6, [7, 9]], // support01 → support, viewer
-    [7, [8]], // market01 → marketing
-    [8, [9]], // guest_view → viewer
+    [1, [1]], // vben → super_admin
+    [2, [2]], // admin → admin
+    [3, [3]], // jack → user
   ];
   const rows: SysUserRole[] = [];
   for (const [uid, rids] of pairs) {
@@ -2742,16 +2595,18 @@ function buildSysUserRoleSeeds(): SysUserRole[] {
   return rows;
 }
 
-/** 种子：角色-菜单授权示例（admin 角色拥有全部顶级菜单，viewer 只读）。 */
+/** 种子：角色-菜单授权（对齐 MOCK_MENUS 按角色分配的菜单）。 */
 function buildSysRoleMenuSeeds(): SysRoleMenu[] {
   const now = "2025-01-10T08:00:00.000Z";
   const rows: SysRoleMenu[] = [];
-  // admin(id=2) 授权菜单管理(12)、字典(21)、国际化(22) 作示例
-  for (const mid of [12, 21, 22]) {
+  // super_admin(id=1) 授权全部菜单管理相关（11/12/13/14/15 + 21/22）
+  for (const mid of [11, 12, 13, 14, 15, 21, 22]) {
+    rows.push({ role_id: 1, menu_id: mid, created_at: now, created_by: 0 });
+  }
+  // admin(id=2) 授权用户管理(11)、角色管理(12)、字典管理(21)、国际化(22)
+  for (const mid of [11, 12, 21, 22]) {
     rows.push({ role_id: 2, menu_id: mid, created_at: now, created_by: 0 });
   }
-  // viewer(id=9) 只授权字典(21)
-  rows.push({ role_id: 9, menu_id: 21, created_at: now, created_by: 0 });
   return rows;
 }
 
@@ -2759,7 +2614,11 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
 function buildSysRoleApiSeeds(): SysRoleApi[] {
   const now = "2025-01-10T08:00:00.000Z";
   const rows: SysRoleApi[] = [];
-  // admin(id=2) 授权用户管理接口 id 1-4（用户 list/create/update/delete）
+  // super_admin(id=1) 授权全部接口
+  for (const aid of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+    rows.push({ role_id: 1, api_id: aid, created_at: now, created_by: 0 });
+  }
+  // admin(id=2) 授权用户管理接口 id 1-4
   for (const aid of [1, 2, 3, 4]) {
     rows.push({ role_id: 2, api_id: aid, created_at: now, created_by: 0 });
   }

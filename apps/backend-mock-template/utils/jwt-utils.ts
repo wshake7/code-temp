@@ -5,7 +5,7 @@ import type { UserInfo } from "./mock-data";
 import { getHeader } from "h3";
 import jwt from "jsonwebtoken";
 
-import { MOCK_USERS } from "./mock-data";
+import { ensureUserSeeds, getMockSysUserList } from "./mock-data";
 
 // TODO: Replace with your own secret key
 const ACCESS_TOKEN_SECRET = "access_token_secret";
@@ -43,12 +43,30 @@ export function verifyAccessToken(
     const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET) as unknown as UserPayload;
 
     const username = decoded.username;
-    const user = MOCK_USERS.find((item) => item.username === username);
-    if (!user) {
+    // 从统一数据源查找用户
+    ensureUserSeeds();
+    const sysUser = getMockSysUserList().find(
+      (item) => item.username === username && item.deleted_at === 0,
+    );
+    if (!sysUser) {
       return null;
     }
-    const { password: _pwd, ...userinfo } = user;
-    return userinfo;
+    // 返回与 UserInfo 兼容的对象（不含 password）
+    const roles =
+      sysUser.username === "vben" ? ["super"] : sysUser.username === "admin" ? ["admin"] : ["user"];
+    const homePath =
+      sysUser.username === "vben"
+        ? "/analytics"
+        : sysUser.username === "admin"
+          ? "/system/user"
+          : "/analytics";
+    return {
+      id: sysUser.id,
+      username: sysUser.username,
+      realName: sysUser.nickname,
+      roles,
+      homePath,
+    };
   } catch {
     return null;
   }
@@ -58,12 +76,30 @@ export function verifyRefreshToken(token: string): null | Omit<UserInfo, "passwo
   try {
     const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as UserPayload;
     const username = decoded.username;
-    const user = MOCK_USERS.find((item) => item.username === username) as UserInfo;
-    if (!user) {
+    // 从统一数据源查找用户
+    ensureUserSeeds();
+    const sysUser = getMockSysUserList().find(
+      (item) => item.username === username && item.deleted_at === 0,
+    );
+    if (!sysUser) {
       return null;
     }
-    const { password: _pwd, ...userinfo } = user;
-    return userinfo;
+    // 返回与 UserInfo 兼容的对象（不含 password）
+    const roles =
+      sysUser.username === "vben" ? ["super"] : sysUser.username === "admin" ? ["admin"] : ["user"];
+    const homePath =
+      sysUser.username === "vben"
+        ? "/analytics"
+        : sysUser.username === "admin"
+          ? "/system/user"
+          : "/analytics";
+    return {
+      id: sysUser.id,
+      username: sysUser.username,
+      realName: sysUser.nickname,
+      roles,
+      homePath,
+    };
   } catch {
     return null;
   }

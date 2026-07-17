@@ -40,5 +40,15 @@
   "offline": "Offline",
   "coming-soon": "Coming Soon",
   "not-found": "404",
-  "home": "Home"
+  "home": "Home",
+  "page.dashboard.title": "Dashboard",
+  "page.dashboard.analytics": "Analytics",
+  "page.dashboard.workspace": "Workspace",
+  "system.title": "System",
+  "system.user.title": "Users",
+  "system.role.title": "Roles",
+  "system.dict.title": "Dictionaries",
+  "system.i18n.title": "Internationalization",
+  "system.menu.title": "Menus",
+  "system.api.title": "APIs"
 }

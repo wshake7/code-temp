@@ -5,7 +5,7 @@ import {
   setRefreshTokenCookie,
 } from "~/utils/cookie-utils";
 import { generateAccessToken, verifyRefreshToken } from "~/utils/jwt-utils";
-import { MOCK_USERS } from "~/utils/mock-data";
+import { ensureUserSeeds, getMockSysUserList } from "~/utils/mock-data";
 import { forbiddenResponse, useResponseSuccess } from "~/utils/response";
 
 export default defineEventHandler(async (event) => {
@@ -21,11 +21,30 @@ export default defineEventHandler(async (event) => {
     return forbiddenResponse(event);
   }
 
-  const findUser = MOCK_USERS.find((item) => item.username === userinfo.username);
-  if (!findUser) {
+  ensureUserSeeds();
+  const sysUser = getMockSysUserList().find(
+    (item) => item.username === userinfo.username && item.deleted_at === 0,
+  );
+  if (!sysUser) {
     return forbiddenResponse(event);
   }
-  const accessToken = generateAccessToken(findUser);
+
+  const mockUser: import("~/utils/mock-data").UserInfo = {
+    id: sysUser.id,
+    username: sysUser.username,
+    password: "",
+    realName: sysUser.nickname,
+    roles:
+      sysUser.username === "vben" ? ["super"] : sysUser.username === "admin" ? ["admin"] : ["user"],
+    homePath:
+      sysUser.username === "vben"
+        ? "/analytics"
+        : sysUser.username === "admin"
+          ? "/system/user"
+          : "/analytics",
+  };
+
+  const accessToken = generateAccessToken(mockUser);
 
   setRefreshTokenCookie(event, refreshToken);
 

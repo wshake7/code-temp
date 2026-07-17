@@ -56,8 +56,7 @@ export const businessRoutes: AppRouteObject[] = Object.values(modulesRoutes).fla
 const rawPageModules = import.meta.glob(
   [
     '../pages/app/dashboard/**/*.tsx',
-    '../pages/app/system/user/**/*.tsx',
-    '../pages/app/system/role/**/*.tsx',
+    '../pages/app/system/**/*.tsx',
   ],
   { eager: true },
 );
