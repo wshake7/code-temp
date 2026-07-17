@@ -1,82 +1,54 @@
-import { faker } from "@faker-js/faker";
-import { eventHandler, getQuery } from "h3";
+import { defineEventHandler, getQuery } from "h3";
+import {
+  countUsersByRole,
+  ensureUserSeeds,
+  getMockSysRoleList,
+  type SysRole,
+} from "~/utils/mock-data";
+import { toUserRoleCamelRow } from "~/utils/user-role-camel";
+import { usePageResponseSuccess, unAuthorizedResponse } from "~/utils/response";
 import { verifyAccessToken } from "~/utils/jwt-utils";
-import { getMenuIds, MOCK_MENU_LIST } from "~/utils/mock-data";
-import { unAuthorizedResponse, usePageResponseSuccess } from "~/utils/response";
 
-const formatterCN = new Intl.DateTimeFormat("zh-CN", {
-  timeZone: "Asia/Shanghai",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
-const menuIds = getMenuIds(MOCK_MENU_LIST);
-
-interface RoleItem {
-  id: string;
-  name: string;
-  status: number;
-  createTime: string;
-  permissions: number[];
-  remark?: string;
-}
-
-function generateMockDataList(count: number): RoleItem[] {
-  const dataList: RoleItem[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const dataItem: RoleItem = {
-      id: faker.string.uuid(),
-      name: faker.commerce.product(),
-      status: faker.helpers.arrayElement([0, 1]),
-      createTime: formatterCN.format(faker.date.between({ from: "2022-01-01", to: "2025-01-01" })),
-      permissions: faker.helpers.arrayElements(menuIds),
-      remark: faker.lorem.sentence(),
-    };
-
-    dataList.push(dataItem);
-  }
-
-  return dataList;
-}
-
-const mockData = generateMockDataList(100);
-
-export default eventHandler(async (event) => {
+/**
+ * 角色管理：分页列表（sys_role）。
+ * 附 userCount（实时统计）+ parentName（父角色名）；字段对齐 schema。
+ */
+export default defineEventHandler(async (event) => {
   const userinfo = verifyAccessToken(event);
   if (!userinfo) {
     return unAuthorizedResponse(event);
   }
+  ensureUserSeeds();
 
-  const { page = 1, pageSize = 20, name, id, remark, startTime, endTime, status } = getQuery(event);
-  let listData: RoleItem[] = structuredClone(mockData);
+  const query = getQuery(event);
+  const { page = 1, pageSize = 20, code, name, status } = query;
+  const shared = getMockSysRoleList();
+
+  let filtered: SysRole[] = shared.filter((r) => r.deleted_at === 0);
+  if (code) {
+    const q = String(code).toLowerCase();
+    filtered = filtered.filter((r) => r.code.toLowerCase().includes(q));
+  }
   if (name) {
-    listData = listData.filter((item) =>
-      item.name.toLowerCase().includes(String(name as string).toLowerCase()),
-    );
-  }
-  if (id) {
-    listData = listData.filter((item) =>
-      item.id.toLowerCase().includes(String(id as string).toLowerCase()),
-    );
-  }
-  if (remark) {
-    listData = listData.filter((item) =>
-      item.remark?.toLowerCase()?.includes(String(remark as string).toLowerCase()),
-    );
-  }
-  if (startTime) {
-    listData = listData.filter((item) => item.createTime >= startTime);
-  }
-  if (endTime) {
-    listData = listData.filter((item) => item.createTime <= endTime);
+    const q = String(name);
+    filtered = filtered.filter((r) => r.name.includes(q));
   }
   if (["0", "1"].includes(status as string)) {
-    listData = listData.filter((item) => item.status === Number(status));
+    filtered = filtered.filter((r) => r.is_enabled === Number(status));
   }
-  return usePageResponseSuccess(page as string, pageSize as string, listData);
+
+  // 按 sort 升序、再 id 升序
+  filtered.sort((a, b) => a.sort - b.sort || a.id - b.id);
+
+  const roleById = new Map(getMockSysRoleList().map((r) => [r.id, r]));
+  const rows = filtered.map((r) => {
+    const parent = r.parent_id ? roleById.get(r.parent_id) : undefined;
+    return {
+      ...toUserRoleCamelRow(r),
+      userCount: countUsersByRole(r.id),
+      parentName: parent?.name ?? null,
+    };
+  });
+
+  return usePageResponseSuccess(page as string, pageSize as string, rows);
 });

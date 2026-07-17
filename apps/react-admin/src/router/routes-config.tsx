@@ -34,7 +34,7 @@ export function normalizePageMapKey(component: string): string | null {
 }
 
 // 自动导入 modules 下的所有路由模块（仅包含业务功能路由）
-// 精简后只加载 dashboard + system；其它模块的 .tsx 文件保留但不被加载
+// dashboard + system（含 user/role/dict/i18n/menu/api）
 const modulesRoutes = import.meta.glob<AppRouteObject[][]>(
   [
     './modules/dashboard.tsx',
@@ -57,6 +57,7 @@ const rawPageModules = import.meta.glob(
   [
     '../pages/app/dashboard/**/*.tsx',
     '../pages/app/system/user/**/*.tsx',
+    '../pages/app/system/role/**/*.tsx',
   ],
   { eager: true },
 );

@@ -9,11 +9,15 @@ import {
   createUserApi,
   deleteUserApi,
   listUsersApi,
+  resetUserPasswordApi,
+  toggleUserStatusApi,
   updateUserApi,
 } from '@/api/rest/user';
 import type {
   CreateUserRequest,
   PageResult,
+  ResetPasswordRequest,
+  ToggleUserStatusRequest,
   UpdateUserRequest,
   UserListItem,
   UserListQuery,
@@ -42,7 +46,7 @@ export async function fetchListUsers(query: UserListQuery) {
 }
 
 // =========================================
-// 新建
+// 新建 / 更新 / 删除
 // =========================================
 export function useCreateUser(
   options?: UseMutationOptions<UserListItem, Error, CreateUserRequest>,
@@ -53,9 +57,6 @@ export function useCreateUser(
   });
 }
 
-// =========================================
-// 更新
-// =========================================
 export function useUpdateUser(
   options?: UseMutationOptions<UserListItem, Error, UpdateUserRequest>,
 ) {
@@ -65,14 +66,32 @@ export function useUpdateUser(
   });
 }
 
-// =========================================
-// 删除
-// =========================================
 export function useDeleteUser(
-  options?: UseMutationOptions<unknown, Error, string>,
+  options?: UseMutationOptions<unknown, Error, number>,
 ) {
   return useMutation({
     mutationFn: (id) => deleteUserApi(id),
+    ...options,
+  });
+}
+
+// =========================================
+// 启停 / 重置密码
+// =========================================
+export function useToggleUserStatus(
+  options?: UseMutationOptions<UserListItem, Error, ToggleUserStatusRequest>,
+) {
+  return useMutation({
+    mutationFn: (req) => toggleUserStatusApi(req),
+    ...options,
+  });
+}
+
+export function useResetUserPassword(
+  options?: UseMutationOptions<{ id: number }, Error, ResetPasswordRequest>,
+) {
+  return useMutation({
+    mutationFn: (req) => resetUserPasswordApi(req),
     ...options,
   });
 }

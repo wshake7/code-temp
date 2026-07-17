@@ -3,111 +3,90 @@ import { Button, Popconfirm, Tag, message } from 'antd';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { PlusOutlined } from '@ant-design/icons';
-import {
-  useDeleteUser,
-  useToggleUserStatus,
-} from '@/api/hooks/user';
-import { listUsersApi } from '@/api/rest/user';
-import type { UserListItem } from '@/api/rest/types';
+import { useDeleteRole } from '@/api/hooks/role';
+import { listRolesApi } from '@/api/rest/role';
+import type { SysRole } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
-import UserFormDrawer, { type UserFormKind } from './modules/user-form-drawer';
-import ResetPasswordModal from './modules/reset-password-modal';
+import RoleFormDrawer, { type RoleFormKind } from './modules/role-form-drawer';
+import RolePermissionDrawer from './modules/role-permission-drawer';
 
 const STATUS_TAG: Record<0 | 1, { color: string; text: string }> = {
   1: { color: 'success', text: '启用' },
   0: { color: 'default', text: '禁用' },
 };
 
-const UserPage = () => {
+const RolePage = () => {
   const actionRef = useRef<ActionType | undefined>(undefined);
   const reload = () => actionRef.current?.reload?.();
 
-  const deleteMut = useDeleteUser({
+  const deleteMut = useDeleteRole({
     onSuccess: () => {
       message.success('删除成功');
       reload();
     },
     onError: (err) => message.error(`删除失败：${(err as Error).message ?? '未知错误'}`),
   });
-  const toggleMut = useToggleUserStatus({
-    onSuccess: () => {
-      message.success('状态已更新');
-      reload();
-    },
-    onError: (err) => message.error(`操作失败：${(err as Error).message ?? '未知错误'}`),
-  });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerKind, setDrawerKind] = useState<UserFormKind>('create');
-  const [editing, setEditing] = useState<UserListItem | null>(null);
+  const [drawerKind, setDrawerKind] = useState<RoleFormKind>('create');
+  const [editing, setEditing] = useState<SysRole | null>(null);
 
-  const [resetOpen, setResetOpen] = useState(false);
-  const [resetUserId, setResetUserId] = useState<number | null>(null);
+  const [permOpen, setPermOpen] = useState(false);
+  const [permRoleId, setPermRoleId] = useState<number | null>(null);
 
   const openCreate = () => {
     setDrawerKind('create');
     setEditing(null);
     setDrawerOpen(true);
   };
-  const openEdit = (row: UserListItem) => {
+  const openEdit = (row: SysRole) => {
     setDrawerKind('edit');
     setEditing(row);
     setDrawerOpen(true);
   };
-  const openReset = (row: UserListItem) => {
-    setResetUserId(row.id);
-    setResetOpen(true);
+  const openPermission = (row: SysRole) => {
+    setPermRoleId(row.id);
+    setPermOpen(true);
   };
 
   /* ---------- ProTable request：分页由 ProTable 接管 ---------- */
-  async function fetchUserRows(params: {
+  async function fetchRoleRows(params: {
     current?: number;
     pageSize?: number;
-    username?: string;
-    nickname?: string;
+    code?: string;
+    name?: string;
     isEnabled?: 0 | 1;
   }) {
-    const { current = 1, pageSize = 20, username, nickname, isEnabled } = params;
-    const res = await listUsersApi({
+    const { current = 1, pageSize = 20, code, name, isEnabled } = params;
+    const res = await listRolesApi({
       page: current,
       pageSize,
-      username: username || undefined,
-      nickname: nickname || undefined,
+      code: code || undefined,
+      name: name || undefined,
       status: isEnabled,
     });
     return { data: res.items, total: res.total, success: true };
   }
 
-  const columns: ProColumns<UserListItem>[] = [
+  const columns: ProColumns<SysRole>[] = [
     { title: 'ID', dataIndex: 'id', width: 70, search: false },
-    { title: '用户名', dataIndex: 'username', width: 140, ellipsis: true },
-    { title: '昵称', dataIndex: 'nickname', width: 140, ellipsis: true },
+    { title: '编码', dataIndex: 'code', width: 160, ellipsis: true },
+    { title: '角色名', dataIndex: 'name', width: 160, ellipsis: true },
     {
-      title: '邮箱',
-      dataIndex: 'email',
-      width: 200,
-      ellipsis: true,
-      search: false,
-      render: (_, r) => r.email || <span style={{ color: '#999' }}>-</span>,
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
+      title: '父角色',
+      dataIndex: 'parentName',
       width: 140,
       search: false,
-      render: (_, r) => r.phone || <span style={{ color: '#999' }}>-</span>,
-    },
-    {
-      title: '角色',
-      dataIndex: 'roleNames',
-      width: 180,
-      search: false,
       render: (_, r) =>
-        r.roleNames.length > 0 ? (
-          r.roleNames.map((n) => <Tag key={n}>{n}</Tag>)
-        ) : (
-          <span style={{ color: '#999' }}>-</span>
-        ),
+        r.parentName || <span style={{ color: '#999' }}>-</span>,
+    },
+    { title: '排序', dataIndex: 'sort', width: 70, search: false },
+    {
+      title: '用户数',
+      dataIndex: 'userCount',
+      width: 90,
+      search: false,
+      render: (_, r) => r.userCount ?? 0,
     },
     {
       title: '状态',
@@ -121,36 +100,22 @@ const UserPage = () => {
       },
     },
     {
-      title: '最后登录',
-      dataIndex: 'lastLoginAt',
-      width: 170,
-      search: false,
-      render: (_, r) =>
-        r.lastLoginAt || <span style={{ color: '#999' }}>-</span>,
-    },
-    {
       title: '操作',
       valueType: 'option',
-      width: 240,
+      width: 200,
       fixed: 'right',
       search: false,
       render: (_, r) => [
         <a key="edit" onClick={() => openEdit(r)}>
           编辑
         </a>,
-        <a
-          key="toggle"
-          onClick={() => toggleMut.mutate({ id: r.id, status: r.isEnabled === 1 ? 0 : 1 })}
-        >
-          {r.isEnabled === 1 ? '禁用' : '启用'}
-        </a>,
-        <a key="reset" onClick={() => openReset(r)}>
-          重置密码
+        <a key="perm" onClick={() => openPermission(r)}>
+          分配权限
         </a>,
         <Popconfirm
           key="del"
           title="确认删除"
-          description={`确定删除「${r.username}」吗？`}
+          description={`确定删除「${r.name}」吗？`}
           onConfirm={() => deleteMut.mutate(r.id)}
         >
           <a style={{ color: '#ff4d4f' }}>删除</a>
@@ -161,19 +126,19 @@ const UserPage = () => {
 
   return (
     <ContentContainer scrollable>
-      <ProTable<UserListItem>
+      <ProTable<SysRole>
         rowKey="id"
-        headerTitle="用户管理"
+        headerTitle="角色管理"
         actionRef={actionRef}
         columns={columns}
-        request={fetchUserRows}
+        request={fetchRoleRows}
         search={{ labelWidth: 'auto' }}
         pagination={{
           defaultPageSize: 20,
           showSizeChanger: true,
           showTotal: (t) => `共 ${t} 条`,
         }}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1100 }}
         toolBarRender={() => [
           <Button
             key="create"
@@ -181,26 +146,26 @@ const UserPage = () => {
             icon={<PlusOutlined />}
             onClick={openCreate}
           >
-            新建用户
+            新增角色
           </Button>,
         ]}
         tableAlertRender={false}
         dateFormatter="string"
       />
-      <UserFormDrawer
+      <RoleFormDrawer
         open={drawerOpen}
         kind={drawerKind}
         row={editing}
         onClose={() => setDrawerOpen(false)}
         onSaved={reload}
       />
-      <ResetPasswordModal
-        open={resetOpen}
-        userId={resetUserId}
-        onClose={() => setResetOpen(false)}
+      <RolePermissionDrawer
+        open={permOpen}
+        roleId={permRoleId}
+        onClose={() => setPermOpen(false)}
       />
     </ContentContainer>
   );
 };
 
-export default UserPage;
+export default RolePage;

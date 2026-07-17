@@ -32,16 +32,31 @@ export interface UserInfo {
   [k: string]: unknown;
 }
 
+// ============================================================
+// 用户管理（sys_user / sys_user_role）— 字段对齐 schema.sql v5
+// 软删 deletedAt: 0=未删；passwordHash 仅后端持有，前端不暴露
+// ============================================================
+
 export interface UserListItem {
-  id: string;
+  id: number;
   username: string;
-  realName: string;
+  nickname: string;
   email: string;
   phone: string;
-  status: 0 | 1;
-  roles: string[];
+  avatar: string;
+  /** 用户默认语言（软外键 → i18n_locale.code） */
+  languageCode: string | null;
+  lastLoginAt: string | null;
+  lastLoginIp: string;
   remark: string;
-  createTime: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  /** 用户角色 ID 列表（来自 sys_user_role） */
+  roleIds: number[];
+  /** 角色名冗余，便于列表展示 */
+  roleNames: string[];
 }
 
 export interface PageResult<T> {
@@ -53,24 +68,42 @@ export interface UserListQuery {
   page?: number;
   pageSize?: number;
   username?: string;
-  realName?: string;
+  nickname?: string;
   status?: 0 | 1;
+  /** 按角色 ID 过滤 */
+  roleId?: number;
   [k: string]: unknown;
 }
 
 export interface CreateUserRequest {
   username: string;
-  realName?: string;
+  /** 创建时必填 */
+  password: string;
+  nickname: string;
   email?: string;
   phone?: string;
-  status?: 0 | 1;
-  roles?: string[];
+  avatar?: string;
+  languageCode?: string | null;
+  isEnabled?: 0 | 1;
+  roleIds?: number[];
   remark?: string;
 }
 
 export interface UpdateUserRequest {
-  id: string;
-  data: Partial<UserListItem>;
+  id: number;
+  data: Partial<Omit<CreateUserRequest, 'username' | 'password'>>;
+}
+
+/** 切换用户启停状态：{ status: 0|1 } */
+export interface ToggleUserStatusRequest {
+  id: number;
+  status: 0 | 1;
+}
+
+/** 重置密码：{ password } */
+export interface ResetPasswordRequest {
+  id: number;
+  password: string;
 }
 
 export interface MenuMeta {
@@ -632,4 +665,75 @@ export interface MenuBindApiItem {
   isEnabled: 0 | 1;
   /** 是否已绑定到当前菜单 */
   bound: boolean;
+}
+
+// ============================================================
+// 角色管理（sys_role / sys_role_menu / sys_role_api）— 字段对齐 schema.sql v5
+// ============================================================
+
+export interface SysRole {
+  id: number;
+  /** 角色编码（创建后不可改） */
+  code: string;
+  name: string;
+  parentId: number | null;
+  sort: number;
+  remark: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: number;
+  updatedBy?: number;
+  /** 角色下用户数（实时统计，列表用） */
+  userCount?: number;
+  /** 父角色名（冗余，列表用） */
+  parentName?: string | null;
+}
+
+export interface RoleListQuery {
+  page?: number;
+  pageSize?: number;
+  code?: string;
+  name?: string;
+  status?: 0 | 1;
+  [k: string]: unknown;
+}
+
+export interface CreateRoleRequest {
+  code: string;
+  name: string;
+  parentId?: number | null;
+  sort?: number;
+  isEnabled?: 0 | 1;
+  remark?: string;
+}
+
+export interface UpdateRoleRequest {
+  id: number;
+  data: Partial<Omit<CreateRoleRequest, 'code'>>;
+}
+
+/** 角色可授权的菜单项（带 bound 标记，复用菜单全量数据） */
+export interface RoleMenuBindItem extends SysMenu {
+  bound: boolean;
+}
+
+/** 角色可授权的接口项（带 bound 标记，复用接口全量数据） */
+export interface RoleApiBindItem {
+  id: number;
+  name: string;
+  method: HttpMethod;
+  path: string;
+  permissionCode: string;
+  apiGroup: string;
+  isEnabled: 0 | 1;
+  bound: boolean;
+}
+
+/** 简化角色选项（用户表单的角色下拉用） */
+export interface RoleOption {
+  id: number;
+  code: string;
+  name: string;
 }

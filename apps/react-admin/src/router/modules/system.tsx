@@ -4,6 +4,7 @@ import DictPage from '@/pages/app/system/dict';
 import I18nPage from '@/pages/app/system/i18n';
 import MenuPage from '@/pages/app/system/menu';
 import ApiPage from '@/pages/app/system/api';
+import RolePage from '@/pages/app/system/role';
 
 /**
  * 系统管理路由配置
@@ -30,6 +31,17 @@ export const systemRoutes: AppRouteObject[] = [
           order: 1,
         },
       },
+        {
+        name: 'roles',
+        path: 'roles', // 相对路径，最终为 /system/roles
+        element: <RolePage />,
+        meta: {
+          title: 'routes:roles',
+          icon: 'lucide:shield-user', // Iconify 格式
+          order: 2,
+          // permission: 'sys:platform_admin', // 平台管理员或租户管理员权限（开发阶段暂时注释）
+        },
+      },
       {
         name: 'dict',
         path: 'dict',
@@ -37,7 +49,7 @@ export const systemRoutes: AppRouteObject[] = [
         meta: {
           title: 'routes:dict',
           icon: 'lucide:book-marked',
-          order: 2,
+          order: 3,
         },
       },
       {
@@ -47,7 +59,7 @@ export const systemRoutes: AppRouteObject[] = [
         meta: {
           title: 'routes:i18n',
           icon: 'lucide:languages',
-          order: 3,
+          order: 4,
         },
       },
       {
@@ -57,7 +69,7 @@ export const systemRoutes: AppRouteObject[] = [
         meta: {
           title: 'routes:menus',
           icon: 'lucide:menu',
-          order: 4,
+          order: 5,
         },
       },
       {
@@ -67,7 +79,7 @@ export const systemRoutes: AppRouteObject[] = [
         meta: {
           title: 'routes:apis',
           icon: 'lucide:terminal',
-          order: 5,
+          order: 6,
         },
       },
     ],

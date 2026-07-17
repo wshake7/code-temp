@@ -1,10 +1,10 @@
 import { defineEventHandler, getRouterParam, setResponseStatus } from "h3";
-import { ensureUserSeeds, softDeleteUser } from "~/utils/mock-data";
-import { toUserCamelRow } from "~/utils/user-role-camel";
+import { ensureUserSeeds, softDeleteRole } from "~/utils/mock-data";
+import { toUserRoleCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
 import { verifyAccessToken } from "~/utils/jwt-utils";
 
-/** 软删用户（清 sys_user_role 关联）。 */
+/** 软删角色：有关联用户/子角色 → 拒绝；否则清菜单/接口绑定后软删。 */
 export default defineEventHandler(async (event) => {
   const userinfo = verifyAccessToken(event);
   if (!userinfo) {
@@ -19,10 +19,10 @@ export default defineEventHandler(async (event) => {
     return useResponseError("BadRequest", "id must be a number");
   }
 
-  const removed = softDeleteUser(id);
-  if (!removed) {
-    setResponseStatus(event, 404);
-    return useResponseError("NotFound", `user ${id} not found`);
+  const result = softDeleteRole(id);
+  if (!result.ok) {
+    setResponseStatus(event, result.reason.includes("not found") ? 404 : 400);
+    return useResponseError("BadRequest", result.reason);
   }
-  return useResponseSuccess(toUserCamelRow(removed));
+  return useResponseSuccess(toUserRoleCamelRow(result.row));
 });

@@ -5,6 +5,7 @@ import { forbiddenResponse, sleep } from "~/utils/response";
 // 路径同时支持带尾斜杠（/api/system/dict-type/<id>）与不带尾斜杠（/api/system/dict-type POST）。
 const WRITE_WHITELIST = [
   "/api/system/user",
+  "/api/system/role",
   "/api/system/dict-type",
   "/api/system/dict-data",
   "/api/system/i18n-locale",

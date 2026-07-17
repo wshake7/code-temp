@@ -1984,6 +1984,807 @@ export function ensureMenuApiSeeds(): void {
   }
 }
 
+// ============================================================
+// RBAC 业务 — sys_user / sys_role / sys_user_role / sys_role_menu / sys_role_api
+// v2/v5: 字段对齐 backend/db/schema.sql；snake 内部存储，handler 出口转 camel。
+// 与上面 MOCK_USERS（auth 登录用）分离：用户管理页走 mockSysUserList 种子。
+// ============================================================
+
+export interface SysUser {
+  id: number;
+  username: string;
+  /** 密码哈希（demo 占位，不真实加密） */
+  password_hash: string;
+  nickname: string;
+  email: string;
+  phone: string;
+  /** 头像 URL */
+  avatar: string;
+  /** 用户默认语言（软外键 → i18n_locale.code） */
+  language_code: null | string;
+  last_login_at: null | string;
+  last_login_ip: string;
+  remark: string;
+  is_enabled: 0 | 1;
+  /** 软删时间戳（毫秒）；0=未删 */
+  deleted_at: number;
+  created_at: string;
+  updated_at: string;
+  created_by: number;
+  updated_by: number;
+}
+
+export interface SysRole {
+  id: number;
+  /** 角色编码（创建后不可改） */
+  code: string;
+  name: string;
+  /** 父角色 ID（自引用，支持层级继承） */
+  parent_id: null | number;
+  sort: number;
+  remark: string;
+  is_enabled: 0 | 1;
+  deleted_at: number;
+  created_at: string;
+  updated_at: string;
+  created_by: number;
+  updated_by: number;
+}
+
+/** 用户-角色关联（sys_user_role），复合主键 (user_id, role_id) */
+export interface SysUserRole {
+  user_id: number;
+  role_id: number;
+  created_at: string;
+  created_by: number;
+}
+
+/** 角色-菜单授权（sys_role_menu），复合主键 (role_id, menu_id) */
+export interface SysRoleMenu {
+  role_id: number;
+  menu_id: number;
+  created_at: string;
+  created_by: number;
+}
+
+/** 角色-接口授权（sys_role_api），复合主键 (role_id, api_id) */
+export interface SysRoleApi {
+  role_id: number;
+  api_id: number;
+  created_at: string;
+  created_by: number;
+}
+
+/** 共享可变用户列表（sys_user） */
+const mockSysUserList: SysUser[] = [];
+export function getMockSysUserList() {
+  return mockSysUserList;
+}
+
+/** 共享可变角色列表（sys_role） */
+const mockSysRoleList: SysRole[] = [];
+export function getMockSysRoleList() {
+  return mockSysRoleList;
+}
+
+/** 共享可变 用户-角色 关联列表 */
+const mockSysUserRoleList: SysUserRole[] = [];
+export function getMockSysUserRoleList() {
+  return mockSysUserRoleList;
+}
+
+/** 共享可变 角色-菜单 关联列表 */
+const mockSysRoleMenuList: SysRoleMenu[] = [];
+export function getMockSysRoleMenuList() {
+  return mockSysRoleMenuList;
+}
+
+/** 共享可变 角色-接口 关联列表 */
+const mockSysRoleApiList: SysRoleApi[] = [];
+export function getMockSysRoleApiList() {
+  return mockSysRoleApiList;
+}
+
+// ─── ID 生成 ───────────────────────────────────────────────
+let sysUserIdSeq = 0;
+function nextSysUserId(): number {
+  sysUserIdSeq += 1;
+  return sysUserIdSeq;
+}
+let sysRoleIdSeq = 0;
+function nextSysRoleId(): number {
+  sysRoleIdSeq += 1;
+  return sysRoleIdSeq;
+}
+
+// ─── 用户纯函数 ─────────────────────────────────────────────
+
+/** demo 占位密码哈希：不真实加密，仅加前缀便于辨识 */
+function placeholderHash(plain: string): string {
+  return `demo$bcrypt$${plain}`;
+}
+
+/** 创建用户；同时写 sys_user_role 关联。返回新建行（camel 化由 handler 完成）。 */
+export function createSysUser(input: {
+  username: string;
+  password: string;
+  nickname: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  languageCode?: null | string;
+  isEnabled?: 0 | 1;
+  remark?: string;
+  roleIds?: number[];
+}): SysUser {
+  const id = nextSysUserId();
+  const now = new Date().toISOString();
+  const row: SysUser = {
+    id,
+    username: input.username,
+    password_hash: placeholderHash(input.password),
+    nickname: input.nickname,
+    email: input.email ?? "",
+    phone: input.phone ?? "",
+    avatar: input.avatar ?? "",
+    language_code: input.languageCode ?? null,
+    last_login_at: null,
+    last_login_ip: "",
+    remark: input.remark ?? "",
+    is_enabled: (input.isEnabled ?? 1) as 0 | 1,
+    deleted_at: 0,
+    created_at: now,
+    updated_at: now,
+    created_by: 0,
+    updated_by: 0,
+  };
+  mockSysUserList.push(row);
+  // 写用户-角色关联
+  setUserRolesInternal(id, input.roleIds ?? []);
+  return row;
+}
+
+/** 更新用户基本信息（不含密码、不含角色）。返回更新后行或 undefined。 */
+export function updateSysUser(
+  id: number,
+  patch: Partial<{
+    nickname: string;
+    email: string;
+    phone: string;
+    avatar: string;
+    languageCode: null | string;
+    isEnabled: 0 | 1;
+    remark: string;
+  }>,
+): SysUser | undefined {
+  const idx = mockSysUserList.findIndex((u) => u.id === id && u.deleted_at === 0);
+  if (idx < 0) return undefined;
+  const before = mockSysUserList[idx];
+  const next: SysUser = {
+    ...before,
+    ...(patch.nickname !== undefined ? { nickname: patch.nickname } : {}),
+    ...(patch.email !== undefined ? { email: patch.email } : {}),
+    ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
+    ...(patch.avatar !== undefined ? { avatar: patch.avatar } : {}),
+    ...(patch.languageCode !== undefined ? { language_code: patch.languageCode } : {}),
+    ...(patch.isEnabled !== undefined ? { is_enabled: patch.isEnabled } : {}),
+    ...(patch.remark !== undefined ? { remark: patch.remark } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  mockSysUserList[idx] = next;
+  return next;
+}
+
+/** 软删用户；同时清 sys_user_role 关联。返回软删后行或 undefined。 */
+export function softDeleteUser(id: number): SysUser | undefined {
+  const idx = mockSysUserList.findIndex((u) => u.id === id && u.deleted_at === 0);
+  if (idx < 0) return undefined;
+  clearUserRoles(id);
+  mockSysUserList[idx] = { ...mockSysUserList[idx], deleted_at: Date.now() };
+  return mockSysUserList[idx];
+}
+
+/** 重置密码：写占位哈希。返回更新后行或 undefined。 */
+export function resetUserPassword(id: number, password: string): SysUser | undefined {
+  const idx = mockSysUserList.findIndex((u) => u.id === id && u.deleted_at === 0);
+  if (idx < 0) return undefined;
+  mockSysUserList[idx] = {
+    ...mockSysUserList[idx],
+    password_hash: placeholderHash(password),
+    updated_at: new Date().toISOString(),
+  };
+  return mockSysUserList[idx];
+}
+
+/** 切换启停状态。返回更新后行或 undefined。 */
+export function toggleUserStatus(id: number, isEnabled: 0 | 1): SysUser | undefined {
+  return updateSysUser(id, { isEnabled });
+}
+
+/** 读取某用户的角色 ID 列表 */
+export function getUserRoleIds(userId: number): number[] {
+  return mockSysUserRoleList.filter((r) => r.user_id === userId).map((r) => r.role_id);
+}
+
+/** 全量替换某用户的角色（内部用，不带时间戳语义）。 */
+function setUserRolesInternal(userId: number, roleIds: number[]): void {
+  for (let i = mockSysUserRoleList.length - 1; i >= 0; i--) {
+    if (mockSysUserRoleList[i].user_id === userId) {
+      mockSysUserRoleList.splice(i, 1);
+    }
+  }
+  const now = new Date().toISOString();
+  for (const rid of roleIds) {
+    mockSysUserRoleList.push({ user_id: userId, role_id: rid, created_at: now, created_by: 0 });
+  }
+}
+
+/** 全量替换某用户的角色（对外，handler 用）。 */
+export function setUserRoles(userId: number, roleIds: number[]): void {
+  setUserRolesInternal(userId, roleIds);
+}
+
+/** 清除某用户的全部角色关联（用户软删时调用）。 */
+export function clearUserRoles(userId: number): void {
+  for (let i = mockSysUserRoleList.length - 1; i >= 0; i--) {
+    if (mockSysUserRoleList[i].user_id === userId) {
+      mockSysUserRoleList.splice(i, 1);
+    }
+  }
+}
+
+/** 统计某角色下的用户数（未软删用户）。 */
+export function countUsersByRole(roleId: number): number {
+  const userIds = new Set(
+    mockSysUserRoleList.filter((r) => r.role_id === roleId).map((r) => r.user_id),
+  );
+  return mockSysUserList.filter((u) => userIds.has(u.id) && u.deleted_at === 0).length;
+}
+
+/** username 唯一校验（软删感知：(username, deleted_at) 唯一）。 */
+export function isUsernameTaken(username: string, excludeId?: number): boolean {
+  return mockSysUserList.some(
+    (u) =>
+      u.deleted_at === 0 &&
+      u.username === username &&
+      (excludeId === undefined || u.id !== excludeId),
+  );
+}
+
+// ─── 角色纯函数 ─────────────────────────────────────────────
+
+/** 创建角色。返回新建行。 */
+export function createSysRole(input: {
+  code: string;
+  name: string;
+  parentId?: null | number;
+  sort?: number;
+  isEnabled?: 0 | 1;
+  remark?: string;
+}): SysRole {
+  const id = nextSysRoleId();
+  const now = new Date().toISOString();
+  const row: SysRole = {
+    id,
+    code: input.code,
+    name: input.name,
+    parent_id: input.parentId ?? null,
+    sort: input.sort ?? 0,
+    remark: input.remark ?? "",
+    is_enabled: (input.isEnabled ?? 1) as 0 | 1,
+    deleted_at: 0,
+    created_at: now,
+    updated_at: now,
+    created_by: 0,
+    updated_by: 0,
+  };
+  mockSysRoleList.push(row);
+  return row;
+}
+
+/** 更新角色（code 不可改）。parentId 变更时做成环检测。返回更新后行或 undefined。 */
+export function updateSysRole(
+  id: number,
+  patch: Partial<{
+    name: string;
+    parentId: null | number;
+    sort: number;
+    isEnabled: 0 | 1;
+    remark: string;
+  }>,
+): { ok: true; row: SysRole } | { ok: false; reason: string } {
+  const idx = mockSysRoleList.findIndex((r) => r.id === id && r.deleted_at === 0);
+  if (idx < 0) return { ok: false, reason: `role ${id} not found` };
+
+  // parentId 成环检测：新父不能是自己，也不能是自己的后代
+  if (patch.parentId !== undefined) {
+    let pid = patch.parentId;
+    if (pid === id) return { ok: false, reason: "parentId 不能是自己" };
+    if (pid !== null) {
+      // 沿父链向上找，若遇到自己则成环
+      const visited = new Set<number>();
+      let cur: null | number = pid;
+      while (cur !== null && !visited.has(cur)) {
+        visited.add(cur);
+        if (cur === id) return { ok: false, reason: "不能将角色移到自身后代下（成环）" };
+        const parent = mockSysRoleList.find((r) => r.id === cur && r.deleted_at === 0);
+        cur = parent?.parent_id ?? null;
+      }
+    }
+  }
+
+  const before = mockSysRoleList[idx];
+  const next: SysRole = {
+    ...before,
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.parentId !== undefined ? { parent_id: patch.parentId } : {}),
+    ...(patch.sort !== undefined ? { sort: patch.sort } : {}),
+    ...(patch.isEnabled !== undefined ? { is_enabled: patch.isEnabled } : {}),
+    ...(patch.remark !== undefined ? { remark: patch.remark } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  mockSysRoleList[idx] = next;
+  return { ok: true, row: next };
+}
+
+/** 角色是否有子角色（未软删）。 */
+export function hasRoleChildren(id: number): boolean {
+  return mockSysRoleList.some((r) => r.parent_id === id && r.deleted_at === 0);
+}
+
+/** 角色是否有关联用户（未软删用户）。 */
+export function hasRoleUsers(id: number): boolean {
+  const userIds = new Set(
+    mockSysUserRoleList.filter((r) => r.role_id === id).map((r) => r.user_id),
+  );
+  return mockSysUserList.some((u) => userIds.has(u.id) && u.deleted_at === 0);
+}
+
+/**
+ * 软删角色：有关联用户或子角色 → 拒绝；否则清菜单/接口绑定后软删。
+ * 返回 { ok, reason?, row? }。
+ */
+export function softDeleteRole(
+  id: number,
+): { ok: true; row: SysRole } | { ok: false; reason: string } {
+  const exists = mockSysRoleList.find((r) => r.id === id && r.deleted_at === 0);
+  if (!exists) return { ok: false, reason: `role ${id} not found` };
+  if (hasRoleUsers(id)) return { ok: false, reason: "该角色下存在用户，请先移除用户角色绑定" };
+  if (hasRoleChildren(id)) return { ok: false, reason: "请先删除子角色" };
+
+  clearRoleBindings(id);
+  const idx = mockSysRoleList.findIndex((r) => r.id === id);
+  mockSysRoleList[idx] = { ...mockSysRoleList[idx], deleted_at: Date.now() };
+  return { ok: true, row: mockSysRoleList[idx] };
+}
+
+/** 清除某角色的菜单/接口绑定（角色软删时调用）。 */
+export function clearRoleBindings(roleId: number): void {
+  clearRoleMenus(roleId);
+  clearRoleApis(roleId);
+}
+
+/** code 唯一校验（软删感知）。 */
+export function isRoleCodeTaken(code: string, excludeId?: number): boolean {
+  return mockSysRoleList.some(
+    (r) => r.deleted_at === 0 && r.code === code && (excludeId === undefined || r.id !== excludeId),
+  );
+}
+
+/** 父角色是否存在且未软删。 */
+export function isValidParentRole(parentId: number): boolean {
+  return mockSysRoleList.some((r) => r.id === parentId && r.deleted_at === 0);
+}
+
+/** 读取某角色的菜单 ID 列表。 */
+export function getRoleMenuIds(roleId: number): number[] {
+  return mockSysRoleMenuList.filter((r) => r.role_id === roleId).map((r) => r.menu_id);
+}
+
+/** 全量替换某角色的菜单授权。 */
+export function setRoleMenus(roleId: number, menuIds: number[]): number[] {
+  clearRoleMenus(roleId);
+  const now = new Date().toISOString();
+  for (const mid of menuIds) {
+    mockSysRoleMenuList.push({ role_id: roleId, menu_id: mid, created_at: now, created_by: 0 });
+  }
+  return menuIds;
+}
+
+/** 清除某角色的菜单授权。 */
+function clearRoleMenus(roleId: number): void {
+  for (let i = mockSysRoleMenuList.length - 1; i >= 0; i--) {
+    if (mockSysRoleMenuList[i].role_id === roleId) {
+      mockSysRoleMenuList.splice(i, 1);
+    }
+  }
+}
+
+/** 读取某角色的接口 ID 列表。 */
+export function getRoleApiIds(roleId: number): number[] {
+  return mockSysRoleApiList.filter((r) => r.role_id === roleId).map((r) => r.api_id);
+}
+
+/** 全量替换某角色的接口授权。 */
+export function setRoleApis(roleId: number, apiIds: number[]): number[] {
+  clearRoleApis(roleId);
+  const now = new Date().toISOString();
+  for (const aid of apiIds) {
+    mockSysRoleApiList.push({ role_id: roleId, api_id: aid, created_at: now, created_by: 0 });
+  }
+  return apiIds;
+}
+
+/** 清除某角色的接口授权。 */
+function clearRoleApis(roleId: number): void {
+  for (let i = mockSysRoleApiList.length - 1; i >= 0; i--) {
+    if (mockSysRoleApiList[i].role_id === roleId) {
+      mockSysRoleApiList.splice(i, 1);
+    }
+  }
+}
+
+// ─── 种子 ───────────────────────────────────────────────────
+
+/** 种子：角色（对齐 Open Design admin.js DATA.roles，9 个）。 */
+function buildSysRoleSeeds(): SysRole[] {
+  const now = "2025-01-10T08:00:00.000Z";
+  const defs: SysRole[] = [
+    {
+      id: 1,
+      code: "super_admin",
+      name: "超级管理员",
+      parent_id: null,
+      sort: 1,
+      remark: "系统内置,不可删除",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 2,
+      code: "admin",
+      name: "系统管理员",
+      parent_id: 1,
+      sort: 10,
+      remark: "可管理用户/角色/菜单",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 3,
+      code: "ops",
+      name: "运营",
+      parent_id: 1,
+      sort: 20,
+      remark: "运营后台",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 4,
+      code: "finance",
+      name: "财务",
+      parent_id: 1,
+      sort: 30,
+      remark: "财务模块",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 5,
+      code: "auditor",
+      name: "审计",
+      parent_id: 1,
+      sort: 40,
+      remark: "只读全部 + 日志",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 6,
+      code: "developer",
+      name: "开发",
+      parent_id: 1,
+      sort: 50,
+      remark: "API/任务模块",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 7,
+      code: "support",
+      name: "客服",
+      parent_id: 1,
+      sort: 60,
+      remark: "工单/用户",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 8,
+      code: "marketing",
+      name: "市场",
+      parent_id: 1,
+      sort: 70,
+      remark: "营销活动",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 9,
+      code: "viewer",
+      name: "只读访客",
+      parent_id: 1,
+      sort: 99,
+      remark: "无写权限",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+  ];
+  return defs;
+}
+
+/** 种子：用户（对齐 Open Design admin.js DATA.users，8 个）。 */
+function buildSysUserSeeds(): SysUser[] {
+  const now = "2025-01-10T08:00:00.000Z";
+  const defs: SysUser[] = [
+    {
+      id: 1,
+      username: "admin",
+      password_hash: placeholderHash("admin123"),
+      nickname: "超级管理员",
+      email: "admin@trellis.cloud",
+      phone: "13800000001",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2026-06-20T01:12:33.000Z",
+      last_login_ip: "10.0.0.12",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2025-01-10T00:00:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 2,
+      username: "operator",
+      password_hash: placeholderHash("operator123"),
+      nickname: "李运营",
+      email: "li.ops@trellis.cloud",
+      phone: "13800000002",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2026-06-20T00:55:14.000Z",
+      last_login_ip: "10.0.0.45",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2025-03-12T02:30:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 3,
+      username: "finance01",
+      password_hash: placeholderHash("finance123"),
+      nickname: "王财务",
+      email: "wang.fin@trellis.cloud",
+      phone: "13800000003",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2026-06-19T09:42:01.000Z",
+      last_login_ip: "10.0.1.108",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2025-05-08T03:15:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 4,
+      username: "auditor",
+      password_hash: placeholderHash("auditor123"),
+      nickname: "赵审计",
+      email: "zhao.aud@trellis.cloud",
+      phone: "13800000004",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2026-06-19T06:20:55.000Z",
+      last_login_ip: "10.0.1.201",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2025-06-20T01:00:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 5,
+      username: "dev_lead",
+      password_hash: placeholderHash("dev123456"),
+      nickname: "陈开发",
+      email: "chen.dev@trellis.cloud",
+      phone: "13800000005",
+      avatar: "",
+      language_code: "en-US",
+      last_login_at: "2026-06-20T02:01:00.000Z",
+      last_login_ip: "10.0.0.78",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2025-04-01T06:00:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 6,
+      username: "support01",
+      password_hash: placeholderHash("support123"),
+      nickname: "林客服",
+      email: "lin.cs@trellis.cloud",
+      phone: "13800000006",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2026-06-19T23:30:21.000Z",
+      last_login_ip: "10.0.2.55",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2025-08-15T08:00:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 7,
+      username: "market01",
+      password_hash: placeholderHash("market123"),
+      nickname: "周市场",
+      email: "zhou.mkt@trellis.cloud",
+      phone: "13800000007",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2025-05-12T03:08:43.000Z",
+      last_login_ip: "10.0.2.180",
+      remark: "已停用",
+      is_enabled: 0,
+      deleted_at: 0,
+      created_at: "2025-09-20T02:00:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+    {
+      id: 8,
+      username: "guest_view",
+      password_hash: placeholderHash("guest1234"),
+      nickname: "访客只读",
+      email: "",
+      phone: "",
+      avatar: "",
+      language_code: "zh-CN",
+      last_login_at: "2026-06-18T07:00:00.000Z",
+      last_login_ip: "10.0.3.10",
+      remark: "",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: "2026-01-15T01:00:00.000Z",
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
+  ];
+  return defs;
+}
+
+/** 种子：用户-角色关联（对齐 admin.js users.roles）。 */
+function buildSysUserRoleSeeds(): SysUserRole[] {
+  const now = "2025-01-10T08:00:00.000Z";
+  const pairs: Array<[number, number[]]> = [
+    [1, [1]], // admin → super_admin
+    [2, [3, 9]], // operator → ops, viewer
+    [3, [4, 9]], // finance01 → finance, viewer
+    [4, [5]], // auditor → auditor
+    [5, [6, 9]], // dev_lead → developer, viewer
+    [6, [7, 9]], // support01 → support, viewer
+    [7, [8]], // market01 → marketing
+    [8, [9]], // guest_view → viewer
+  ];
+  const rows: SysUserRole[] = [];
+  for (const [uid, rids] of pairs) {
+    for (const rid of rids) {
+      rows.push({ user_id: uid, role_id: rid, created_at: now, created_by: 0 });
+    }
+  }
+  return rows;
+}
+
+/** 种子：角色-菜单授权示例（admin 角色拥有全部顶级菜单，viewer 只读）。 */
+function buildSysRoleMenuSeeds(): SysRoleMenu[] {
+  const now = "2025-01-10T08:00:00.000Z";
+  const rows: SysRoleMenu[] = [];
+  // admin(id=2) 授权菜单管理(12)、字典(21)、国际化(22) 作示例
+  for (const mid of [12, 21, 22]) {
+    rows.push({ role_id: 2, menu_id: mid, created_at: now, created_by: 0 });
+  }
+  // viewer(id=9) 只授权字典(21)
+  rows.push({ role_id: 9, menu_id: 21, created_at: now, created_by: 0 });
+  return rows;
+}
+
+/** 种子：角色-接口授权示例（admin 拥有用户管理 4 个接口）。 */
+function buildSysRoleApiSeeds(): SysRoleApi[] {
+  const now = "2025-01-10T08:00:00.000Z";
+  const rows: SysRoleApi[] = [];
+  // admin(id=2) 授权用户管理接口 id 1-4（用户 list/create/update/delete）
+  for (const aid of [1, 2, 3, 4]) {
+    rows.push({ role_id: 2, api_id: aid, created_at: now, created_by: 0 });
+  }
+  return rows;
+}
+
+/** 确保 user/role 种子已写入（幂等）。handler 入口调用。 */
+export function ensureUserSeeds(): void {
+  if (mockSysRoleList.length === 0) {
+    mockSysRoleList.push(...buildSysRoleSeeds());
+  }
+  if (mockSysUserList.length === 0) {
+    mockSysUserList.push(...buildSysUserSeeds());
+  }
+  if (mockSysUserRoleList.length === 0) {
+    mockSysUserRoleList.push(...buildSysUserRoleSeeds());
+  }
+  if (mockSysRoleMenuList.length === 0) {
+    mockSysRoleMenuList.push(...buildSysRoleMenuSeeds());
+  }
+  if (mockSysRoleApiList.length === 0) {
+    mockSysRoleApiList.push(...buildSysRoleApiSeeds());
+  }
+}
+
 /**
  * 后端路由清单（sync 用）。手维护常量；与真实 nitro 路由会漂移，demo 可接受。
  * 覆盖 system 下常见 CRUD + auth。
