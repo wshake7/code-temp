@@ -11,6 +11,7 @@ import { useDeleteMenu } from '@/api/hooks/menu';
 import { listMenusApi } from '@/api/rest/menu';
 import type { MenuType, SysMenu } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
+import { useAccessRefreshStore } from '@/stores';
 import MenuFormDrawer, { type MenuFormKind } from './modules/menu-form-drawer';
 
 /** 扁平菜单按 parentId 组成树，供 ProTable 的 childrenColumnName 渲染 */
@@ -68,6 +69,7 @@ const MenuPage = () => {
     onSuccess: () => {
       message.success('删除成功');
       reload();
+      useAccessRefreshStore.getState().refreshAccess();
     },
     onError: (err) => message.error(`删除失败：${(err as Error).message ?? '未知错误'}`),
   });

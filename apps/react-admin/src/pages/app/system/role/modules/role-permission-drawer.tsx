@@ -26,6 +26,7 @@ import type {
   RoleApiBindItem,
   RoleMenuBindItem,
 } from '@/api/rest/types';
+import { useAccessRefreshStore } from '@/stores';
 
 interface Props {
   open: boolean;
@@ -77,7 +78,10 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
   // 菜单授权
   const { data: boundMenus } = useRoleMenus(roleId, { enabled: open && roleId !== null });
   const setMenusMut = useSetRoleMenus({
-    onSuccess: () => message.success('菜单授权已保存'),
+    onSuccess: () => {
+      message.success('菜单授权已保存');
+      useAccessRefreshStore.getState().refreshAccess();
+    },
     onError: (err) => message.error(`保存失败：${(err as Error).message ?? '未知错误'}`),
   });
 

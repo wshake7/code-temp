@@ -34,6 +34,7 @@ import type {
   MenuType,
   SysMenu,
 } from '@/api/rest/types';
+import { useAccessRefreshStore } from '@/stores';
 
 export type MenuFormKind = 'create' | 'edit';
 
@@ -91,6 +92,7 @@ const MenuFormDrawer = ({
   const createMut = useCreateMenu({
     onSuccess: () => {
       message.success('创建成功');
+      useAccessRefreshStore.getState().refreshAccess();
       onSaved();
       onClose();
     },
@@ -99,6 +101,7 @@ const MenuFormDrawer = ({
   const updateMut = useUpdateMenu({
     onSuccess: () => {
       message.success('保存成功');
+      useAccessRefreshStore.getState().refreshAccess();
       onSaved();
       onClose();
     },

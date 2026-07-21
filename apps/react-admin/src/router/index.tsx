@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { RouterProvider } from 'react-router-dom';
 
-import { createAccessibleRouter } from '@/core/router/factory';
-import { useAuthStore } from '@/stores';
+import { createAccessibleRouter, type AccessibleRouterResult } from '@/core/router/factory';
+import { useAuthStore, useAccessRefreshStore, useUserStore } from '@/stores';
 import { useAuth } from '@/hooks/useAuth';
 import { getAccessStatic } from '@/core/access';
 import { fetchAllDictEntries } from '@/hooks/useDictCache';
@@ -10,10 +10,11 @@ import { usePreferencesStore } from '@/core/preferences/store';
 import { getAllMenusApi } from '@/api/rest/menu';
 
 import { Forbidden } from '@/pages/core/error';
-import type { ComponentRecordType } from '@/core/router';
+import type { AppRouteObject, ComponentRecordType } from '@/core/router';
 import MainLayout from '@/layouts/MainLayout';
 import { LayoutChildrenProvider } from '@/layouts/MainLayout/context/LayoutChildrenContext';
 import { AuthGuard } from '@/router/guards';
+import Loading from '@/components/common/Loading';
 
 import {
   allRoutes,
@@ -22,7 +23,7 @@ import {
 } from './routes-config';
 
 // 布局组件映射（后端 component 字段 → React 组件）
-// 后端模式：BasicLayout 需要包裹 AuthGuard（前端模式已在 staticRoutes 中包裹）
+// 后端模式：业务路由挂在静态 MainLayout 下；BasicLayout 仍可映射到同一壳
 const AuthenticatedLayout = () => (
   <AuthGuard>
     <MainLayout />
@@ -33,22 +34,27 @@ const layoutMap: ComponentRecordType = {
   BasicLayout: AuthenticatedLayout,
 };
 
-// 提取主布局容器 (path: '/') 的 children，避免 MainLayout 自身依赖 routes-config 形成循环
-const layoutChildren = allRoutes.find((route) => route.path === '/' && route.children)?.children ?? [];
+// 静态 fallback：frontend 模式 / 初始化失败时使用
+const staticLayoutChildren =
+  allRoutes.find((route) => route.path === '/' && route.children)?.children ?? [];
 
 export const AppRouter = () => {
-  const [router, setRouter] = useState<Awaited<ReturnType<typeof createAccessibleRouter>> | null>(null);
+  const [router, setRouter] = useState<AccessibleRouterResult['router'] | null>(null);
+  const [menuRoutes, setMenuRoutes] = useState<AppRouteObject[]>(staticLayoutChildren);
   const [loading, setLoading] = useState(true);
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const accessMode = usePreferencesStore((s) => s.preferences.app.accessMode);
+  const accessVersion = useAccessRefreshStore((s) => s.version);
   // getUserPermissionCodes 内部用 useCallback 稳定，但 effect 不应依赖它
   // （auth 流程触发会调它，已在 useAuthStore 中反映）
-  const { getUserPermissionCodes } = useAuth();
+  const { getUserPermissionCodes, fetchAccessCodes } = useAuth();
   const getUserPermissionCodesRef = useRef(getUserPermissionCodes);
+  const fetchAccessCodesRef = useRef(fetchAccessCodes);
   useEffect(() => {
     getUserPermissionCodesRef.current = getUserPermissionCodes;
-  }, [getUserPermissionCodes]);
+    fetchAccessCodesRef.current = fetchAccessCodes;
+  }, [getUserPermissionCodes, fetchAccessCodes]);
 
   const isAuthenticated = !!accessToken;
 
@@ -63,17 +69,21 @@ export const AppRouter = () => {
         // 对齐 Vue 版 setupAccessGuard：权限码获取 + 字典预加载
         if (isAuthenticated) {
           try {
-            // 1. 获取用户权限码（角色 + 权限码，首次会调 API）
-            await getUserPermissionCodesRef.current();
+            // 1. 获取用户权限码（角色 + 权限码）
+            // accessVersion>0 时强制重拉 codes（菜单/角色变更后）
+            if (accessVersion > 0) {
+              const codes = await fetchAccessCodesRef.current();
+              useUserStore.getState().setAccessCodes(codes);
+              await getUserPermissionCodesRef.current();
+            } else {
+              await getUserPermissionCodesRef.current();
+            }
 
             // 2. 预加载字典数据（部分页面依赖字典，未预加载会导致闪烁）
             await fetchAllDictEntries();
           } catch (authErr) {
             // 认证失败（token 过期/无效）：forceLogout 已在拦截器中被调用
-            // 清除 userStore 防止脏数据
             console.warn('Auth initialization failed, will redirect to login:', authErr);
-            // forceLogout 已在拦截器中处理，此处清除 userStore
-            const { useUserStore } = await import('@/stores');
             useUserStore.getState().$reset();
 
             if (cancelled) return; // 已过期，不继续创建路由
@@ -84,7 +94,7 @@ export const AppRouter = () => {
         const freshPermissions = getAccessStatic().getAllPermissions();
 
         // 无论认证是否成功，都生成路由（未认证时 permissions 为空，AuthGuard 会拦截）
-        const appRouter = await createAccessibleRouter(accessMode, {
+        const accessible = await createAccessibleRouter(accessMode, {
           routes: allRoutes,
           permissions: freshPermissions,
           forbiddenElement: <Forbidden />,
@@ -99,7 +109,12 @@ export const AppRouter = () => {
         });
 
         if (!cancelled) {
-          setRouter(appRouter);
+          setRouter(accessible.router);
+          setMenuRoutes(
+            accessible.menuRoutes.length > 0
+              ? accessible.menuRoutes
+              : staticLayoutChildren,
+          );
         }
       } catch (err) {
         console.error('Router init failed:', err);
@@ -112,18 +127,17 @@ export const AppRouter = () => {
 
     initRouter();
 
-    // cleanup：当 effect 重新触发时（isAuthenticated 变化），取消上一次 initRouter
+    // cleanup：当 effect 重新触发时（isAuthenticated / accessMode / accessVersion），取消上一次
     return () => {
       cancelled = true;
     };
-    // 只依赖真正会触发初始化的字段。getUserPermissionCodes 走 ref，避免对象引用变化导致 effect 反复跑
-  }, [isAuthenticated, accessMode]);
+  }, [isAuthenticated, accessMode, accessVersion]);
 
   if (loading || !router)
     return <Loading fullScreen text="初始化中" subText="正在加载路由配置..." />;
 
   return (
-    <LayoutChildrenProvider value={layoutChildren}>
+    <LayoutChildrenProvider value={menuRoutes}>
       <RouterProvider
         router={router}
         future={{ v7_startTransition: true }}

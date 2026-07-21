@@ -1,4 +1,8 @@
-import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  type RouteObject,
+  type RouterProviderProps,
+} from 'react-router-dom';
 import { injectRedirects } from './utils/inject-redirect';
 import { sortRoutes } from './utils/sort-routes';
 import { transformRoutesWithHandle } from './utils/transform-meta-to-handle';
@@ -27,28 +31,36 @@ function separateRoutes(routes: AppRouteObject[]) {
   return { layoutRoutes, otherRoutes };
 }
 
+export interface AccessibleRouterResult {
+  router: RouterProviderProps['router'];
+  /** Routes used to build the sidebar (layout children / backend tree). */
+  menuRoutes: AppRouteObject[];
+}
+
 export const createAccessibleRouter = async (
   mode: AccessModeType,
   options: GenerateMenuAndRoutesOptions,
-) => {
+): Promise<AccessibleRouterResult> => {
   let routes: AppRouteObject[] = [...options.routes];
+  let menuRoutes: AppRouteObject[];
 
   // 根据模式生成路由
   switch (mode) {
     case 'backend': {
-      // 后端模式：从 API 获取路由树，动态转换组件
+      // 后端模式：从 API 获取业务路由树，挂到静态 MainLayout 下
       if (!options.fetchMenuListAsync) {
-        console.warn('[Router] Backend mode requires fetchMenuListAsync, falling back to frontend mode');
+        console.warn(
+          '[Router] Backend mode requires fetchMenuListAsync, falling back to frontend mode',
+        );
         routes = await generateRoutesByFrontend(
           routes,
           options.permissions ?? [],
           options.forbiddenElement,
         );
+        menuRoutes =
+          routes.find((route) => route.path === '/' && route.children)?.children ?? [];
       } else {
-        // 分离布局路由与静态路由（auth/error 等不受 AuthGuard 保护）
         const { layoutRoutes, otherRoutes } = separateRoutes(routes);
-
-        // 后端返回的路由树（根节点 component="BasicLayout"，已包含 Layout）
         const backendRoutes = await generateRoutesByBackend({
           staticRoutes: layoutRoutes,
           mode,
@@ -57,8 +69,25 @@ export const createAccessibleRouter = async (
           pageMap: options.pageMap,
         });
 
-        // 合并：后端路由 + 静态路由（auth/error）
-        routes = [...backendRoutes, ...otherRoutes];
+        const layout = layoutRoutes[0];
+        if (layout) {
+          // Keep static index redirect children; append backend business tree.
+          const staticChildren = (layout.children ?? []).filter(
+            (child) => child.index || child.path === '/' || !child.path,
+          );
+          routes = [
+            {
+              ...layout,
+              children: [...staticChildren, ...backendRoutes],
+            },
+            ...otherRoutes,
+          ];
+          menuRoutes = backendRoutes;
+        } else {
+          // No layout shell — fall back to previous behavior.
+          routes = [...backendRoutes, ...otherRoutes];
+          menuRoutes = backendRoutes;
+        }
       }
       break;
     }
@@ -70,6 +99,8 @@ export const createAccessibleRouter = async (
         options.permissions ?? [],
         options.forbiddenElement,
       );
+      menuRoutes =
+        routes.find((route) => route.path === '/' && route.children)?.children ?? [];
       break;
     }
   }
@@ -82,11 +113,26 @@ export const createAccessibleRouter = async (
   // 将 meta 转换为 handle，使 useMatches() 能获取路由元数据
   routes = transformRoutesWithHandle(routes);
 
-  return createBrowserRouter(routes as RouteObject[], {
-    future: {
-      v7_relativeSplatPath: true,
-    },
-  });
+  // Keep menuRoutes in sync with post-process on the same tree nodes where possible.
+  // Sidebar only needs meta/path/name/children — handle transform is optional.
+  if (options.autoInjectRedirect !== false) {
+    menuRoutes = injectRedirects(
+      menuRoutes as unknown as AppRoute[],
+    ) as unknown as AppRouteObject[];
+  }
+  if (options.autoSort !== false) {
+    menuRoutes = sortRoutes(menuRoutes as unknown as AppRoute[]) as unknown as AppRouteObject[];
+  }
+  menuRoutes = transformRoutesWithHandle(menuRoutes);
+
+  return {
+    router: createBrowserRouter(routes as RouteObject[], {
+      future: {
+        v7_relativeSplatPath: true,
+      },
+    }),
+    menuRoutes,
+  };
 };
 
 /**

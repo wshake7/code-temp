@@ -58,6 +58,7 @@ declare global {
   const startTransition: typeof import('react').startTransition
   const stopRefreshTimer: typeof import('./hooks/useTokenRefresh').stopRefreshTimer
   const use: typeof import('react').use
+  const useAccessRefreshStore: typeof import('./stores/accessRefresh').useAccessRefreshStore
   const useActionState: typeof import('react').useActionState
   const useAuth: typeof import('./hooks/useAuth').useAuth
   const useAuthStore: typeof import('./stores/auth').useAuthStore
