@@ -97,12 +97,13 @@ export function sysMenuToRouteRecord(menu: SysMenu): RuntimeMenuRoute | null {
 
   const icon = (typeof metaBag.icon === "string" && metaBag.icon) || menu.icon || undefined;
 
+  // 路由树已由 role_menu RBAC 投影裁剪；不要把 MENU.permission_code 自动写入
+  // meta.authority。否则 React 侧栏会用 /auth/codes（仅 BUTTON 码）二次过滤，
+  // 把已授权的系统子菜单全部滤掉。仅当 metadata 显式声明 authority 时才透传。
   const authority =
     Array.isArray(metaBag.authority) && metaBag.authority.length > 0
       ? metaBag.authority
-      : menu.permission_code
-        ? [menu.permission_code]
-        : undefined;
+      : undefined;
 
   const meta: Record<string, unknown> = {
     title,

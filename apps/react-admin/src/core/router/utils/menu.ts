@@ -22,19 +22,38 @@ const sortMenuTree = <T extends { order?: number; children?: T[] }>(menuList: T[
     });
 };
 
+export interface TransformRoutesToMenuOptions {
+  /**
+   * 是否按 meta.authority 再过滤一次。
+   * backend 模式：路由树已由 /menu/all RBAC 投影裁剪，默认不应再滤（且 /auth/codes 仅含 BUTTON 码）。
+   * frontend 模式：可传 true，用 permissions 二次收敛。
+   */
+  checkAuthority?: boolean;
+}
+
 export const transformRoutesToMenu = (
   routes: MenuRoute[],
-  permissions: string[],
+  permissions: string[] = [],
   parentPath: string = '',
+  options: TransformRoutesToMenuOptions = {},
 ): NonNullable<ProLayoutProps['route']>['routes'] => {
+  const { checkAuthority = false } = options;
+
   const menus: MenuNode[] = routes
     .filter((route) => {
-      // 过滤掉隐藏菜单或没有权限的路由
+      // index 重定向子路由、无 path 的节点不进侧栏
+      if (route.index || !route.path) return false;
+      // 过滤掉隐藏菜单
       if (route.meta?.hideInMenu) return false;
+
+      if (!checkAuthority) return true;
 
       const meta = route.meta;
       // 如果有权限要求且用户不在权限列表中，则过滤
-      return !(meta?.authority?.length && !meta.authority.some((code: string) => permissions.includes(code)));
+      return !(
+        meta?.authority?.length &&
+        !meta.authority.some((code: string) => permissions.includes(code))
+      );
     })
     .map((route) => {
       // 处理路径：将相对路径转换为绝对路径
@@ -50,7 +69,15 @@ export const transformRoutesToMenu = (
       };
 
       if (route.children) {
-        menuItem.children = transformRoutesToMenu(route.children, permissions, fullPath) as MenuNode[] | undefined;
+        const children = transformRoutesToMenu(
+          route.children,
+          permissions,
+          fullPath,
+          options,
+        ) as MenuNode[] | undefined;
+        if (children && children.length > 0) {
+          menuItem.children = children;
+        }
       }
 
       return menuItem;

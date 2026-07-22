@@ -61,7 +61,8 @@ export const HeaderContent = ({
   widgetConfig,
 }: HeaderContentProps) => {
   const { t } = useI18n('common');
-  const { t: tRoutes } = useTranslation(); // 用于路由翻译
+  // 与侧栏/Tabs 一致：动态菜单 title 多为 routes 命名空间 key（如 page.dashboard.analytics）
+  const { t: tRoutes } = useTranslation('routes');
   const navigate = useNavigate();
   const matches = useMatches();
 
@@ -79,6 +80,20 @@ export const HeaderContent = ({
     const typedMatches = matches as MatchWithHandle[];
     const showIcon = breadcrumbPreferences?.showIcon ?? true;
     const showHome = breadcrumbPreferences?.showHome ?? true;
+
+    const translateRouteTitle = (raw: string): string => {
+      if (!raw) return '';
+      if (raw.startsWith('menu:') || raw.startsWith('routes:')) {
+        const keyName = raw.substring(raw.indexOf(':') + 1);
+        return tRoutes(keyName, { defaultValue: raw });
+      }
+      // page.dashboard.* / system.* 等
+      if (raw.includes('.')) {
+        const translated = tRoutes(raw, { defaultValue: '' });
+        if (translated) return translated;
+      }
+      return tRoutes(raw, { defaultValue: raw });
+    };
 
     const items = typedMatches
       .filter((match) => {
@@ -98,9 +113,7 @@ export const HeaderContent = ({
           icon = getIconFromName(match.handle.icon);
         }
 
-        // 尝试通过路由 name 获取翻译标题
-        let title = match.handle?.title || '';
-        title = tRoutes(title, { defaultValue: title });
+        const title = translateRouteTitle(match.handle?.title || '');
 
         return {
           key: match.pathname,

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { AppRouteObject } from '@/core/router/types';
 import { transformRoutesToMenu } from '@/core/router/utils/menu';
+import { usePreferencesStore } from '@/core/preferences/store';
 
 interface UseMenuDataOptions {
   /**
@@ -21,6 +22,8 @@ export const useMenuData = ({
   dynamicRoutes,
   permissions,
 }: UseMenuDataOptions) => {
+  const accessMode = usePreferencesStore((s) => s.preferences.app.accessMode);
+
   // 优先使用动态路由（后端模式），否则用主布局的子路由
   const routes = useMemo(() => {
     if (dynamicRoutes?.length) {
@@ -30,8 +33,12 @@ export const useMenuData = ({
   }, [dynamicRoutes, layoutChildren]);
 
   // 转换路由 → 菜单
+  // backend：树已由 /menu/all 裁剪，禁止再按 authority 过滤（codes 只有 BUTTON）
+  // frontend：可用 permissions 二次收敛
   // 说明：语言切换时上层组件会重新渲染，无需在此处显式依赖 i18n.language
   return useMemo(() => {
-    return transformRoutesToMenu(routes, permissions);
-  }, [routes, permissions]);
+    return transformRoutesToMenu(routes, permissions, '', {
+      checkAuthority: accessMode === 'frontend',
+    });
+  }, [routes, permissions, accessMode]);
 };
