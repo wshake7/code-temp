@@ -189,6 +189,23 @@ export function expandMenuIdsWithAncestors(
 }
 
 /**
+ * 自身 + 祖先链均未删除且已启用。
+ * 父 DIR 禁用时，子节点不得升为根出现在动态菜单中。
+ */
+export function isRuntimeMenuEligible(menu: SysMenu, byId: Map<number, SysMenu>): boolean {
+  if (menu.deleted_at !== 0 || menu.is_enabled !== 1) return false;
+  let parentId = menu.parent_id;
+  while (parentId != null) {
+    const parent = byId.get(parentId);
+    if (!parent || parent.deleted_at !== 0 || parent.is_enabled !== 1) {
+      return false;
+    }
+    parentId = parent.parent_id;
+  }
+  return true;
+}
+
+/**
  * Build nested runtime routes from a flat SysMenu list and a set of allowed ids.
  * BUTTON nodes contribute no route; empty DIR branches are pruned.
  */
@@ -196,10 +213,10 @@ export function buildRuntimeMenuTree(
   menus: SysMenu[],
   allowedIds: Set<number>,
 ): RuntimeMenuRoute[] {
+  const menuById = new Map(menus.map((m) => [m.id, m]));
   const usable = menus
     .filter(
-      (m) =>
-        allowedIds.has(m.id) && m.deleted_at === 0 && m.is_enabled === 1 && m.type !== "BUTTON",
+      (m) => allowedIds.has(m.id) && m.type !== "BUTTON" && isRuntimeMenuEligible(m, menuById),
     )
     .sort((a, b) => a.sort - b.sort || a.id - b.id);
 
@@ -286,12 +303,14 @@ export function getUserAccessCodes(username: string, userId?: number): string[] 
   ensureMenuApiSeeds();
   ensureUserSeeds();
   const menus = getMockSysMenuList();
+  const menuById = new Map(menus.map((m) => [m.id, m]));
   const granted = getGrantedMenuIdsForUser(username, userId);
   // Codes from explicitly granted BUTTONs, or BUTTONs whose parent MENU is granted.
+  // 祖先禁用时不发码，与动态菜单投影规则一致。
   const codes = new Set<string>();
   for (const menu of menus) {
     if (menu.type !== "BUTTON") continue;
-    if (menu.deleted_at !== 0 || menu.is_enabled !== 1) continue;
+    if (!isRuntimeMenuEligible(menu, menuById)) continue;
     if (!menu.permission_code) continue;
     const allowed = granted.has(menu.id) || (menu.parent_id != null && granted.has(menu.parent_id));
     if (allowed) codes.add(menu.permission_code);
