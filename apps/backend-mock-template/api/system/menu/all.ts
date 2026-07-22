@@ -2,7 +2,7 @@ import { defineEventHandler, getQuery } from "h3";
 import { ensureMenuApiSeeds, getMockSysMenuList, type SysMenu } from "~/utils/mock-data";
 import { toCamelRow } from "~/utils/menu-api-camel";
 import { useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 全量菜单（未软删），用于父菜单下拉与前端组树 */
 export default defineEventHandler(async (event) => {

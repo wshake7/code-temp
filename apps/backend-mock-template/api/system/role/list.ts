@@ -7,7 +7,7 @@ import {
 } from "~/utils/mock-data";
 import { toUserRoleCamelRow } from "~/utils/user-role-camel";
 import { usePageResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 角色管理：分页列表（sys_role）。

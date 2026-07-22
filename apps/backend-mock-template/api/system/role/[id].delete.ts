@@ -2,7 +2,7 @@ import { defineEventHandler, getRouterParam, setResponseStatus } from "h3";
 import { ensureUserSeeds, softDeleteRole } from "~/utils/mock-data";
 import { toUserRoleCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 软删角色：有关联用户/子角色 → 拒绝；否则清菜单/接口绑定后软删。 */
 export default defineEventHandler(async (event) => {

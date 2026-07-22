@@ -2,7 +2,7 @@ import { defineEventHandler, getRouterParam, readBody, setResponseStatus } from 
 import { ensureUserSeeds, toggleUserStatus } from "~/utils/mock-data";
 import { toUserCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 切换用户启停状态：{ status: 0|1 }。 */
 export default defineEventHandler(async (event) => {

@@ -13,7 +13,6 @@ const defaultPreferences: Preferences = {
         dynamicTitle: true,
         enableCheckUpdates: false,
         enablePreferences: true,
-        enableRefreshToken: false,
         enableTenant: false,
         isMobile: false,
         layout: "sidebar-nav",

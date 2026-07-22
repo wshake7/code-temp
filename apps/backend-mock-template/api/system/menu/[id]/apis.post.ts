@@ -1,7 +1,7 @@
 import { defineEventHandler, getRouterParam, readBody, setResponseStatus } from "h3";
 import { ensureMenuApiSeeds, getMockSysMenuList, setMenuApis } from "~/utils/mock-data";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 全量替换某菜单的接口绑定（覆盖写）。body: { apiIds: number[] } */
 export default defineEventHandler(async (event) => {

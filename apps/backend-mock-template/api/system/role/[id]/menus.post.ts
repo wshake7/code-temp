@@ -7,7 +7,7 @@ import {
   setRoleMenus,
 } from "~/utils/mock-data";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 全量替换某角色的菜单授权：{ menuIds: number[] }。 */
 export default defineEventHandler(async (event) => {

@@ -48,7 +48,7 @@ export const UserLayout = ({ requireAuth = false }: UserLayoutProps) => {
   // 未登录保护
   if (requireAuth && !accessToken) {
     const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+    return <Navigate to={`/auth/login?redirect=${redirect}`} replace />;
   }
 
   // 已登录跳转（用于登录页）

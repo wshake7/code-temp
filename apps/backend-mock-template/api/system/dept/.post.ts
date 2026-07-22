@@ -1,5 +1,5 @@
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
+import { verifyAccessToken } from '~/utils/session-utils';
 import {
   sleep,
   unAuthorizedResponse,

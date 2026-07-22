@@ -1,7 +1,7 @@
 import { defineEventHandler, getRouterParam, readBody, setResponseStatus } from "h3";
 import { ensureUserSeeds, resetUserPassword } from "~/utils/mock-data";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 重置用户密码：{ password }。占位哈希，不真实加密。 */
 export default defineEventHandler(async (event) => {

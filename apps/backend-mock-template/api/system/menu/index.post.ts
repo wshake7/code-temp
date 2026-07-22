@@ -8,7 +8,7 @@ import {
 } from "~/utils/mock-data";
 import { pickCamelKeys, toCamelRow } from "~/utils/menu-api-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 export default defineEventHandler(async (event) => {
   const userinfo = verifyAccessToken(event);

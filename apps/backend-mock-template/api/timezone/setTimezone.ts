@@ -1,5 +1,5 @@
 import { eventHandler, readBody, setResponseStatus } from "h3";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 import { TIME_ZONE_OPTIONS } from "~/utils/mock-data";
 import { unAuthorizedResponse, useResponseSuccess } from "~/utils/response";
 import { setTimezone } from "~/utils/timezone-utils";

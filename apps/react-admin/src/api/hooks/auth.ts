@@ -10,7 +10,6 @@ import {
   getUserInfoApi,
   loginApi,
   logoutApi,
-  refreshTokenApi,
 } from '@/api/rest/auth';
 import type { AccessCode, LoginRequest, LoginResponse, UserInfo } from '@/api/rest/types';
 
@@ -32,18 +31,6 @@ export function useLogin(
 export function useLogout(options?: UseMutationOptions<unknown, Error, void>) {
   return useMutation({
     mutationFn: () => logoutApi(),
-    ...options,
-  });
-}
-
-// =========================================
-// 刷新 Token (Mutation)
-// =========================================
-export function useRefreshToken(
-  options?: UseMutationOptions<{ accessToken: string }, Error, void>,
-) {
-  return useMutation({
-    mutationFn: () => refreshTokenApi(),
     ...options,
   });
 }

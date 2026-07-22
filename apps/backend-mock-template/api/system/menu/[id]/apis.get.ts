@@ -7,7 +7,7 @@ import {
 } from "~/utils/mock-data";
 import { toCamelRow } from "~/utils/menu-api-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 读取某菜单已绑定的接口列表 */
 export default defineEventHandler(async (event) => {

@@ -8,7 +8,7 @@ import {
 } from "~/utils/mock-data";
 import { pickUserRoleCamelKeys, toUserCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 创建用户（sys_user + sys_user_role）。

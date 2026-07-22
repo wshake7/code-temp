@@ -34,7 +34,7 @@
 ┌──────────────▼──────────────────────────┐
 │      apiClient 单例 (src/api/client.ts)   │
 │  - 懒加载各 Service Client               │
-│  - 统一 Token 注入、错误拦截、自动刷新    │
+│  - 统一 Token 注入、错误拦截（401 强制登出） │
 └──────────────┬──────────────────────────┘
                │ 调用 Generated Code
 ┌──────────────▼──────────────────────────┐
@@ -86,7 +86,7 @@ src/api/
 - 将已有的 `requestApi`（基于 axios）适配为 `ClientTransport` 接口
 - 通过 `createApiClient(transport)` 创建聚合型 `apiClient`
 - `apiClient` 以懒加载 getter 的形式暴露所有 Service Client
-- 保留 Token 注入、错误拦截、自动刷新等全部已有逻辑
+- 保留 Token 注入、错误拦截等全部已有逻辑（401 直接 forceLogout，无前端 refresh）
 
 **ApiClient 结构**:
 

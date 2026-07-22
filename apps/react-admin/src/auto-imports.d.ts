@@ -54,9 +54,7 @@ declare global {
   const memo: typeof import('react').memo
   const monacoLoader: typeof import('./components/common/Editor/src/monaco-loader').default
   const resetDictCache: typeof import('./hooks/useDictCache').resetDictCache
-  const startRefreshTimer: typeof import('./hooks/useTokenRefresh').startRefreshTimer
   const startTransition: typeof import('react').startTransition
-  const stopRefreshTimer: typeof import('./hooks/useTokenRefresh').stopRefreshTimer
   const use: typeof import('react').use
   const useAccessRefreshStore: typeof import('./stores/accessRefresh').useAccessRefreshStore
   const useActionState: typeof import('react').useActionState

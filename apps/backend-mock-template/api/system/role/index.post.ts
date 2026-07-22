@@ -7,7 +7,7 @@ import {
 } from "~/utils/mock-data";
 import { pickUserRoleCamelKeys, toUserRoleCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 创建角色：code/name/parentId/sort/isEnabled/remark。code 创建后不可改。 */
 export default defineEventHandler(async (event) => {

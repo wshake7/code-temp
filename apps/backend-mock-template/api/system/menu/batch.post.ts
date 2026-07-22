@@ -8,7 +8,7 @@ import {
   updateSysMenu,
 } from "~/utils/mock-data";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 菜单批量操作。

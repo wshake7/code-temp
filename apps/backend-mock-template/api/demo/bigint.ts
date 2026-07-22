@@ -1,5 +1,5 @@
 import { eventHandler, setHeader } from "h3";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 import { unAuthorizedResponse } from "~/utils/response";
 
 export default eventHandler(async (event) => {

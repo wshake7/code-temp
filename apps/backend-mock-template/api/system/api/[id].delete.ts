@@ -7,7 +7,7 @@ import {
 } from "~/utils/mock-data";
 import { toCamelRow } from "~/utils/menu-api-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 软删接口：清 sys_menu_api 绑定后软删 */
 export default defineEventHandler(async (event) => {

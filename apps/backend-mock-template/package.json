@@ -12,11 +12,9 @@
   },
   "dependencies": {
     "@faker-js/faker": "catalog:",
-    "jsonwebtoken": "catalog:",
     "nitropack": "catalog:"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "catalog:",
     "h3": "1.15.11"
   }
 }

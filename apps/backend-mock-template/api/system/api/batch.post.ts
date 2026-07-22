@@ -7,7 +7,7 @@ import {
   updateSysApi,
 } from "~/utils/mock-data";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 接口批量操作。

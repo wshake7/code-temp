@@ -1,5 +1,5 @@
 import { get, post } from './request';
-import type { AccessCode, LoginRequest, LoginResponse, RefreshTokenResponse, UserInfo } from './types';
+import type { AccessCode, LoginRequest, LoginResponse, UserInfo } from './types';
 
 /** 登录 */
 export function loginApi(body: LoginRequest) {
@@ -9,11 +9,6 @@ export function loginApi(body: LoginRequest) {
 /** 登出 */
 export function logoutApi() {
   return post<unknown>('/auth/logout');
-}
-
-/** 刷新 token（依赖 cookie，不带 body） */
-export function refreshTokenApi() {
-  return post<RefreshTokenResponse>('/auth/refresh');
 }
 
 /** 获取权限码 */

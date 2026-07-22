@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import i18next from 'i18next';
 
-import { loginApi, getUserInfoApi, refreshTokenApi, logoutApi } from '@/api/rest/auth';
-import { startRefreshTimer, stopRefreshTimer } from '@/hooks/useTokenRefresh';
+import { loginApi, getUserInfoApi, logoutApi } from '@/api/rest/auth';
 import type { UserInfo, LoginRequest } from '@/api/rest/types';
 import { queryClient } from '@/core/query-client';
 
@@ -15,9 +14,8 @@ export interface LoginOptions {
 }
 
 export interface AuthState {
-  // Token 状态
+  // Token 状态（sa-token 风格单 token）
   accessToken: string | null;
-  accessTokenExpireAt: number | null;
 
   // 用户状态
   userInfo: UserInfo | null;
@@ -33,7 +31,6 @@ export interface AuthState {
     onSuccess?: () => void,
   ) => Promise<void>;
   logout: (redirect?: boolean) => Promise<void>;
-  refreshToken: () => Promise<string>;
   reauthenticate: () => void;
   forceLogout: () => void;
   setUserInfo: (info: UserInfo) => void;
@@ -43,8 +40,6 @@ export interface AuthState {
   // 内部：手动持久化
   hydrate: () => void;
 }
-
-const DEFAULT_ACCESS_EXPIRES_IN = 7200; // 2 小时
 
 function pickStorage(remember: boolean): Storage | null {
   if (typeof window === 'undefined') return null;
@@ -58,7 +53,7 @@ function getRememberFromCookie(): boolean {
 }
 
 function persistState(
-  state: Pick<AuthState, 'accessToken' | 'accessTokenExpireAt'>,
+  state: Pick<AuthState, 'accessToken'>,
   remember: boolean,
 ) {
   if (typeof window === 'undefined') return;
@@ -108,32 +103,28 @@ function readPersistedUserInfo(): UserInfo | null {
 
 function readPersisted(): {
   accessToken: string | null;
-  accessTokenExpireAt: number | null;
 } {
   if (typeof window === 'undefined') {
-    return { accessToken: null, accessTokenExpireAt: null };
+    return { accessToken: null };
   }
   // 优先读 remember=true 选择的 storage
   const remember = getRememberFromCookie();
   const raw = pickStorage(remember)?.getItem(STORAGE_KEY);
-  if (!raw) return { accessToken: null, accessTokenExpireAt: null };
+  if (!raw) return { accessToken: null };
   try {
     const parsed = JSON.parse(raw) as {
       accessToken?: string;
-      accessTokenExpireAt?: number;
     };
     return {
       accessToken: parsed.accessToken ?? null,
-      accessTokenExpireAt: parsed.accessTokenExpireAt ?? null,
     };
   } catch {
-    return { accessToken: null, accessTokenExpireAt: null };
+    return { accessToken: null };
   }
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
+export const useAuthStore = create<AuthState>()((set) => ({
   accessToken: null,
-  accessTokenExpireAt: null,
   userInfo: null,
   loginLoading: false,
   error: null,
@@ -149,14 +140,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ loginLoading: true, error: null });
 
     try {
-      // 1. 登录（明文密码）
+      // 1. 登录（明文密码），只持久化 accessToken
       const response = await loginApi(params);
-      const now = Date.now();
       const accessToken = response.accessToken;
-      const expiresAt = now + DEFAULT_ACCESS_EXPIRES_IN * 1000;
 
-      set({ accessToken, accessTokenExpireAt: expiresAt });
-      persistState({ accessToken, accessTokenExpireAt: expiresAt }, remember);
+      set({ accessToken });
+      persistState({ accessToken }, remember);
 
       // 2. 拉取完整用户信息（vben 形态）
       let userInfo: UserInfo | null = null;
@@ -175,10 +164,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ userInfo });
       persistUserInfo(userInfo);
 
-      // 3. 启动定时刷新
-      startRefreshTimer();
-
-      // 4. 跳转交给 onSuccess 回调（页面层用 react-router 的 navigate，避免整页刷新丢内存）
+      // 3. 跳转交给 onSuccess 回调（页面层用 react-router 的 navigate，避免整页刷新丢内存）
       if (onSuccess) {
         onSuccess();
       }
@@ -195,7 +181,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   logout: async () => {
-    stopRefreshTimer();
     try {
       await logoutApi().catch(() => {
         // 登出 API 失败不影响本地清理
@@ -210,28 +195,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
       set({
         accessToken: null,
-        accessTokenExpireAt: null,
         userInfo: null,
         error: null,
         loginLoading: false,
       });
-    }
-  },
-
-  refreshToken: async () => {
-    try {
-      const response = await refreshTokenApi();
-      const now = Date.now();
-      const accessToken = response.accessToken;
-      const accessTokenExpireAt = now + DEFAULT_ACCESS_EXPIRES_IN * 1000;
-      set({ accessToken, accessTokenExpireAt });
-      const remember = getRememberFromCookie();
-      persistState({ accessToken, accessTokenExpireAt }, remember);
-      return accessToken;
-    } catch (err) {
-      console.error('[auth.refreshToken] failed', err);
-      get().forceLogout();
-      return '';
     }
   },
 
@@ -240,7 +207,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   forceLogout: () => {
-    stopRefreshTimer();
     // 清除 queryClient 缓存，防止缓存污染导致重新登录失败
     queryClient.clear();
     clearPersisted();
@@ -249,7 +215,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
     set({
       accessToken: null,
-      accessTokenExpireAt: null,
       userInfo: null,
       error: null,
       loginLoading: false,
@@ -268,7 +233,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   $reset: () =>
     set({
       accessToken: null,
-      accessTokenExpireAt: null,
       userInfo: null,
       error: null,
       loginLoading: false,

@@ -7,7 +7,7 @@ import {
 } from "~/utils/mock-data";
 import { toCamelRow } from "~/utils/menu-api-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 读取某角色可授权的接口列表（带 bound 标记）。

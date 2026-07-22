@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { eventHandler } from "h3";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 import { unAuthorizedResponse, useResponseSuccess } from "~/utils/response";
 
 const formatterCN = new Intl.DateTimeFormat("zh-CN", {

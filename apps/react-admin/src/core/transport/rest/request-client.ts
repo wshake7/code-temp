@@ -21,10 +21,6 @@ class RequestClient {
   public addResponseInterceptor: InterceptorManager['addResponseInterceptor'];
 
   public download: FileDownloader['download'];
-  // 是否正在刷新token
-  public isRefreshing = false;
-  // 刷新token队列
-  public refreshTokenQueue: ((token: string) => void)[] = [];
   public upload: FileUploader['upload'];
 
   // ==========================
@@ -196,12 +192,11 @@ class RequestClient {
   }
 
   /**
-   * 401 认证拦截器：自动刷新 Token 或跳转登录页
+   * 401 认证拦截器：单 token 模式下直接 forceLogout / 重新登录
    */
   private useAuthInterceptor(callbacks: RequestClientCallbacks) {
     this.addResponseInterceptor(
       authenticateResponseInterceptor({
-        client: this,
         doReAuthenticate: async () => {
           console.warn('Token expired, redirecting to login...');
           if (callbacks.onReAuthenticate) {
@@ -212,14 +207,6 @@ class RequestClient {
             );
           }
         },
-        doRefreshToken: async () => {
-          if (callbacks.refreshToken) {
-            return callbacks.refreshToken();
-          }
-          return '';
-        },
-        enableRefreshToken: true,
-        formatToken: this.formatToken.bind(this),
       }),
     );
   }

@@ -8,7 +8,7 @@ import {
 } from "~/utils/mock-data";
 import { toUserCamelRow } from "~/utils/user-role-camel";
 import { usePageResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 用户管理：分页列表（sys_user）。

@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { eventHandler, getQuery } from "h3";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 import { sleep, unAuthorizedResponse, usePageResponseSuccess } from "~/utils/response";
 
 function generateMockDataList(count: number) {

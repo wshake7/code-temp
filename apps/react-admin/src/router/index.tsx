@@ -67,6 +67,7 @@ export const AppRouter = () => {
       try {
         // ========== 已认证时的初始化流程 ==========
         // 对齐 Vue 版 setupAccessGuard：权限码获取 + 字典预加载
+        let authStillValid = isAuthenticated;
         if (isAuthenticated) {
           try {
             // 1. 获取用户权限码（角色 + 权限码）
@@ -81,26 +82,42 @@ export const AppRouter = () => {
 
             // 2. 预加载字典数据（部分页面依赖字典，未预加载会导致闪烁）
             await fetchAllDictEntries();
+
+            // 初始化期间 401 会 forceLogout；以 store 为准
+            authStillValid = !!useAuthStore.getState().accessToken;
           } catch (authErr) {
             // 认证失败（token 过期/无效）：forceLogout 已在拦截器中被调用
             console.warn('Auth initialization failed, will redirect to login:', authErr);
             useUserStore.getState().$reset();
+            authStillValid = !!useAuthStore.getState().accessToken;
 
-            if (cancelled) return; // 已过期，不继续创建路由
+            if (cancelled) return;
           }
         }
 
         // await 之后，通过 useAccess 获取最新合并权限（角色码 + 权限码）
         const freshPermissions = getAccessStatic().getAllPermissions();
 
+        // token 已失效：用 frontend 静态路由建树，AuthGuard 会送去登录，避免 backend 空菜单 + 404
+        const effectiveMode = authStillValid ? accessMode : 'frontend';
+
         // 无论认证是否成功，都生成路由（未认证时 permissions 为空，AuthGuard 会拦截）
-        const accessible = await createAccessibleRouter(accessMode, {
+        const accessible = await createAccessibleRouter(effectiveMode, {
           routes: allRoutes,
           permissions: freshPermissions,
           forbiddenElement: <Forbidden />,
           fetchMenuListAsync: async () => {
-            const items = await getAllMenusApi();
-            return filterMenusByPageMap(items ?? []);
+            // 无 token 时不要打菜单接口（会 401 再 forceLogout）
+            if (!useAuthStore.getState().accessToken) {
+              return [];
+            }
+            try {
+              const items = await getAllMenusApi();
+              return filterMenusByPageMap(items ?? []);
+            } catch (menuErr) {
+              console.warn('fetchMenuListAsync failed, fallback to static routes:', menuErr);
+              return [];
+            }
           },
           layoutMap,
           pageMap,

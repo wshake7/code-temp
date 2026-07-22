@@ -90,7 +90,7 @@ src/
 │   ├── rest/                   # REST 客户端（薄封装 RequestClient）
 │   │   ├── request.ts          #   - get/post/put/delete
 │   │   ├── types.ts            #   - 业务类型（LoginRequest、UserListItem、MenuItem...）
-│   │   ├── auth.ts             #   - loginApi / logoutApi / refreshTokenApi / ...
+│   │   ├── auth.ts             #   - loginApi / logoutApi / getUserInfoApi / ...
 │   │   ├── user.ts             #   - listUsersApi / createUserApi / updateUserApi / ...
 │   │   └── menu.ts             #   - getAllMenusApi
 │   ├── hooks/                  # React Query Hooks（组件内使用）
@@ -115,7 +115,7 @@ src/
 │   └── index.tsx               # AppRouter 入口
 │
 ├── stores/                     # 全局状态（Zustand）
-│   ├── auth.ts                 # 认证状态（token / refreshToken / forceLogout）
+│   ├── auth.ts                 # 认证状态（accessToken / forceLogout，sa-token 单 token）
 │   ├── user.ts                 # 用户信息（userInfo / roles / permissions）
 │   ├── tabs.ts                 # 标签页状态
 │   └── pageRefresh.ts          # 页面刷新控制
@@ -124,7 +124,6 @@ src/
 │   ├── useAuth.ts              # 认证统一入口（登录/登出/权限码获取）
 │   ├── useDictCache.ts         # 字典缓存
 │   ├── useProTableScrollY.ts   # ProTable 动态高度
-│   ├── useTokenRefresh.ts      # Token 定时刷新
 │   └── ...
 │
 ├── locales/                    # 翻译资源
@@ -238,7 +237,7 @@ refactor(storage): 重构缓存驱逐策略
 main.tsx
   → bootstrap()
     → initI18n(locale)              // 初始化 i18next
-    → RequestClient.init(...)       // 配置 Axios（getToken / refreshToken / 错误处理）
+    → RequestClient.init(...)       // 配置 Axios（getToken / 401 强制登出 / 错误处理）
   → render()
     → QueryClientProvider           // TanStack Query
     → ThemeProvider                 // AntD 主题 + 暗色模式 + 水印 + 国际化
@@ -253,11 +252,12 @@ main.tsx
         → <RouterProvider />        // 渲染路由
 ```
 
-### 认证流程
+### 认证流程（sa-token 风格单 token）
 
-- **登录**：`useAuth().login()` → 存储 token → 路由守卫放行 → 跳转原页面
+- **登录**：`useAuth().login()` → 只存储 `accessToken`（remember→localStorage，否则 sessionStorage）→ 路由守卫放行 → 跳转原页面
+- **请求头**：`Authorization: Bearer <accessToken>`
+- **会话续期**：由后端滑动续期，前端不调用 `/auth/refresh`，无客户端定时刷新
 - **Token 失效**：401 响应 → `forceLogout()` → 清除 token → 跳转登录页（携带 redirect）
-- **Token 刷新**：`useTokenRefresh` Hook 定时检查，过期前自动调用 refreshToken
 - **登出**：`useAuth().logout()` → 调用后端 /logout → 清除状态 → 跳转登录页
 
 ### 权限体系

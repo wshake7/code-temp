@@ -8,7 +8,7 @@ import {
 } from "~/utils/mock-data";
 import { pickUserRoleCamelKeys, toUserCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 更新用户（基本信息 + 角色）。password 不在此改（走 /password 端点）。

@@ -1,7 +1,7 @@
 import { defineEventHandler } from "h3";
 import { ensureMenuApiSeeds, getMockSysApiList } from "~/utils/mock-data";
 import { useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 去重的 api_group 列表，供前端分组下拉 */
 export default defineEventHandler(async (event) => {

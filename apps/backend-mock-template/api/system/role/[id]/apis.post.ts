@@ -7,7 +7,7 @@ import {
   setRoleApis,
 } from "~/utils/mock-data";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 全量替换某角色的接口授权：{ apiIds: number[] }。 */
 export default defineEventHandler(async (event) => {

@@ -2,7 +2,7 @@ import { defineEventHandler, getQuery } from "h3";
 import { ensureUserSeeds, getMockSysRoleList } from "~/utils/mock-data";
 import { toUserRoleCamelRow } from "~/utils/user-role-camel";
 import { useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /**
  * 全量角色（未软删），用于用户表单的角色下拉。

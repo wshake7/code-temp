@@ -14,10 +14,6 @@ export interface LoginResponse {
   accessToken: string;
 }
 
-export interface RefreshTokenResponse {
-  accessToken: string;
-}
-
 export type AccessCode = string;
 
 export interface UserInfo {

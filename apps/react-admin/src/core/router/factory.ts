@@ -10,7 +10,8 @@ import { transformRoutesWithHandle } from './utils/transform-meta-to-handle';
 import type { GenerateMenuAndRoutesOptions, AppRoute, AppRouteObject } from './types';
 import { generateRoutesByBackend, generateRoutesByFrontend } from '@/core/router/generators';
 import type { AccessModeType } from '@/core/preferences';
-import React from 'react';
+import React, { createElement } from 'react';
+import RouteErrorFallback from '@/layouts/components/ErrorFallback/RouteErrorFallback';
 
 /**
  * 从路由列表中分离出：
@@ -72,18 +73,41 @@ export const createAccessibleRouter = async (
 
         const layout = layoutRoutes[0];
         if (layout) {
-          // Keep static index redirect children; append backend business tree.
+          // 保留：index 重定向、通配 404；再挂后端业务树
+          // 若漏掉 path:'*'，未匹配子路径会在 data router 下抛 404 且无 errorElement → 默认白屏
           const staticChildren = (layout.children ?? []).filter(
-            (child) => child.index || child.path === '/' || !child.path,
+            (child) =>
+              child.index ||
+              child.path === '/' ||
+              !child.path ||
+              child.path === '*',
           );
+          const splatChildren = staticChildren.filter((c) => c.path === '*');
+          const nonSplatStatic = staticChildren.filter((c) => c.path !== '*');
+
+          // 后端菜单为空（鉴权失败/接口异常）时回退到静态 layout 子路由，避免只剩 redirect 无页面
+          const businessChildren =
+            backendRoutes.length > 0
+              ? backendRoutes
+              : (layout.children ?? []).filter(
+                  (child) =>
+                    !child.index &&
+                    child.path !== '/' &&
+                    child.path !== '*' &&
+                    !!child.path,
+                );
+
           routes = [
             {
               ...layout,
-              children: [...staticChildren, ...backendRoutes],
+              // 确保主布局始终有 errorElement
+              errorElement: layout.errorElement,
+              // splat 必须在最后
+              children: [...nonSplatStatic, ...businessChildren, ...splatChildren],
             },
             ...otherRoutes,
           ];
-          menuRoutes = backendRoutes;
+          menuRoutes = backendRoutes.length > 0 ? backendRoutes : businessChildren;
         } else {
           // No layout shell — fall back to previous behavior.
           routes = [...backendRoutes, ...otherRoutes];
@@ -129,8 +153,18 @@ export const createAccessibleRouter = async (
   }
   menuRoutes = transformRoutesWithHandle(menuRoutes);
 
+  // 顶层路由缺 errorElement 时补上，避免 RR 默认 “Unexpected Application Error”
+  const withErrorBoundary = routes.map((route) =>
+    route.errorElement
+      ? route
+      : {
+          ...route,
+          errorElement: createElement(RouteErrorFallback),
+        },
+  );
+
   return {
-    router: createBrowserRouter(routes as RouteObject[], {
+    router: createBrowserRouter(withErrorBoundary as RouteObject[], {
       future: {
         v7_relativeSplatPath: true,
       },

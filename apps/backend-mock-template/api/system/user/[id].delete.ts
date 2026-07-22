@@ -2,7 +2,7 @@ import { defineEventHandler, getRouterParam, setResponseStatus } from "h3";
 import { ensureUserSeeds, softDeleteUser } from "~/utils/mock-data";
 import { toUserCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 软删用户（清 sys_user_role 关联）。 */
 export default defineEventHandler(async (event) => {

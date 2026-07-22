@@ -32,10 +32,6 @@ export interface AppPreferences {
     enableCheckUpdates: boolean;
     /** 是否显示偏好设置 */
     enablePreferences: boolean;
-    /**
-     * @zh_CN 是否开启refreshToken
-     */
-    enableRefreshToken: boolean;
     /** 是否启用多租户 */
     enableTenant: boolean;
     /** 是否移动端 */

@@ -159,7 +159,6 @@ interface AppPreferences {
   colorGrayMode: boolean;                     // 灰色模式
   colorWeakMode: boolean;                     // 色弱模式
   watermark: boolean;                         // 水印
-  enableRefreshToken: boolean;                // 启用 Token 刷新
   enableTenant: boolean;                      // 启用多租户
   enablePreferences: boolean;                 // 显示偏好设置入口
   isMobile: boolean;                          // 移动端模式

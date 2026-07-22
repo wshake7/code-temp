@@ -2,7 +2,7 @@ import { defineEventHandler, getRouterParam, readBody, setResponseStatus } from 
 import { ensureUserSeeds, isValidParentRole, updateSysRole } from "~/utils/mock-data";
 import { pickUserRoleCamelKeys, toUserRoleCamelRow } from "~/utils/user-role-camel";
 import { useResponseError, useResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 更新角色：code 不可改；parentId 变更做成环检测。 */
 export default defineEventHandler(async (event) => {

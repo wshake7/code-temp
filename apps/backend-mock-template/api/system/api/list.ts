@@ -2,7 +2,7 @@ import { defineEventHandler, getQuery } from "h3";
 import { ensureMenuApiSeeds, getMockSysApiList, type SysApi } from "~/utils/mock-data";
 import { toCamelRow } from "~/utils/menu-api-camel";
 import { usePageResponseSuccess, unAuthorizedResponse } from "~/utils/response";
-import { verifyAccessToken } from "~/utils/jwt-utils";
+import { verifyAccessToken } from "~/utils/session-utils";
 
 /** 接口管理：分页列表（sys_api） */
 export default defineEventHandler(async (event) => {

@@ -28,7 +28,7 @@ async function _initI18n() {
   RequestClient.init(import.meta.env.VITE_API_URL, {
     getToken: () => useAuthStore.getState().accessToken,
     getLocale: () => i18n.language,
-    refreshToken: async () => useAuthStore.getState().refreshToken(),
+    // 单 token：401 直接 forceLogout，无前端 refresh
     onReAuthenticate: async () => {
       useAuthStore.getState().forceLogout();
     },
