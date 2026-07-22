@@ -213,13 +213,39 @@ const systemMenus = (level: "full" | "partial") => {
   ];
 };
 
+/** 日志审计菜单（对齐 sys_login_log；full 角色可见） */
+const logMenus = () => [
+  {
+    meta: {
+      icon: "lucide:logs",
+      order: 2004,
+      title: "log.title",
+    },
+    name: "Log",
+    path: "/log",
+    redirect: "/log/login-log",
+    children: [
+      {
+        name: "LogLoginLog",
+        path: "/log/login-log",
+        component: "/log/login-log/index",
+        meta: {
+          icon: "lucide:user-lock",
+          order: 1,
+          title: "log.loginLog.title",
+        },
+      },
+    ],
+  },
+];
+
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...systemMenus("full")],
+    menus: [...dashboardMenus, ...logMenus(), ...systemMenus("full")],
     username: "vben",
   },
   {
-    menus: [...dashboardMenus, ...systemMenus("partial")],
+    menus: [...dashboardMenus, ...logMenus(), ...systemMenus("partial")],
     username: "admin",
   },
   {
@@ -1597,6 +1623,34 @@ function buildSysMenuSeeds(): SysMenu[] {
       sort: 1,
       ...base,
     },
+    // 日志审计 — sys_login_log
+    {
+      id: 300,
+      parent_id: null,
+      name: "log.title",
+      type: "DIR",
+      path: "/log",
+      component: null,
+      icon: "lucide:logs",
+      permission_code: null,
+      sort: 2004,
+      ...base,
+      redirect: "/log/login-log",
+      metadata: JSON.stringify({ routeName: "Log", order: 2004 }),
+    },
+    {
+      id: 301,
+      parent_id: 300,
+      name: "log.loginLog.title",
+      type: "MENU",
+      path: "/log/login-log",
+      component: "/log/login-log/index",
+      icon: "lucide:user-lock",
+      permission_code: "log:login-log:list",
+      sort: 1,
+      ...base,
+      metadata: JSON.stringify({ routeName: "LogLoginLog", order: 1 }),
+    },
   ];
 
   for (const d of defs) {
@@ -1820,6 +1874,21 @@ function buildSysApiSeeds(): SysApi[] {
       created_by: 0,
       updated_by: 0,
     },
+    {
+      id: 16,
+      name: "登录日志分页列表",
+      method: "GET",
+      path: "/api/system/login-log/list",
+      permission_code: "log:login-log:list",
+      api_group: "日志审计",
+      remark: "sys_login_log / archive 列表",
+      is_enabled: 1,
+      deleted_at: 0,
+      created_at: now,
+      updated_at: now,
+      created_by: 0,
+      updated_by: 0,
+    },
   ];
   for (const d of defs) {
     mockSysApiList.push({ ...d, method: d.method.toUpperCase() });
@@ -1838,13 +1907,15 @@ export function ensureMenuApiSeeds(): void {
   if (mockSysApiList.length === 0) {
     buildSysApiSeeds();
   }
-  // sys_menu_api 种子：菜单管理(13) 绑定「菜单树」「接口同步」两个接口（7、8）作示例
+  // sys_menu_api 种子：菜单管理绑定示例 + 登录日志绑定列表接口
   if (mockSysMenuApiList.length === 0) {
     const now = "2025-01-10T08:00:00.000Z";
     // SystemMenu(205) binds sample APIs 7/8
     mockSysMenuApiList.push(
       { menu_id: 205, api_id: 7, created_at: now, created_by: 0 },
       { menu_id: 205, api_id: 8, created_at: now, created_by: 0 },
+      // LogLoginLog(301) → 登录日志列表
+      { menu_id: 301, api_id: 16, created_at: now, created_by: 0 },
     );
   }
 }
@@ -2430,6 +2501,8 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
 
   // Dashboard branch + buttons included where useful.
   const dashboard = [100, 101, 102];
+  // 日志审计（与 MOCK_MENUS / Vue 静态路由对齐）
+  const logBranch = [300, 301];
   // Full system menus + button children
   const systemFull = [
     200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206, 2061,
@@ -2438,11 +2511,11 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
   const systemPartial = [200, 201, 2011, 2012, 2013, 202, 2021, 203, 204];
 
   // super_admin(id=1) = vben full
-  for (const mid of [...dashboard, ...systemFull]) {
+  for (const mid of [...dashboard, ...logBranch, ...systemFull]) {
     rows.push({ role_id: 1, menu_id: mid, created_at: now, created_by: 0 });
   }
-  // admin(id=2) = partial system + dashboard
-  for (const mid of [...dashboard, ...systemPartial]) {
+  // admin(id=2) = partial system + dashboard + 登录日志
+  for (const mid of [...dashboard, ...logBranch, ...systemPartial]) {
     rows.push({ role_id: 2, menu_id: mid, created_at: now, created_by: 0 });
   }
   // user(id=3) = jack dashboard only
@@ -2457,11 +2530,11 @@ function buildSysRoleApiSeeds(): SysRoleApi[] {
   const now = "2025-01-10T08:00:00.000Z";
   const rows: SysRoleApi[] = [];
   // super_admin(id=1) 授权全部接口
-  for (const aid of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+  for (const aid of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) {
     rows.push({ role_id: 1, api_id: aid, created_at: now, created_by: 0 });
   }
-  // admin(id=2) 授权用户管理接口 id 1-4
-  for (const aid of [1, 2, 3, 4]) {
+  // admin(id=2) 授权用户管理接口 + 登录日志列表
+  for (const aid of [1, 2, 3, 4, 16]) {
     rows.push({ role_id: 2, api_id: aid, created_at: now, created_by: 0 });
   }
   return rows;
@@ -2483,6 +2556,480 @@ export function ensureUserSeeds(): void {
   }
   if (mockSysRoleApiList.length === 0) {
     mockSysRoleApiList.push(...buildSysRoleApiSeeds());
+  }
+}
+
+// ============================================================
+// 登录日志 — sys_login_log / sys_login_log_archive
+// 字段对齐 schema.sql v5；只增不改；login 成功/失败均写热表。
+// ============================================================
+
+export type LoginMethod = "PASSWORD" | "SSO" | "OAUTH" | "SMS";
+
+export interface SysLoginLog {
+  id: number;
+  username: string;
+  success: 0 | 1;
+  reason: string;
+  status_code: null | number;
+  sys_user_id: null | number;
+  login_method: LoginMethod;
+  login_time: string;
+  login_ip: string;
+  login_mac: string;
+  client_id: string;
+  client_name: string;
+  user_agent: string;
+  browser_name: string;
+  browser_version: string;
+  os_name: string;
+  os_version: string;
+  location: string;
+  created_at: string;
+}
+
+export interface SysLoginLogArchive extends SysLoginLog {
+  archived_at: string;
+}
+
+export interface AppendLoginLogInput {
+  username: string;
+  success: 0 | 1;
+  reason?: string;
+  statusCode?: null | number;
+  sysUserId?: null | number;
+  loginMethod?: LoginMethod;
+  loginIp?: string;
+  loginMac?: string;
+  clientId?: string;
+  clientName?: string;
+  userAgent?: string;
+  browserName?: string;
+  browserVersion?: string;
+  osName?: string;
+  osVersion?: string;
+  location?: string;
+  loginTime?: string;
+}
+
+const mockSysLoginLogList: SysLoginLog[] = [];
+const mockSysLoginLogArchiveList: SysLoginLogArchive[] = [];
+
+export function getMockSysLoginLogList() {
+  return mockSysLoginLogList;
+}
+
+export function getMockSysLoginLogArchiveList() {
+  return mockSysLoginLogArchiveList;
+}
+
+let sysLoginLogIdSeq = 0;
+function nextSysLoginLogId(): number {
+  sysLoginLogIdSeq += 1;
+  return sysLoginLogIdSeq;
+}
+
+let sysLoginLogArchiveIdSeq = 0;
+function nextSysLoginLogArchiveId(): number {
+  sysLoginLogArchiveIdSeq += 1;
+  return sysLoginLogArchiveIdSeq;
+}
+
+/** 简易 UA 解析（mock 用，非完整 parser） */
+export function parseUserAgent(ua: string): {
+  browser_name: string;
+  browser_version: string;
+  os_name: string;
+  os_version: string;
+} {
+  let browser_name = "";
+  let browser_version = "";
+  let os_name = "";
+  let os_version = "";
+
+  const edge = ua.match(/Edg\/([\d.]+)/);
+  const chrome = ua.match(/Chrome\/([\d.]+)/);
+  const firefox = ua.match(/Firefox\/([\d.]+)/);
+  const safari = ua.match(/Version\/([\d.]+).*Safari/);
+  if (edge) {
+    browser_name = "Edge";
+    browser_version = edge[1] ?? "";
+  } else if (chrome) {
+    browser_name = "Chrome";
+    browser_version = chrome[1] ?? "";
+  } else if (firefox) {
+    browser_name = "Firefox";
+    browser_version = firefox[1] ?? "";
+  } else if (safari) {
+    browser_name = "Safari";
+    browser_version = safari[1] ?? "";
+  } else if (ua) {
+    browser_name = "Unknown";
+  }
+
+  const win = ua.match(/Windows NT ([\d.]+)/);
+  const mac = ua.match(/Mac OS X ([\d_]+)/);
+  const android = ua.match(/Android ([\d.]+)/);
+  const ios = ua.match(/OS ([\d_]+) like Mac OS X/);
+  if (win) {
+    os_name = "Windows";
+    os_version = win[1] === "10.0" ? "10/11" : (win[1] ?? "");
+  } else if (mac) {
+    os_name = "macOS";
+    os_version = (mac[1] ?? "").replace(/_/g, ".");
+  } else if (android) {
+    os_name = "Android";
+    os_version = android[1] ?? "";
+  } else if (ios) {
+    os_name = "iOS";
+    os_version = (ios[1] ?? "").replace(/_/g, ".");
+  } else if (/Linux/.test(ua)) {
+    os_name = "Linux";
+  }
+
+  return { browser_name, browser_version, os_name, os_version };
+}
+
+/** 追加一条热表登录日志（只增不改）；写入前确保种子已就绪 */
+export function appendLoginLog(input: AppendLoginLogInput): SysLoginLog {
+  ensureLoginLogSeeds();
+  const now = input.loginTime ?? new Date().toISOString();
+  const ua = input.userAgent ?? "";
+  const parsed = parseUserAgent(ua);
+  const row: SysLoginLog = {
+    id: nextSysLoginLogId(),
+    username: input.username,
+    success: input.success,
+    reason: input.reason ?? "",
+    status_code: input.statusCode ?? (input.success === 1 ? 200 : 403),
+    sys_user_id: input.sysUserId ?? null,
+    login_method: input.loginMethod ?? "PASSWORD",
+    login_time: now,
+    login_ip: input.loginIp ?? "",
+    login_mac: input.loginMac ?? "",
+    client_id: input.clientId ?? "web-admin",
+    client_name: input.clientName ?? "Web Admin",
+    user_agent: ua,
+    browser_name: input.browserName ?? parsed.browser_name,
+    browser_version: input.browserVersion ?? parsed.browser_version,
+    os_name: input.osName ?? parsed.os_name,
+    os_version: input.osVersion ?? parsed.os_version,
+    location: input.location ?? "Mock-City",
+    created_at: now,
+  };
+  mockSysLoginLogList.push(row);
+  return row;
+}
+
+function hoursAgo(h: number): string {
+  return new Date(Date.now() - h * 3600_000).toISOString();
+}
+
+function daysAgo(d: number): string {
+  return new Date(Date.now() - d * 86_400_000).toISOString();
+}
+
+function buildLoginLogSeeds(): SysLoginLog[] {
+  const chromeUa =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+  const macUa =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15";
+  const seeds: Omit<SysLoginLog, "id">[] = [
+    {
+      username: "vben",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 1,
+      login_method: "PASSWORD",
+      login_time: hoursAgo(1),
+      login_ip: "10.0.0.12",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "122.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: hoursAgo(1),
+    },
+    {
+      username: "admin",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 2,
+      login_method: "PASSWORD",
+      login_time: hoursAgo(3),
+      login_ip: "10.0.0.21",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: macUa,
+      browser_name: "Safari",
+      browser_version: "17.2",
+      os_name: "macOS",
+      os_version: "14.3",
+      location: "Mock-City",
+      created_at: hoursAgo(3),
+    },
+    {
+      username: "admin",
+      success: 0,
+      reason: "Username or password is incorrect.",
+      status_code: 403,
+      sys_user_id: null,
+      login_method: "PASSWORD",
+      login_time: hoursAgo(5),
+      login_ip: "203.0.113.8",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "122.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: hoursAgo(5),
+    },
+    {
+      username: "jack",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 3,
+      login_method: "PASSWORD",
+      login_time: hoursAgo(8),
+      login_ip: "10.0.0.33",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "122.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: hoursAgo(8),
+    },
+    {
+      username: "unknown",
+      success: 0,
+      reason: "Username or password is incorrect.",
+      status_code: 403,
+      sys_user_id: null,
+      login_method: "PASSWORD",
+      login_time: hoursAgo(12),
+      login_ip: "198.51.100.4",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "122.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: hoursAgo(12),
+    },
+    {
+      username: "vben",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 1,
+      login_method: "SSO",
+      login_time: hoursAgo(24),
+      login_ip: "10.0.0.12",
+      login_mac: "",
+      client_id: "sso-portal",
+      client_name: "SSO Portal",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "122.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: hoursAgo(24),
+    },
+    {
+      username: "jack",
+      success: 0,
+      reason: "Username and password are required",
+      status_code: 400,
+      sys_user_id: null,
+      login_method: "PASSWORD",
+      login_time: hoursAgo(30),
+      login_ip: "10.0.0.99",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: "",
+      browser_name: "",
+      browser_version: "",
+      os_name: "",
+      os_version: "",
+      location: "Mock-City",
+      created_at: hoursAgo(30),
+    },
+    {
+      username: "admin",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 2,
+      login_method: "OAUTH",
+      login_time: hoursAgo(48),
+      login_ip: "10.0.0.21",
+      login_mac: "",
+      client_id: "oauth-app",
+      client_name: "OAuth App",
+      user_agent: macUa,
+      browser_name: "Safari",
+      browser_version: "17.2",
+      os_name: "macOS",
+      os_version: "14.3",
+      location: "Mock-City",
+      created_at: hoursAgo(48),
+    },
+  ];
+  return seeds.map((s) => {
+    const id = nextSysLoginLogId();
+    return { id, ...s };
+  });
+}
+
+function buildLoginLogArchiveSeeds(): SysLoginLogArchive[] {
+  const chromeUa =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  const seeds: Omit<SysLoginLogArchive, "id">[] = [
+    {
+      username: "vben",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 1,
+      login_method: "PASSWORD",
+      login_time: daysAgo(45),
+      login_ip: "10.0.0.12",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "120.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: daysAgo(45),
+      archived_at: daysAgo(15),
+    },
+    {
+      username: "admin",
+      success: 0,
+      reason: "Username or password is incorrect.",
+      status_code: 403,
+      sys_user_id: null,
+      login_method: "PASSWORD",
+      login_time: daysAgo(50),
+      login_ip: "203.0.113.20",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "120.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: daysAgo(50),
+      archived_at: daysAgo(15),
+    },
+    {
+      username: "jack",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 3,
+      login_method: "SMS",
+      login_time: daysAgo(60),
+      login_ip: "10.0.0.33",
+      login_mac: "",
+      client_id: "mobile-app",
+      client_name: "Mobile App",
+      user_agent: "MockMobile/1.0",
+      browser_name: "Unknown",
+      browser_version: "",
+      os_name: "Android",
+      os_version: "14",
+      location: "Mock-City",
+      created_at: daysAgo(60),
+      archived_at: daysAgo(20),
+    },
+    {
+      username: "vben",
+      success: 1,
+      reason: "",
+      status_code: 200,
+      sys_user_id: 1,
+      login_method: "PASSWORD",
+      login_time: daysAgo(70),
+      login_ip: "10.0.0.12",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "120.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: daysAgo(70),
+      archived_at: daysAgo(25),
+    },
+    {
+      username: "ghost",
+      success: 0,
+      reason: "Username or password is incorrect.",
+      status_code: 403,
+      sys_user_id: null,
+      login_method: "PASSWORD",
+      login_time: daysAgo(80),
+      login_ip: "198.51.100.99",
+      login_mac: "",
+      client_id: "web-admin",
+      client_name: "Web Admin",
+      user_agent: chromeUa,
+      browser_name: "Chrome",
+      browser_version: "120.0.0.0",
+      os_name: "Windows",
+      os_version: "10/11",
+      location: "Mock-City",
+      created_at: daysAgo(80),
+      archived_at: daysAgo(30),
+    },
+  ];
+  return seeds.map((s) => {
+    const id = nextSysLoginLogArchiveId();
+    return { id, ...s };
+  });
+}
+
+/** 是否已完成种子装载（与 list 长度解耦，避免登录先写导致种子被跳过） */
+let loginLogSeedsReady = false;
+
+/** 确保登录日志种子已写入（幂等）。 */
+export function ensureLoginLogSeeds(): void {
+  if (loginLogSeedsReady) return;
+  loginLogSeedsReady = true;
+  if (mockSysLoginLogList.length === 0) {
+    mockSysLoginLogList.push(...buildLoginLogSeeds());
+  }
+  if (mockSysLoginLogArchiveList.length === 0) {
+    mockSysLoginLogArchiveList.push(...buildLoginLogArchiveSeeds());
   }
 }
 

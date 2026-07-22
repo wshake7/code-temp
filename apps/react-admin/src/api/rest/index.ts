@@ -6,3 +6,4 @@ export * as MenuApi from './menu';
 export * as RoleApi from './role';
 export * as DictTypeApi from './dict-type';
 export * as DictDataApi from './dict-data';
+export * as LoginLogApi from './login-log';

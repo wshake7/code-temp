@@ -2,69 +2,63 @@ import type { AppRouteObject } from '@/core/router/types';
 import { createLazyRoute } from '@/core/router';
 
 /**
- * 日志审计管理路由配置
- * 包括登录审计、API审计、操作审计、数据访问审计、权限审计等页面
+ * 日志审计管理路由
+ * 登录日志已实现；其余子页暂用 ComingSoon，避免缺页。
  */
 export const logRoutes: AppRouteObject[] = [
   {
     name: 'log',
-    path: 'log', // 相对路径，会自动拼接到父路由 '/'
+    path: 'log',
     meta: {
       title: 'routes:log',
-      icon: 'lucide:logs', // Iconify 格式
+      icon: 'lucide:logs',
       order: 2004,
-      keepAlive: true, // 保持组件状态
-      // permission: 'sys:platform_admin', // 平台管理员权限（开发阶段暂时注释）
+      keepAlive: true,
     },
     children: [
       {
-        name: 'login-audit-log',
-        path: 'login-audit-logs', // 相对路径，最终为 /log/login-audit-logs
-        element: createLazyRoute(() => import('@/pages/app/log/login-audit-log')),
+        name: 'login-log',
+        path: 'login-log',
+        element: createLazyRoute(() => import('@/pages/app/log/login-log')),
         meta: {
-          title: 'routes:login-audit-log',
-          icon: 'lucide:user-lock', // Iconify 格式
-          // permission: 'sys:platform_admin', // 平台管理员权限（开发阶段暂时注释）
+          title: 'routes:login-log',
+          icon: 'lucide:user-lock',
         },
       },
       {
         name: 'api-audit-log',
-        path: 'api-audit-logs', // 相对路径，最终为 /log/api-audit-logs
-        element: createLazyRoute(() => import('@/pages/app/log/api-audit-log')),
+        path: 'api-audit-logs',
+        element: createLazyRoute(() => import('@/pages/core/error/ComingSoon')),
         meta: {
           title: 'routes:api-audit-log',
-          icon: 'lucide:file-clock', // Iconify 格式
-          // permission: 'sys:platform_admin', // 平台管理员权限（开发阶段暂时注释）
+          icon: 'lucide:file-clock',
         },
       },
       {
         name: 'operation-audit-log',
-        path: 'operation-audit-logs', // 相对路径，最终为 /log/operation-audit-logs
-        element: createLazyRoute(() => import('@/pages/app/log/operation-audit-log')),
+        path: 'operation-audit-logs',
+        element: createLazyRoute(() => import('@/pages/core/error/ComingSoon')),
         meta: {
           title: 'routes:operation-audit-log',
-          icon: 'lucide:shield-ellipsis', // Iconify 格式
-          // permission: 'sys:platform_admin', // 平台管理员权限（开发阶段暂时注释）
+          icon: 'lucide:shield-ellipsis',
         },
       },
       {
         name: 'data-access-audit-log',
-        path: 'data-access-audit-logs', // 相对路径，最终为 /log/data-access-audit-logs
-        element: createLazyRoute(() => import('@/pages/app/log/data-access-audit-log')),
+        path: 'data-access-audit-logs',
+        element: createLazyRoute(() => import('@/pages/core/error/ComingSoon')),
         meta: {
           title: 'routes:data-access-audit-log',
-          icon: 'lucide:shield-check', // Iconify 格式
-          // permission: 'sys:platform_admin', // 平台管理员权限（开发阶段暂时注释）
+          icon: 'lucide:shield-check',
         },
       },
       {
         name: 'permission-audit-log',
-        path: 'permission-audit-logs', // 相对路径，最终为 /log/permission-audit-logs
-        element: createLazyRoute(() => import('@/pages/app/log/permission-audit-log')),
+        path: 'permission-audit-logs',
+        element: createLazyRoute(() => import('@/pages/core/error/ComingSoon')),
         meta: {
           title: 'routes:permission-audit-log',
-          icon: 'lucide:shield-alert', // Iconify 格式
-          // permission: 'sys:platform_admin', // 平台管理员权限（开发阶段暂时注释）
+          icon: 'lucide:shield-alert',
         },
       },
     ],

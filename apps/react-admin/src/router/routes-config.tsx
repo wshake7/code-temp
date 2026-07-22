@@ -39,6 +39,7 @@ const modulesRoutes = import.meta.glob<AppRouteObject[][]>(
   [
     './modules/dashboard.tsx',
     './modules/system.tsx',
+    './modules/log.tsx',
   ],
   { eager: true },
 );
@@ -57,6 +58,7 @@ const rawPageModules = import.meta.glob(
   [
     '../pages/app/dashboard/**/*.tsx',
     '../pages/app/system/**/*.tsx',
+    '../pages/app/log/**/*.tsx',
   ],
   { eager: true },
 );

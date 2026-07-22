@@ -11,6 +11,7 @@
   "inbox": "Inbox",
   "log": "Log Audit",
   "login-audit-log": "Login Audit Log",
+  "login-log": "Login Log",
   "api-audit-log": "API Audit Log",
   "operation-audit-log": "Operation Audit Log",
   "data-access-audit-log": "Data Access Audit Log",
@@ -50,5 +51,7 @@
   "system.dict.title": "Dictionaries",
   "system.i18n.title": "Internationalization",
   "system.menu.title": "Menus",
-  "system.api.title": "APIs"
+  "system.api.title": "APIs",
+  "log.title": "Log Audit",
+  "log.loginLog.title": "Login Log"
 }

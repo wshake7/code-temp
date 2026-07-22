@@ -733,3 +733,49 @@ export interface RoleOption {
   code: string;
   name: string;
 }
+
+// ============================================================
+// 登录日志（sys_login_log / sys_login_log_archive）— 对齐 schema.sql v5
+// ============================================================
+
+export type LoginMethod = 'PASSWORD' | 'SSO' | 'OAUTH' | 'SMS';
+
+export type LoginLogSource = 'hot' | 'archive';
+
+export interface LoginLogListItem {
+  id: number;
+  username: string;
+  success: 0 | 1;
+  reason: string;
+  statusCode: number | null;
+  sysUserId: number | null;
+  loginMethod: LoginMethod | string;
+  loginTime: string;
+  loginIp: string;
+  loginMac: string;
+  clientId: string;
+  clientName: string;
+  userAgent: string;
+  browserName: string;
+  browserVersion: string;
+  osName: string;
+  osVersion: string;
+  location: string;
+  createdAt: string;
+  /** 仅 source=archive 时有值 */
+  archivedAt?: string;
+}
+
+export interface LoginLogListQuery {
+  page?: number;
+  pageSize?: number;
+  /** hot=热表 archive=归档，默认 hot */
+  source?: LoginLogSource;
+  username?: string;
+  success?: 0 | 1;
+  loginMethod?: string;
+  loginIp?: string;
+  loginTimeFrom?: string;
+  loginTimeTo?: string;
+  [k: string]: unknown;
+}
