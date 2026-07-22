@@ -22,11 +22,11 @@ export const staticRoutes: AppRouteObject[] = [
       hideInTab: true,
     },
     children: [
-      // 根路径重定向到 dashboard
+      // 根路径重定向到分析页（对齐 Vue 概览首页）
       {
         path: '/',
         index: true,
-        element: <Navigate to="/dashboard" replace />,
+        element: <Navigate to="/analytics" replace />,
         meta: { title: 'routes:home', hideInMenu: true, hideInTab: true },
       },
     ],

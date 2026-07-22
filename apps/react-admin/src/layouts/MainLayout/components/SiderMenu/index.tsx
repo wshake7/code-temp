@@ -58,6 +58,11 @@ export const Index = ({
         const keyName = label.includes(':') ? label.substring(label.indexOf(':') + 1) : label;
         return tRoutes(keyName, { defaultValue: label });
       }
+      // 后端/动态菜单常用 page.dashboard.* / system.* 等 routes 命名空间 key
+      if (label.includes('.')) {
+        const translated = tRoutes(label, { defaultValue: '' });
+        if (translated) return translated;
+      }
       // 否则直接尝试翻译（可能已经是简化的 key）
       return t(label, label);
     };

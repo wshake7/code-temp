@@ -10,8 +10,8 @@ export const ROUTES = {
   /** 注册页 */
   REGISTER: '/auth/register',
 
-  /** 默认首页（登录后跳转） */
-  DEFAULT_HOME: '/dashboard',
+  /** 默认首页（登录后跳转，对齐 Vue defaultHomePath/analytics） */
+  DEFAULT_HOME: '/analytics',
 
   /** 403 无权限页 */
   FORBIDDEN: '/error/403',

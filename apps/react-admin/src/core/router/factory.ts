@@ -4,6 +4,7 @@ import {
   type RouterProviderProps,
 } from 'react-router-dom';
 import { injectRedirects } from './utils/inject-redirect';
+import { flattenLayoutAbsoluteChildren } from './utils/flatten-absolute-routes';
 import { sortRoutes } from './utils/sort-routes';
 import { transformRoutesWithHandle } from './utils/transform-meta-to-handle';
 import type { GenerateMenuAndRoutesOptions, AppRoute, AppRouteObject } from './types';
@@ -110,11 +111,14 @@ export const createAccessibleRouter = async (
   if (options.autoSort !== false)
     routes = sortRoutes(routes as unknown as AppRoute[]) as unknown as AppRouteObject[];
 
+  // RR6: absolute children like /analytics under /dashboard are illegal.
+  // Menus keep the nested tree; only the router tree is flattened.
+  routes = flattenLayoutAbsoluteChildren(routes);
+
   // 将 meta 转换为 handle，使 useMatches() 能获取路由元数据
   routes = transformRoutesWithHandle(routes);
 
-  // Keep menuRoutes in sync with post-process on the same tree nodes where possible.
-  // Sidebar only needs meta/path/name/children — handle transform is optional.
+  // Keep menuRoutes nested for sidebar grouping; only light post-process.
   if (options.autoInjectRedirect !== false) {
     menuRoutes = injectRedirects(
       menuRoutes as unknown as AppRoute[],
