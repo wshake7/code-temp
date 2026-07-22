@@ -7,7 +7,7 @@ import {
   PlusOutlined,
   UpOutlined,
 } from '@ant-design/icons';
-import { useDeleteMenu } from '@/api/hooks/menu';
+import { useDeleteMenu, useUpdateMenu } from '@/api/hooks/menu';
 import { listMenusApi } from '@/api/rest/menu';
 import type { MenuType, SysMenu } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
@@ -72,6 +72,15 @@ const MenuPage = () => {
       useAccessRefreshStore.getState().refreshAccess();
     },
     onError: (err) => message.error(`删除失败：${(err as Error).message ?? '未知错误'}`),
+  });
+
+  const toggleMut = useUpdateMenu({
+    onSuccess: (_data, vars) => {
+      message.success(vars.data.isEnabled === 1 ? '已启用' : '已禁用');
+      reload();
+      useAccessRefreshStore.getState().refreshAccess();
+    },
+    onError: (err) => message.error(`操作失败：${(err as Error).message ?? '未知错误'}`),
   });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -191,7 +200,7 @@ const MenuPage = () => {
     {
       title: '操作',
       valueType: 'option',
-      width: 200,
+      width: 250,
       fixed: 'right',
       search: false,
       render: (_, r) => {
@@ -205,6 +214,17 @@ const MenuPage = () => {
               添加
             </a>
           ) : null,
+          <a
+            key="toggle"
+            onClick={() =>
+              toggleMut.mutate({
+                id: r.id,
+                data: { isEnabled: r.isEnabled === 1 ? 0 : 1 },
+              })
+            }
+          >
+            {r.isEnabled === 1 ? '禁用' : '启用'}
+          </a>,
           <Popconfirm
             key="del"
             title="确认删除"
