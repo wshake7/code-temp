@@ -7,6 +7,8 @@
 --   - dict_type  v7 移除 platform 字段
 --   - dict_data  v8 platform ∈ {general, react-admin, vue-admin}
 --                 v9 tag_type 前端按标识映射 ant Tag 颜色 / vben Tag color
+--                 v10 UNIQUE(type_id, value, platform, deleted_at)
+--                     同 value 可在不同 platform 各有一条
 -- ============================================================
 
 SET NAMES utf8mb4;

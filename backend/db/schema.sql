@@ -9,7 +9,7 @@
 --             核心 13（含 sys_data_permission）
 --             关联 4（sys_user_role / sys_role_api / sys_role_menu / sys_menu_api）
 --             记录 4（3 张日志 + temporal_task_execution）
---             归档 3（api_log_archive / login_log_archive / operation_log_archive）
+--             归档 3（api_log_archive / sys_login_log_archive / operation_log_archive）
 --             casbin 1（casbin_rule）
 -- 执行顺序:   按依赖顺序；FK 引用先建；自引用外键用 ALTER 后置
 -- 部署:       本文件可独立执行；如使用迁移工具，按本文件顺序切分版本脚本
@@ -38,7 +38,7 @@
 --        - 改名: request_method→method, request_path→path, response_body→response
 --                , duration_ms→cost_time, user_id→sys_user_id, response_status→status_code
 --        - 放宽: request_id 64→128, module 64→255, client_ip 45→64, user_agent VARCHAR(512)→TEXT
---   4. login_log: 字段扩充对齐 PG 风格(参考 sys_login_log):
+--   4. sys_login_log: 字段扩充对齐 PG 风格(参考 PG sys_login_log):
 --        - 新增: login_mac / login_time / status_code / location
 --                / browser_name / browser_version / os_name / os_version / client_id / client_name
 --                / reason / sys_user_id
@@ -46,7 +46,7 @@
 --        - 移除: device / os / browser / country / province / city
 --                (由 os_name/version + browser_name/version + location 替代)
 --        - 放宽: user_agent VARCHAR(512)→TEXT
---   5. api_log_archive / login_log_archive: 同步与热表同结构
+--   5. api_log_archive / sys_login_log_archive: 同步与热表同结构
 -- v8 (仅 dict_data):
 --   1. dict_data: 重新加 platform VARCHAR(32) NOT NULL DEFAULT 'general'(字典项归属平台;
 --        与前端的 VITE_APP_PLATFORM 配合做"前端只看自己+通用"过滤;enum={general,react-admin,vue-admin})
@@ -57,6 +57,10 @@
 --        default=无样式;前端按标识映射 ant Tag 颜色 / vben Tag color;
 --        enum={default,primary,success,warning,error,processing,magenta,red,
 --              volcano,orange,gold,lime,green,cyan,blue,geekblue,purple})
+-- v10 (仅 dict_data):
+--   1. dict_data: UNIQUE 由 (type_id, value, deleted_at) 改为
+--        (type_id, value, platform, deleted_at)
+--        — 支持同类型同 value 在不同 platform 各有一条活跃行(配合 v8 平台过滤)
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -317,6 +321,7 @@ CREATE TABLE i18n_translation (
 -- v7: 跟随 dict_type 移除 platform 注释
 -- v8: 重新加 platform(字典项归属平台;general = 跨平台通用)
 -- v9: 加 tag_type(预设样式标识;default=无样式;前端按标识映射 ant Tag 颜色 / vben Tag color)
+-- v10: UNIQUE 纳入 platform — 同 (type_id, value) 可在不同 platform 各有一条活跃行
 -- ============================================================
 CREATE TABLE dict_data (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -335,7 +340,7 @@ CREATE TABLE dict_data (
     created_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '创建人(0=系统操作;非0=软引用 sys_user.id)',
     updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
     PRIMARY KEY (id),
-    UNIQUE KEY uniq_dict_data_type_value (type_id, value, deleted_at),
+    UNIQUE KEY uniq_dict_data_type_value_platform (type_id, value, platform, deleted_at),
     INDEX idx_dict_data_type_sort (type_id, sort),
     INDEX idx_dict_data_platform (platform),
     INDEX idx_dict_data_is_enabled (is_enabled),
@@ -576,12 +581,12 @@ CREATE TABLE api_log_archive (
 
 
 -- ============================================================
--- Section 18: 登录日志 — login_log (v5: 字段扩充对齐 PG sys_login_log)
+-- Section 18: 登录日志 — sys_login_log (v5: 字段扩充对齐 PG sys_login_log)
 -- 新增: MAC / UA 解析 / IP 解析 / 状态码 / 客户端指纹
 -- 移除: device / os / browser / country / province / city
 --       (由 os_name/version + browser_name/version + location + client_* 替代)
 -- ============================================================
-CREATE TABLE login_log (
+CREATE TABLE sys_login_log (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     username        VARCHAR(64)     NOT NULL DEFAULT ''  COMMENT '登录用户名',
     success         TINYINT(1)      NOT NULL DEFAULT 0  COMMENT '1=成功 0=失败',
@@ -612,19 +617,19 @@ CREATE TABLE login_log (
     created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
-    INDEX idx_login_log_username_created_at (username, created_at),
-    INDEX idx_login_log_success_created_at (success, created_at),
-    INDEX idx_login_log_sys_user_id (sys_user_id),
-    INDEX idx_login_log_login_ip_created_at (login_ip, created_at),
-    INDEX idx_login_log_login_time (login_time)
+    INDEX idx_sys_login_log_username_created_at (username, created_at),
+    INDEX idx_sys_login_log_success_created_at (success, created_at),
+    INDEX idx_sys_login_log_sys_user_id (sys_user_id),
+    INDEX idx_sys_login_log_login_ip_created_at (login_ip, created_at),
+    INDEX idx_sys_login_log_login_time (login_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='登录日志(记录型,只增不改;含 UA/IP 解析与客户端指纹)';
 
 
 -- ============================================================
--- Section 19: 登录日志归档 — login_log_archive (v5: 与 login_log 同结构)
+-- Section 19: 登录日志归档 — sys_login_log_archive (v5: 与 sys_login_log 同结构)
 -- ============================================================
-CREATE TABLE login_log_archive (
+CREATE TABLE sys_login_log_archive (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     username        VARCHAR(64)     NOT NULL DEFAULT '',
     success         TINYINT(1)      NOT NULL DEFAULT 0,
@@ -650,11 +655,11 @@ CREATE TABLE login_log_archive (
     created_at      TIMESTAMP       NOT NULL,
     archived_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    INDEX idx_login_log_archive_username_created_at (username, created_at),
-    INDEX idx_login_log_archive_success_created_at (success, created_at),
-    INDEX idx_login_log_archive_sys_user_id (sys_user_id),
-    INDEX idx_login_log_archive_login_ip_created_at (login_ip, created_at),
-    INDEX idx_login_log_archive_login_time (login_time)
+    INDEX idx_sys_login_log_archive_username_created_at (username, created_at),
+    INDEX idx_sys_login_log_archive_success_created_at (success, created_at),
+    INDEX idx_sys_login_log_archive_sys_user_id (sys_user_id),
+    INDEX idx_sys_login_log_archive_login_ip_created_at (login_ip, created_at),
+    INDEX idx_sys_login_log_archive_login_time (login_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='登录日志归档(与热表同结构)';
 
@@ -755,5 +760,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10)
 -- ============================================================

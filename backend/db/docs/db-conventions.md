@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v5+)
+# 后台管理 DB 约定 (v10)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -47,7 +47,7 @@
 
 ## 4. 审计 + 启停 + 软删字段（核心表）
 
-每张**核心表**（共 13 张）必须包含以下 **7 个字段**，**顺序固定**：
+每张**核心表**（共 10 张）必须包含以下 **7 个字段**，**顺序固定**：
 
 ```sql
 remark          VARCHAR(512)    NOT NULL DEFAULT ''                -- 管理员备注
@@ -93,7 +93,7 @@ updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0                  -- 0=系统�
 
 | 表类                                                                               | 字段                                                                                                                             |
 | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 核心表 13 张（含 `sys_data_permission`）                                           | 上述 7 字段全有                                                                                                                  |
+| 核心表 10 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission`） | 上述 7 字段全有                                                                                                                  |
 | 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`） | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
 | 记录型表 4 张（3 张日志 + `temporal_task_execution`）                              | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
 | 归档表 3 张（`*_archive`）                                                         | 镜像热表（多 `archived_at`）                                                                                                     |
@@ -134,7 +134,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 - `i18n_locale.code`
 - `i18n_translation.(locale_id, translation_key)`
 - `dict_type.code`
-- `dict_data.(type_id, value)`
+- `dict_data.(type_id, value, platform)`（v10+；平台是隔离维度）
 - `temporal_task_config.code`
 - `sys_data_permission.(subject_type, subject_id, resource_table, action_key)`
 
@@ -154,11 +154,12 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 | 场景                    | 索引                                                                                          |
 | ----------------------- | --------------------------------------------------------------------------------------------- |
-| 按用户 + 时间查日志     | `(sys_user_id, created_at)`（v5+ `api_log` / `login_log`；`operation_log` 仍为 `user_id`）    |
+| 按用户 + 时间查日志     | `(sys_user_id, created_at)`（v5+ `api_log` / `sys_login_log`；`operation_log` 仍为 `user_id`）    |
 | 按用户 + 模块 + 时间    | `(sys_user_id, module, created_at)`（`api_log` 特有；v5+）                                    |
 | 按状态 + 时间筛选       | `(status_code, created_at)`（`api_log`）/ `(status, created_at)`（`temporal_task_execution`） |
 | 关联表反向查询          | `(xxx_id, role_id)`（与 PK 反向）                                                             |
 | 字典/枚举筛选           | `(type_id, sort)`                                                                             |
+| 字典按平台过滤          | `idx_dict_data_platform`（`dict_data.platform`；v8+）                                         |
 | 软删过滤                | `idx_*_deleted_at` 单列                                                                       |
 | 菜单物化路径查祖先/子树 | `(tree_path)` 前缀匹配                                                                        |
 
@@ -197,7 +198,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 | `sys_user.language_code` → `i18n_locale.code`                    | `NULL`               | 同上（i18n_locale.code 软引用）                                   |
 | `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id` | `NOT NULL DEFAULT 0` | 多态主体（`ANY_*` 时为 0），无法 FK                               |
 | `temporal_task_execution.config_id` → `temporal_task_config.id`  | `NULL`               | 执行可能先于配置存在                                              |
-| `api_log.sys_user_id` / `login_log.sys_user_id` → `sys_user.id`  | `NULL`               | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`  | `NULL`           | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ### 7.3 自引用外键
 
@@ -235,6 +236,8 @@ ALTER TABLE sys_role
 - 数据权限 subject_type：`USER` / `ROLE` / `ANY_USER` / `ANY_ROLE`
 - 数据权限 scope_type：`all` / `none` / `include` / `exclude` / `custom`
 - Temporal status：`RUNNING` / `COMPLETED` / `FAILED` / `CANCELLED` / `TERMINATED` / `TIMED_OUT` / `CONTINUED_AS_NEW`
+- 字典项平台（`dict_data.platform`，v8+）：`general` / `react-admin` / `vue-admin`
+- 字典项样式（`dict_data.tag_type`，v9+）：`default` / `primary` / `success` / `warning` / `error` / `processing` / `magenta` / `red` / `volcano` / `orange` / `gold` / `lime` / `green` / `cyan` / `blue` / `geekblue` / `purple`
 
 ---
 
@@ -322,13 +325,13 @@ INSERT INTO sys_user (username, password_hash) VALUES ('alice', '...');
 | 表              | 主体         | 来源                                | 关键字段                                                                                                                                             |
 | --------------- | ------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `api_log`       | HTTP 请求    | AOP 拦截 controller                 | `request_id` UNIQUE / `module` / `sys_user_id`（v5+）                                                                                                |
-| `login_log`     | 登录事件     | 登录 service 显式写                 | `login_method` / `reason`（v5+ 改名 `failure_reason`→`reason`）/ `status_code` / `login_ip`（v5+ 改名 `client_ip`→`login_ip`）/ `sys_user_id`（v5+） |
+| `sys_login_log` | 登录事件     | 登录 service 显式写                 | `login_method` / `reason`（v5+ 改名 `failure_reason`→`reason`）/ `status_code` / `login_ip`（v5+ 改名 `client_ip`→`login_ip`）/ `sys_user_id`（v5+） |
 | `operation_log` | 业务数据变更 | AOP 拦截 service + 显式 `@AuditLog` | `source` AUTO/EXPLICIT / `request_id` 关联                                                                                                           |
 
 ### 11.2 写策略
 
 - `api_log`：**全量**自动写入，每次请求一条；中间件生成 `request_id` 唯一标识
-- `login_log`：登录 service 显式写（成功/失败都写）
+- `sys_login_log`：登录 service 显式写（成功/失败都写）
 - `operation_log`：AOP 拦截 `UPDATE` / `DELETE` 自动写（`source = 'AUTO'`）；同时支持 `@AuditLog` 注解显式打标（`source = 'EXPLICIT'`）
 
 ### 11.3 `api_log` 与 `operation_log` 关联
@@ -456,13 +459,38 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 
 ---
 
-## 17. 不在本任务范围
+## 17. 字典平台归属（`dict_data.platform` / `tag_type`）
+
+### 17.1 为什么平台在 data 不在 type
+
+- v6 曾在 `dict_type` 加 `platform`，v7 移除：同一字典类型（如开关状态）可跨平台复用
+- v8 改在 **`dict_data`** 落 `platform`：同一 `type` 下可有 general 通用项 + 各端专属项
+- v10：唯一键 `UNIQUE(type_id, value, platform, deleted_at)`，同类型同 value 可在不同 platform 各有一条活跃行
+- 前端按 `VITE_APP_PLATFORM` 过滤：`WHERE platform IN ('general', :current_platform) AND deleted_at = 0`
+- 应用层判重：按 `(type_id, value, platform)` 三元组，**不要**只按 `(type_id, value)`
+
+### 17.2 `tag_type` 语义
+
+- `default`：无样式（不染色）
+- 其余值：前端映射到 ant Design Tag color / vben Tag color，**不**在库内存色值
+- 库只存预设标识；换肤、主题由前端负责
+
+### 17.3 Seed
+
+初始字典见 `backend/db/schema_data.sql`（依赖 `schema.sql` 先建表）：
+
+- `sys_platform`：`general` / `react-admin` / `vue-admin`
+- `sys_switch_status`：按 platform 各一组 enabled/disabled，并带对应 `tag_type`
+
+---
+
+## 18. 不在本任务范围
 
 - ORM model 代码（Go struct / Java entity）
-- 迁移工具集成（仅交付独立 .sql）
+- 迁移工具集成（仅交付独立 .sql；`schema.sql` + `schema_data.sql` 可独立执行）
 - TTL 归档作业实现
 - Casbin policy 文件（`model.conf` / `policy.csv`）
-- Seed 数据脚本
+- 全量业务 Seed（仅交付字典相关 `schema_data.sql`）
 - 数据库 Docker 编排
 
-以上均**不**在 `backend/db/` 内交付。
+以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

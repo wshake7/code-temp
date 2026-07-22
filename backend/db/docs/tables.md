@@ -1,8 +1,8 @@
-# 表字段速查 (v5+)
+# 表字段速查 (v10)
 
-> 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md` 与 `../design.md`。
+> 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 22 张表，按模块分组。
+> 共 22 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10（`platform` / `tag_type` / UNIQUE 含 platform）。
 
 ---
 
@@ -245,29 +245,41 @@
 
 **外键**：无
 
+> v6 曾加 `platform`，v7 已移除：字典**类型**不做平台归属；平台过滤落在 `dict_data.platform`（v8+）。
+
 ---
 
 ### 5.2 `dict_data` — 字典数据
 
-| 字段         | 类型            | 必填 | 默认           | 说明               |
-| ------------ | --------------- | ---- | -------------- | ------------------ |
-| `id`         | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键               |
-| `type_id`    | BIGINT UNSIGNED | 是   | -              | 所属类型           |
-| `value`      | VARCHAR(64)     | 是   | -              | 字典值             |
-| `label`      | VARCHAR(128)    | 是   | -              | 字典标签           |
-| `sort`       | INT             | 是   | 0              | 排序               |
-| `is_default` | TINYINT(1)      | 是   | 0              | 是否该类型默认值   |
-| `is_enabled` | TINYINT(1)      | 是   | 1              |                    |
-| `deleted_at` | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒） |
-| `remark`     | VARCHAR(512)    | 是   | `''`           |                    |
-| `created_at` | TIMESTAMP       | 是   | NOW()          |                    |
-| `updated_at` | TIMESTAMP       | 是   | NOW()          |                    |
-| `created_by` | BIGINT UNSIGNED | 是   | 0              |                    |
-| `updated_by` | BIGINT UNSIGNED | 是   | 0              |                    |
+| 字段         | 类型            | 必填 | 默认           | 说明                                                                 |
+| ------------ | --------------- | ---- | -------------- | -------------------------------------------------------------------- |
+| `id`         | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                                 |
+| `type_id`    | BIGINT UNSIGNED | 是   | -              | 所属类型                                                             |
+| `value`      | VARCHAR(64)     | 是   | -              | 字典值                                                               |
+| `label`      | VARCHAR(128)    | 是   | -              | 字典标签                                                             |
+| `sort`       | INT             | 是   | 0              | 排序                                                                 |
+| `is_default` | TINYINT(1)      | 是   | 0              | 是否该类型默认值                                                     |
+| `platform`   | VARCHAR(32)     | 是   | `'general'`    | 归属平台（v8+）：`general` / `react-admin` / `vue-admin`             |
+| `tag_type`   | VARCHAR(32)     | 是   | `'default'`    | 预设样式标识（v9+）；前端映射 ant Tag / vben Tag color；`default`=无样式 |
+| `is_enabled` | TINYINT(1)      | 是   | 1              |                                                                      |
+| `deleted_at` | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                                   |
+| `remark`     | VARCHAR(512)    | 是   | `''`           |                                                                      |
+| `created_at` | TIMESTAMP       | 是   | NOW()          |                                                                      |
+| `updated_at` | TIMESTAMP       | 是   | NOW()          |                                                                      |
+| `created_by` | BIGINT UNSIGNED | 是   | 0              |                                                                      |
+| `updated_by` | BIGINT UNSIGNED | 是   | 0              |                                                                      |
 
-**索引**：`PRIMARY(id)` / `UNIQUE(type_id, value, deleted_at)` / `idx_type_id_sort` / `idx_is_enabled` / `idx_deleted_at`
+**索引**：`PRIMARY(id)` / `UNIQUE(type_id, value, platform, deleted_at)` / `idx_type_id_sort` / `idx_platform` / `idx_is_enabled` / `idx_deleted_at`
 
 **外键**：`fk_type_id` → `dict_type(id)`
+
+> v8: 加 `platform`（字典项归属平台；与前端 `VITE_APP_PLATFORM` 配合做「只看自己 + general」过滤）。`dict_type` 保持无 `platform`（v7 决策）。
+>
+> v9: 加 `tag_type`（`default` / `primary` / `success` / `warning` / `error` / `processing` / `magenta` / `red` / `volcano` / `orange` / `gold` / `lime` / `green` / `cyan` / `blue` / `geekblue` / `purple`）。
+>
+> v10: 软删感知唯一键纳入 `platform` → `UNIQUE(type_id, value, platform, deleted_at)`，允许同类型同 value 在不同平台各有一条活跃行（与 `schema_data.sql` 中 `sys_switch_status` 一致）。
+>
+> 初始 seed 见 `backend/db/schema_data.sql`（`sys_platform` / `sys_switch_status`）。
 
 ---
 
@@ -353,7 +365,7 @@
 
 ---
 
-### 7.3 `login_log` — 登录日志（v5+ 字段扩充对齐 PG `sys_login_log`）
+### 7.3 `sys_login_log` — 登录日志（v5+ 字段扩充对齐 PG `sys_login_log`）
 
 | 字段              | 类型            | 必填 | 默认           | 说明                                                             |
 | ----------------- | --------------- | ---- | -------------- | ---------------------------------------------------------------- |
@@ -385,9 +397,9 @@
 
 ---
 
-### 7.4 `login_log_archive` — 登录日志归档
+### 7.4 `sys_login_log_archive` — 登录日志归档
 
-结构同 `login_log`（v5+），**额外**加 `archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`
+结构同 `sys_login_log`（v5+），**额外**加 `archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`
 
 ---
 

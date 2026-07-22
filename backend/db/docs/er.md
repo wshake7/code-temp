@@ -1,6 +1,6 @@
-# ER 关系与基数 (v5+)
+# ER 关系与基数 (v10)
 
-> 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md` 与 `../design.md`。
+> 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 
 ---
 
@@ -50,6 +50,7 @@
 │                                                                             │
 │   ┌──────────────┐  1     N  ┌─────────────────────┐                       │
 │   │  dict_type   │──────────►│  dict_data          │                       │
+│   │  (无 platform)│           │  platform/tag_type  │  (v8/v9 项级平台与样式) │
 │   └──────────────┘           └─────────────────────┘                       │
 │                                                                             │
 │                       Temporal 任务                                         │
@@ -67,7 +68,7 @@
 │                       日志（记录型）                                         │
 │                                                                             │
 │   ┌──────────────┐       ┌──────────────┐       ┌──────────────┐          │
-│   │  api_log     │       │  login_log   │       │operation_log │          │
+│   │  api_log     │       │sys_login_log │       │operation_log │          │
 │   │ request_id   │       │  username    │       │  request_id  │          │
 │   │ UNIQUE       │       │  success     │       │  source      │          │
 │   └──────────────┘       └──────────────┘       └──────────────┘          │
@@ -75,10 +76,10 @@
 │         │ request_id 关联(可选)│                       │                  │
 │         └───────────────────────┴───────────────────────┘                  │
 │                                                                             │
-│   ┌────────────────┐ ┌────────────────┐ ┌────────────────┐                │
-│   │ api_log_archive│ │login_log_archive│ │operation_log_  │                │
-│   │                │ │                │ │    archive    │                │
-│   └────────────────┘ └────────────────┘ └────────────────┘                │
+│   ┌────────────────┐ ┌────────────────────┐ ┌────────────────┐            │
+│   │ api_log_archive│ │sys_login_log_archive│ │operation_log_  │            │
+│   │                │ │                    │ │    archive    │            │
+│   └────────────────┘ └────────────────────┘ └────────────────┘            │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -122,7 +123,7 @@
 | `language_code`             | `sys_user`                | `NULL`               | `i18n_locale.code`            | i18n_locale.code 软引用                                       |
 | `subject_id`                | `sys_data_permission`     | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id` | 多态主体（`ANY_*` 时为 0）                                    |
 | `config_id`                 | `temporal_task_execution` | `NULL`               | `temporal_task_config.id`     | 执行可能先于配置存在                                          |
-| `sys_user_id`               | `api_log` / `login_log`   | `NULL`               | `sys_user.id`                 | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`             | `sys_user.id`                 | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ---
 
@@ -195,7 +196,7 @@
 │              一次 HTTP 请求                                  │
 │              触发 1 个 api_log + N 个 operation_log          │
 │                                                              │
-│   login_log: 独立表(不通过 request_id 关联;按 username/user_id)
+│   sys_login_log: 独立表(不通过 request_id 关联;按 username/user_id)
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -203,7 +204,7 @@
 应用层用法：
 
 - JOIN 一次请求的完整审计轨迹：`api_log` JOIN `operation_log` ON `request_id`
-- 登录审计：`login_log` 单独查（按 username / user_id / 时间窗口）
+- 登录审计：`sys_login_log` 单独查（按 username / user_id / 时间窗口）
 
 ---
 
@@ -234,7 +235,7 @@
 │  │  - status                   │ │    │                                  │
 │  │  - started_at / closed_at   │ │    │                                  │
 │  │  - input/result summary     │ │    │                                  │
-│  │  - deleted_at (v4+ 加)      │ │    │                                  │
+│  │  - 仅 created_at（记录型）  │ │    │                                  │
 │  │                             │ │    │                                  │
 │  │  由 admin 后端异步镜像       │◄┼────┼─ Temporal SDK Listen           │
 │  │  (只存摘要)                  │ │    │  事件流 → 写入镜像             │
