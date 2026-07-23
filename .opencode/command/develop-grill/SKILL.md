@@ -4,17 +4,45 @@ description: "Build a feature using Research > Grill > Plan > Implement > Review
 argument-hint: "<feature description>"
 ---
 
-通过五个阶段构建功能，每个阶段之间有验证门。
+Research → Grill → Plan → Implement → Review。除 Research → Grill 外，其余阶段过渡必须走门禁，禁止自动进入下一阶段。
 
 ## Feature: $ARGUMENTS
 
+若 `$ARGUMENTS` 为空，先确认要构建的功能描述。
+
+### 门禁（通用）
+
+展示当前阶段结论后，**立刻**用 AskUserQuestion（一次一问）。禁止只写「停止/等待批准」或静默继续。
+
+| 过渡 | 问题 | 继续 | 补充 |
+|------|------|------|------|
+| Grill → Plan | 是否进入计划？ | `进入计划 (Recommended)` | `需要补充` |
+| Plan → Implement | 是否批准实现？ | `批准并继续 (Recommended)` | `需要补充` |
+| Review → Commit | 是否提交变更？ | `提交 (Recommended)` | `暂不提交` |
+
+Research → Grill **无需门禁**：评分达标（或用户已决定带着差距继续）后直接进入 Grill。
+
+- 只有选「继续」类选项才可进入下一阶段；「需要补充」则修订/补调研/继续访谈后再问一次
+- Grill 结束前：不起草计划、文件列表或实现产物
+- 禁止凭 "ok" / "good" 等软确认跳过门禁
+
 ### Phase 1: Research
 
-探索 codebase 理解范围：
+探索 codebase，摸清范围后再打分。
 
-1. 找到所有相关文件和已有模式
-2. 检查依赖和约束
-3. 按下方评分体系的 5 个维度打分（0-100）
+**探索清单：**
+
+1. **相关代码**：入口、路由/API、数据模型、UI 页面、测试与 fixtures
+2. **已有模式**：同域 CRUD / 鉴权 / 列表筛选等可复用实现；记录可对照路径
+3. **依赖与约束**：调用链、跨端约定（mock / React / Vue）、配置与 schema、权限与错误约定
+4. **边界与验证**：空值/并发/权限/失败路径；现有测试或手动验收方式
+
+**输出（进入 Grill 前必须展示）：**
+
+- 相关文件/模块列表（尽量精确到路径）
+- 可复用模式与关键约束
+- 已知边界与待确认决策（留给 Grill）
+- 五维评分表
 
 #### 评分体系
 
@@ -30,85 +58,65 @@ argument-hint: "<feature description>"
 
 **打分方法：**
 
-1. 逐维度评估，给出具体分数和一句话理由。
-2. 汇总为总分和通过/不通过判断。
-3. 不通过时，列出差距和下一步行动（如"需要探索 X 模块的 API 边界"），而不是笼统地说"需要更多研究"。
+1. 逐维给分 + 一句话理由（引用具体路径/符号，避免空话）
+2. 汇总总分与通过/不通过
+3. 不通过时：点名最低维、差距、下一步行动（如「需要探索 X 的 API 边界」），而非笼统「需要更多研究」
 
 **决策：**
 
-- 总分 >= 70：调研充分，展示发现并进入 Phase 2
-- 总分 < 70：识别得分最低的维度，补充对应上下文，重新评分；循环直到 >= 70 或明确告知用户哪些维度无法提升
+- 总分 >= 70：展示上述输出后**直接进入 Phase 2**（无门禁）
+- 总分 < 70：补最低维后重评；循环直到 >= 70，或说明无法提升的维度并询问是否带着差距进入 Grill
 
-### Phase 2: Grill (Research)
+### Phase 2: Grill
 
-**停止。用户回答问题并明确确认前，不要进入 Phase 3。**
+使用 `/grill-with-docs`（含 `/grilling` 与 domain-modeling）驱动访谈：
 
-Phase 1 完成评分后，进入访谈循环。**你** 来驱动：
-
-使用 `/grill-with-docs` skill 进行访谈，并遵循下方问答约定。
-
-#### 问答约定
-
-1. **一次一问**：`questions` 数组长度始终为 1。问完等用户回复，再问下一个。
-2. **代码能查到的不要问人**：如果 fact 能通过探索 codebase 找到，直接查。只有 decisions 才交给用户。
-3. **推荐选项放第一个**：`options[0]` 加 `(Recommended)` 后缀。
-4. **推到底**：不要在几个软问题后停下。走完每个决策分支，直到用户给出明确的完成信号（"proceed" / "approved" / "good" / "next"）。
-5. **完成时写摘要**：用户确认后，写一段共同理解摘要。
-
-**字段约束：**
-
-- **`header`**：≤ 12 字符，短名词短语（如 `Scope`、`Auth`、`UI`）
-- **`options`**：2-4 项；推荐选项放第一并加 `(Recommended)`；`label` 1-5 词，`description` 解释权衡与影响；不要手写 `Other`——工具会自动追加
-- **`multiSelect`**：互斥决策默认 `false`；只有选项是累加性质时用 `true`（如"覆盖哪些测试场景"）
-- **`preview`**（可选）：当选项适合可视化对比时使用——UI 布局、目录结构、API 形状、配置表单、代码片段等"一张图胜千言"的场景。约束：仅限单选（`multiSelect: false`）；HTML preview 不含 `<script>` / `<style>` / `<!DOCTYPE>`；markdown 格式用 ASCII art 和 fenced code blocks
-
-**Notes 跟进：** 每次用户回答后，在回复末尾追加一行 `notes:` 自由文本，记录用户偏好，以及该答案的关键要点、背后的权衡及相关的未决分支。
-
-硬约束：
-- 不要起草计划、文件列表或任何实现产物。
-- 用户明确确认前，不要进入 Phase 3。
+- 一次一问；推荐选项加 `(Recommended)`
+- fact 自己查 codebase，decision 交给用户；推到底
+- 每次回答末尾加 `notes:`（偏好、权衡、未决分支）
+- 收尾写共同理解摘要，再走门禁
 
 ### Phase 3: Plan
 
-展示计划供审批：
+基于 Research 发现 + Grill 共同理解起草计划。**只描述要做什么，不写实现代码。** 计划须可执行、可审查：路径尽量精确，步骤可独立验证。
+
+**起草要求：**
+
+1. Goal 对齐 Grill 结论；Out of scope 写清不做的部分
+2. 文件列表来自 Research，并反映 Grill 决策；改/新建/可能删除分开写
+3. Approach 按依赖排序（数据/API → 业务 → UI → 测试），每步说明理由
+4. Risks 写潜在问题与缓解；Test strategy 写手动/自动如何验收
+5. 若 Grill 改了范围，先修订 Research 中过时假设，再出计划
+
+展示完整计划后走门禁（Plan → Implement）。选「需要补充」则修订计划或回 Grill/Research，再重新提问。
 
 ```text
 PLAN: [Feature Name]
 
 Goal: [一句话]
+Out of scope: [明确不做的]
 
 Files to modify:
-1. path/file.ts - [改什么]
+1. path/file.ts - [改什么 / 为什么]
 
 New files:
 1. path/new.ts - [用途]
 
 Approach:
 1. [步骤与理由]
+2. [步骤与理由]
 
 Risks:
-- [潜在问题与缓解]
+- [问题] → [缓解]
 
 Test strategy:
-- [如何验证]
+- [如何验证；涉及多端时分别写]
 ```
-
-**停止。用户明确批准计划前，不要进入 Phase 4。**
 
 ### Phase 4: Implement
 
-使用 `/implement` skill 执行已审批的计划。
+用 `/implement` 执行已批准计划。
 
 ### Phase 5: Review & Commit
 
-使用 `/code-review` skill 审查变更，然后：
-
-1. 阅读每个变更文件的全文
-2. 验证，不假设——每个潜在问题引用精确行号；无法引用就丢弃该发现
-3. 用 `grep` 查找 console.log、TODO、硬编码密钥、调试语句——只报告 grep 找到的
-4. 不报告未验证的发现——不要说"确保 X"或"考虑 Y"
-5. 展示已验证摘要供最终审批
-6. **不要自动提交。** 审查结束后，用问答工具（AskUserQuestion）询问是否提交，例如：
-   - 问题：是否用 conventional commit 提交当前变更？
-   - 选项：`提交 (Recommended)` / `暂不提交`
-7. 仅当用户明确选择提交时，再使用 conventional commit 消息执行提交；选择暂不提交则跳过 commit，流程正常结束
+用 `/code-review`：读变更全文；有精确行号才报；`grep` 查 console.log / TODO / 密钥，只报实际命中；不报未验证猜测。展示摘要后走提交门禁；**不自动提交**。
