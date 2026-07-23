@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   AutoComplete,
   Button,
@@ -40,6 +40,29 @@ const METHOD_OPTIONS: { label: string; value: HttpMethod }[] = [
   'HEAD',
 ].map((m) => ({ label: m, value: m as HttpMethod }));
 
+function buildApiFormValues(row: SysApi | null): FormValues {
+  if (row) {
+    return {
+      name: row.name,
+      method: row.method,
+      path: row.path,
+      permissionCode: row.permissionCode,
+      apiGroup: row.apiGroup,
+      remark: row.remark,
+      isEnabled: row.isEnabled === 1,
+    };
+  }
+  return {
+    name: '',
+    method: 'GET',
+    path: '',
+    permissionCode: '',
+    apiGroup: '',
+    remark: '',
+    isEnabled: true,
+  };
+}
+
 const ApiFormDrawer = ({ open, row, onClose, onSaved }: Props) => {
   const isEdit = !!row;
   const [form] = Form.useForm<FormValues>();
@@ -69,30 +92,10 @@ const ApiFormDrawer = ({ open, row, onClose, onSaved }: Props) => {
     [groups],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    if (isEdit && row) {
-      form.setFieldsValue({
-        name: row.name,
-        method: row.method,
-        path: row.path,
-        permissionCode: row.permissionCode,
-        apiGroup: row.apiGroup,
-        remark: row.remark,
-        isEnabled: row.isEnabled === 1,
-      });
-    } else {
-      form.setFieldsValue({
-        name: '',
-        method: 'GET',
-        path: '',
-        permissionCode: '',
-        apiGroup: '',
-        remark: '',
-        isEnabled: true,
-      });
-    }
-  }, [open, isEdit, row, form]);
+  // Form 用 key + initialValues 保证 destroyOnClose 挂载即回显，
+  // 避免 useEffect + setFieldsValue 在字段注册前执行导致丢值。
+  const formInitialValues = useMemo(() => buildApiFormValues(row), [row]);
+  const formKey = row ? `edit-${row.id}` : 'create';
 
   const handleOk = async () => {
     const values = await form.validateFields();
@@ -130,7 +133,13 @@ const ApiFormDrawer = ({ open, row, onClose, onSaved }: Props) => {
         </Space>
       }
     >
-      <Form form={form} layout="vertical" preserve={false}>
+      <Form
+        key={formKey}
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={formInitialValues}
+      >
         <Form.Item
           label="接口名"
           name="name"

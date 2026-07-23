@@ -76,6 +76,55 @@ const DEFAULT_METADATA_TEXT = JSON.stringify(
   2,
 );
 
+/** metadata 安全美化：非法 JSON 原样回显，避免抛错导致整表空白 */
+function formatMetadataForForm(raw: string | null | undefined): string {
+  if (!raw) return '';
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
+}
+
+function buildMenuFormValues(
+  kind: MenuFormKind,
+  row: SysMenu | null,
+  presetParentId: number | null,
+): FormValues {
+  if (kind === 'edit' && row) {
+    return {
+      parentId: row.parentId,
+      name: row.name,
+      type: row.type,
+      path: row.path ?? undefined,
+      component: row.component ?? undefined,
+      redirect: row.redirect,
+      icon: row.icon,
+      permissionCode: row.permissionCode ?? undefined,
+      sort: row.sort,
+      isHidden: row.isHidden === 1,
+      isEnabled: row.isEnabled === 1,
+      remark: row.remark,
+      metadata: formatMetadataForForm(row.metadata),
+    };
+  }
+  return {
+    parentId: presetParentId ?? null,
+    name: '',
+    type: 'MENU',
+    path: '',
+    component: '',
+    redirect: '',
+    icon: '',
+    permissionCode: '',
+    sort: 0,
+    isHidden: false,
+    isEnabled: true,
+    remark: '',
+    metadata: '',
+  };
+}
+
 const MenuFormDrawer = ({
   open,
   kind,
@@ -126,45 +175,23 @@ const MenuFormDrawer = ({
   // 绑定选中态：api_id 集合
   const [boundIds, setBoundIds] = useState<Set<number>>(new Set());
 
+  // Form 用 key + initialValues 保证 destroyOnClose 挂载即回显，
+  // 避免 useEffect + setFieldsValue 在字段注册前执行导致丢值。
+  const formInitialValues = useMemo(
+    () => buildMenuFormValues(kind, row, presetParentId),
+    [kind, row, presetParentId],
+  );
+  const formKey =
+    kind === 'edit' && row
+      ? `edit-${row.id}`
+      : `create-${presetParentId ?? 'root'}`;
+
+  // 打开抽屉时回到基础 tab 并清空搜索；不在这里 setFieldsValue
   useEffect(() => {
     if (!open) return;
-    // 基础表单初始化
-    if (isEdit && row) {
-      form.setFieldsValue({
-        parentId: row.parentId,
-        name: row.name,
-        type: row.type,
-        path: row.path ?? undefined,
-        component: row.component ?? undefined,
-        redirect: row.redirect,
-        icon: row.icon,
-        permissionCode: row.permissionCode ?? undefined,
-        sort: row.sort,
-        isHidden: row.isHidden === 1,
-        isEnabled: row.isEnabled === 1,
-        remark: row.remark,
-        metadata: row.metadata ? JSON.stringify(JSON.parse(row.metadata), null, 2) : '',
-      });
-    } else {
-      form.setFieldsValue({
-        parentId: presetParentId ?? null,
-        name: '',
-        type: 'MENU',
-        path: '',
-        component: '',
-        redirect: '',
-        icon: '',
-        permissionCode: '',
-        sort: 0,
-        isHidden: false,
-        isEnabled: true,
-        remark: '',
-        metadata: '',
-      });
-    }
     setActiveTab('basic');
     setApiSearch('');
-  }, [open, isEdit, row, presetParentId, form]);
+  }, [open, formKey]);
 
   // 绑定接口初始化：编辑时用 boundApis 的 bound 标记
   useEffect(() => {
@@ -179,7 +206,7 @@ const MenuFormDrawer = ({
 
   // 当前 type（决定哪些字段显示）
   const watchType = Form.useWatch('type', form) as MenuType | undefined;
-  const currentType = watchType ?? (isEdit ? row?.type : 'MENU');
+  const currentType = watchType ?? formInitialValues.type;
 
   // 父菜单选项：排除自己与后代（编辑时）
   const parentOptions = useMemo(() => {
@@ -292,7 +319,13 @@ const MenuFormDrawer = ({
   const submitting = createMut.isPending || updateMut.isPending || setApisMut.isPending;
 
   const renderBasicForm = () => (
-    <Form form={form} layout="vertical" preserve={false}>
+    <Form
+      key={formKey}
+      form={form}
+      layout="vertical"
+      preserve={false}
+      initialValues={formInitialValues}
+    >
       <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 16 }}>
         基础（{currentType === 'DIR' ? '目录' : currentType === 'MENU' ? '菜单' : '按钮'}）
       </div>
@@ -459,7 +492,10 @@ const MenuFormDrawer = ({
         ]}
       />
 
-      {activeTab === 'basic' && renderBasicForm()}
+      {/* 始终挂载基础 Form，避免切 tab 卸载后 initialValues 丢失 */}
+      <div style={{ display: activeTab === 'basic' ? 'block' : 'none' }}>
+        {renderBasicForm()}
+      </div>
 
       {activeTab === 'bind' && (
         <div>
