@@ -1,5 +1,4 @@
- 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Button,
   Col,
@@ -50,6 +49,38 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+/** 由列表行构建表单初值；新建时给默认空值。 */
+function buildUserFormValues(row: UserListItem | null): FormValues {
+  if (row) {
+    return {
+      username: row.username,
+      nickname: row.nickname,
+      email: row.email || undefined,
+      phone: row.phone || undefined,
+      avatar: row.avatar || undefined,
+      languageCode: row.languageCode ?? undefined,
+      isEnabled: row.isEnabled === 1,
+      password: '',
+      confirmPassword: '',
+      roleIds: row.roleIds ?? [],
+      remark: row.remark || undefined,
+    };
+  }
+  return {
+    username: '',
+    nickname: '',
+    email: '',
+    phone: '',
+    avatar: '',
+    languageCode: undefined,
+    isEnabled: true,
+    password: '',
+    confirmPassword: '',
+    roleIds: [],
+    remark: '',
+  };
+}
+
 const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
   const isEdit = kind === 'edit' && !!row;
   const [form] = Form.useForm<FormValues>();
@@ -76,38 +107,10 @@ const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
   // 语言下拉：全量语言
   const { data: localeOptions } = useListAllI18nLocale(undefined, { enabled: open });
 
-  useEffect(() => {
-    if (!open) return;
-    if (isEdit && row) {
-      form.setFieldsValue({
-        username: row.username,
-        nickname: row.nickname,
-        email: row.email || undefined,
-        phone: row.phone || undefined,
-        avatar: row.avatar || undefined,
-        languageCode: row.languageCode ?? undefined,
-        isEnabled: row.isEnabled === 1,
-        password: '',
-        confirmPassword: '',
-        roleIds: row.roleIds,
-        remark: row.remark || undefined,
-      });
-    } else {
-      form.setFieldsValue({
-        username: '',
-        nickname: '',
-        email: '',
-        phone: '',
-        avatar: '',
-        languageCode: undefined,
-        isEnabled: true,
-        password: '',
-        confirmPassword: '',
-        roleIds: [],
-        remark: '',
-      });
-    }
-  }, [open, isEdit, row, form]);
+  // Form 用 key + initialValues 保证 destroyOnClose 挂载即回显，
+  // 避免 useEffect + setFieldsValue 在字段注册前执行导致丢值。
+  const formInitialValues = useMemo(() => buildUserFormValues(row), [row]);
+  const formKey = row ? `edit-${row.id}` : 'create';
 
   const roleSelectOptions = useMemo(
     () => (roleOptions ?? []).map((r) => ({ label: `${r.name}（${r.code}）`, value: r.id })),
@@ -171,7 +174,13 @@ const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
         </Space>
       }
     >
-      <Form form={form} layout="vertical" preserve={false}>
+      <Form
+        key={formKey}
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={formInitialValues}
+      >
         {/* 基础信息段 */}
         <SectionTitle>基础信息</SectionTitle>
         <Row gutter={16}>
