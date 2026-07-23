@@ -1,12 +1,14 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Button, Popconfirm, Space, Tag, message } from 'antd';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import {
   DeleteOutlined,
+  DownOutlined,
   EditOutlined,
   PlusOutlined,
   SyncOutlined,
+  UpOutlined,
 } from '@ant-design/icons';
 import {
   useApiGroups,
@@ -32,6 +34,72 @@ const STATUS_TAG: Record<0 | 1, { color: string; text: string }> = {
   1: { color: 'success', text: '启用' },
   0: { color: 'default', text: '禁用' },
 };
+
+/** 分组树节点：父行为合成分组，子行为真实接口 */
+type ApiTreeNode = SysApi & {
+  isGroup?: boolean;
+  children?: ApiTreeNode[];
+  /** 稳定 rowKey：分组用 group:xxx，叶子用数字 id 字符串 */
+  rowKey: string;
+};
+
+/** 按 apiGroup 合成分组树；空分组名归为「未分组」。仅在当前页结果内组树。 */
+function buildApiGroupTree(list: SysApi[]): ApiTreeNode[] {
+  const groups = new Map<string, SysApi[]>();
+  list.forEach((a) => {
+    const g = a.apiGroup?.trim() || '未分组';
+    const arr = groups.get(g) ?? [];
+    arr.push(a);
+    groups.set(g, arr);
+  });
+
+  // 分组父节点使用负 id，避免与真实接口 id 冲突
+  let groupSeq = -1;
+
+  return [...groups.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], 'zh-CN'))
+    .map(([groupName, apis]) => {
+      const children: ApiTreeNode[] = [...apis]
+        .sort((a, b) => a.id - b.id)
+        .map((a) => ({
+          ...a,
+          rowKey: String(a.id),
+        }));
+
+      const parentId = groupSeq--;
+      return {
+        id: parentId,
+        name: `${groupName}（${children.length}）`,
+        method: 'GET' as HttpMethod,
+        path: '',
+        permissionCode: '',
+        apiGroup: groupName,
+        remark: '',
+        isEnabled: 1 as const,
+        deletedAt: 0,
+        createdAt: '',
+        updatedAt: '',
+        isGroup: true,
+        rowKey: `group:${groupName}`,
+        children,
+      };
+    });
+}
+
+/** 收集树中所有可展开节点的 rowKey */
+function collectExpandableKeys(nodes: ApiTreeNode[]): string[] {
+  const keys: string[] = [];
+  const walk = (list: ApiTreeNode[]) => {
+    for (const n of list) {
+      if (n.children && n.children.length > 0) {
+        keys.push(n.rowKey);
+        walk(n.children);
+      }
+    }
+  };
+  walk(nodes);
+  return keys;
+}
 
 const ApiPage = () => {
   const actionRef = useRef<ActionType | undefined>(undefined);
@@ -65,6 +133,17 @@ const ApiPage = () => {
     setDrawerOpen(true);
   };
 
+  // 全部展开/折叠：受控 expandedRowKeys，与菜单管理语义一致
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [currentTree, setCurrentTree] = useState<ApiTreeNode[]>([]);
+  const allExpandableKeys = useMemo(
+    () => collectExpandableKeys(currentTree),
+    [currentTree],
+  );
+  const allExpanded =
+    allExpandableKeys.length > 0 &&
+    allExpandableKeys.every((k) => expandedKeys.includes(k));
+
   const groupEnum = useMemo(() => {
     const out: Record<string, { text: string }> = {};
     (groups ?? []).forEach((g) => {
@@ -73,7 +152,7 @@ const ApiPage = () => {
     return out;
   }, [groups]);
 
-  /* ---------- ProTable request：与字典一致的形态 ---------- */
+  /* ---------- ProTable request：当前页扁平列表 → 分组树 ---------- */
   async function fetchApiRows(params: {
     current?: number;
     pageSize?: number;
@@ -93,12 +172,30 @@ const ApiPage = () => {
       group: apiGroup || undefined,
       status: isEnabled,
     });
-    return { data: res.items, total: res.total, success: true };
+    // 树形仅在当前页范围内生效：与菜单管理 buildTree 一致
+    return { data: buildApiGroupTree(res.items), total: res.total, success: true };
   }
 
-  const columns: ProColumns<SysApi>[] = [
-    { title: 'ID', dataIndex: 'id', width: 70, search: false },
-    { title: '接口名', dataIndex: 'name', width: 180, ellipsis: true },
+  const columns: ProColumns<ApiTreeNode>[] = [
+    {
+      title: '接口名',
+      dataIndex: 'name',
+      width: 220,
+      ellipsis: true,
+      render: (_, r) =>
+        r.isGroup ? (
+          <span style={{ fontWeight: 600 }}>{r.name}</span>
+        ) : (
+          r.name
+        ),
+    },
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      width: 70,
+      search: false,
+      render: (_, r) => (r.isGroup ? <span style={{ color: '#999' }}>-</span> : r.id),
+    },
     {
       title: '方法',
       dataIndex: 'method',
@@ -113,29 +210,46 @@ const ApiPage = () => {
         OPTIONS: { text: 'OPTIONS' },
         HEAD: { text: 'HEAD' },
       },
-      render: (_, r) => <Tag color={METHOD_COLOR[r.method]}>{r.method}</Tag>,
+      render: (_, r) =>
+        r.isGroup ? (
+          <span style={{ color: '#999' }}>-</span>
+        ) : (
+          <Tag color={METHOD_COLOR[r.method]}>{r.method}</Tag>
+        ),
     },
     {
       title: '路径',
       dataIndex: 'path',
       width: 240,
       ellipsis: true,
-      render: (_, r) => <span style={{ fontFamily: 'monospace' }}>{r.path}</span>,
+      render: (_, r) =>
+        r.isGroup ? (
+          <span style={{ color: '#999' }}>-</span>
+        ) : (
+          <span style={{ fontFamily: 'monospace' }}>{r.path}</span>
+        ),
     },
     {
       title: '权限码',
       dataIndex: 'permissionCode',
       width: 180,
       ellipsis: true,
-      render: (_, r) => <Tag color="default">{r.permissionCode}</Tag>,
+      search: false,
+      render: (_, r) =>
+        r.isGroup ? (
+          <span style={{ color: '#999' }}>-</span>
+        ) : (
+          <Tag color="default">{r.permissionCode}</Tag>
+        ),
     },
     {
+      // 仅作搜索筛选；列表由分组父行表达，不再单独渲染分组列
       title: '分组',
       dataIndex: 'apiGroup',
       width: 110,
       valueType: 'select',
       valueEnum: groupEnum,
-      render: (_, r) => <Tag color="default">{r.apiGroup}</Tag>,
+      hideInTable: true,
     },
     {
       title: '状态',
@@ -144,6 +258,7 @@ const ApiPage = () => {
       valueType: 'select',
       valueEnum: { 1: { text: '启用' }, 0: { text: '禁用' } },
       render: (_, r) => {
+        if (r.isGroup) return <span style={{ color: '#999' }}>-</span>;
         const t = STATUS_TAG[r.isEnabled];
         return <Tag color={t.color}>{t.text}</Tag>;
       },
@@ -154,6 +269,8 @@ const ApiPage = () => {
       width: 170,
       valueType: 'dateTime',
       search: false,
+      render: (_, r) =>
+        r.isGroup ? <span style={{ color: '#999' }}>-</span> : r.createdAt,
     },
     {
       title: '操作',
@@ -161,38 +278,45 @@ const ApiPage = () => {
       width: 120,
       fixed: 'right',
       search: false,
-      render: (_, r) => [
-        <a key="edit" onClick={() => openEdit(r)}>
-          <Space size={2}>
-            <EditOutlined /> 编辑
-          </Space>
-        </a>,
-        <Popconfirm
-          key="del"
-          title="确认删除"
-          description={`确定删除「${r.name}」吗？`}
-          onConfirm={() => deleteMut.mutate(r.id)}
-        >
-          <a style={{ color: '#ff4d4f' }}>
-            <DeleteOutlined /> 删除
-          </a>
-        </Popconfirm>,
-      ],
+      render: (_, r) => {
+        if (r.isGroup) return null;
+        return [
+          <a key="edit" onClick={() => openEdit(r)}>
+            <Space size={2}>
+              <EditOutlined /> 编辑
+            </Space>
+          </a>,
+          <Popconfirm
+            key="del"
+            title="确认删除"
+            description={`确定删除「${r.name}」吗？`}
+            onConfirm={() => deleteMut.mutate(r.id)}
+          >
+            <a style={{ color: '#ff4d4f' }}>
+              <DeleteOutlined /> 删除
+            </a>
+          </Popconfirm>,
+        ];
+      },
     },
   ];
 
+  const toggleExpandAll = useCallback(() => {
+    setExpandedKeys(allExpanded ? [] : allExpandableKeys);
+  }, [allExpanded, allExpandableKeys]);
+
   return (
-    <ContentContainer>
-      <ProTable<SysApi>
-        rowKey="id"
+    <ContentContainer scrollable>
+      <ProTable<ApiTreeNode>
+        rowKey="rowKey"
         headerTitle="接口管理"
         actionRef={actionRef}
         columns={columns}
         request={fetchApiRows}
+        onDataSourceChange={(ds) => setCurrentTree((ds as ApiTreeNode[]) ?? [])}
         search={{ labelWidth: 'auto' }}
         pagination={{
-          // 用 defaultPageSize 代替 pageSize：与字典保持一致，让 antd Table 用内部受控态
-          // 维护当前分页大小，避免改变分页大小后视图不更新
+          // 用 defaultPageSize 代替 pageSize：与字典/菜单保持一致
           defaultPageSize: 20,
           showSizeChanger: true,
           showTotal: (t) => `共 ${t} 条`,
@@ -217,7 +341,27 @@ const ApiPage = () => {
           >
             新增接口
           </Button>,
+          <Button
+            key="toggle-expand"
+            icon={allExpanded ? <UpOutlined /> : <DownOutlined />}
+            onClick={toggleExpandAll}
+            disabled={allExpandableKeys.length === 0}
+          >
+            {allExpanded ? '折叠全部' : '展开全部'}
+          </Button>,
         ]}
+        expandable={{
+          expandedRowKeys: expandedKeys,
+          onExpand: (expanded, record) => {
+            setExpandedKeys((prev) =>
+              expanded
+                ? prev.includes(record.rowKey)
+                  ? prev
+                  : [...prev, record.rowKey]
+                : prev.filter((k) => k !== record.rowKey),
+            );
+          },
+        }}
         tableAlertRender={false}
         dateFormatter="string"
       />
