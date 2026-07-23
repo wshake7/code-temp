@@ -42,3 +42,5 @@ node_modules/
 .understand-anything/tmp/
 __pycache__
 .output
+# Added by code-review-graph
+.code-review-graph/
