@@ -117,13 +117,13 @@
 
 ## 3. 软引用清单（不建 FK）
 
-| 字段                        | 表                        | 类型                 | 软引用目标                    | 原因                                                          |
-| --------------------------- | ------------------------- | -------------------- | ----------------------------- | ------------------------------------------------------------- |
-| `created_by` / `updated_by` | 所有 10 张核心表          | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）   | 用户删除时不应级联清空历史                                    |
-| `language_code`             | `sys_user`                | `NULL`               | `i18n_locale.code`            | i18n_locale.code 软引用                                       |
-| `subject_id`                | `sys_data_permission`     | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id` | 多态主体（`ANY_*` 时为 0）                                    |
-| `config_id`                 | `temporal_task_execution` | `NULL`               | `temporal_task_config.id`     | 执行可能先于配置存在                                          |
-| `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`             | `sys_user.id`                 | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| 字段                        | 表                          | 类型                 | 软引用目标                    | 原因                                                          |
+| --------------------------- | --------------------------- | -------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `created_by` / `updated_by` | 所有 10 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）   | 用户删除时不应级联清空历史                                    |
+| `language_code`             | `sys_user`                  | `NULL`               | `i18n_locale.code`            | i18n_locale.code 软引用                                       |
+| `subject_id`                | `sys_data_permission`       | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id` | 多态主体（`ANY_*` 时为 0）                                    |
+| `config_id`                 | `temporal_task_execution`   | `NULL`               | `temporal_task_config.id`     | 执行可能先于配置存在                                          |
+| `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`               | `sys_user.id`                 | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ---
 

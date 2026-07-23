@@ -91,12 +91,12 @@ updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0                  -- 0=系统�
 
 ### 4.4 不同表的覆盖
 
-| 表类                                                                               | 字段                                                                                                                             |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 表类                                                                                                                                                                               | 字段                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | 核心表 10 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission`） | 上述 7 字段全有                                                                                                                  |
-| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`） | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
-| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                              | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
-| 归档表 3 张（`*_archive`）                                                         | 镜像热表（多 `archived_at`）                                                                                                     |
+| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                 | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
+| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                              | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
+| 归档表 3 张（`*_archive`）                                                                                                                                                         | 镜像热表（多 `archived_at`）                                                                                                     |
 
 ---
 
@@ -152,16 +152,16 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 ### 6.2 高频索引模式
 
-| 场景                    | 索引                                                                                          |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| 按用户 + 时间查日志     | `(sys_user_id, created_at)`（v5+ `api_log` / `sys_login_log`；`operation_log` 仍为 `user_id`）    |
-| 按用户 + 模块 + 时间    | `(sys_user_id, module, created_at)`（`api_log` 特有；v5+）                                    |
-| 按状态 + 时间筛选       | `(status_code, created_at)`（`api_log`）/ `(status, created_at)`（`temporal_task_execution`） |
-| 关联表反向查询          | `(xxx_id, role_id)`（与 PK 反向）                                                             |
-| 字典/枚举筛选           | `(type_id, sort)`                                                                             |
-| 字典按平台过滤          | `idx_dict_data_platform`（`dict_data.platform`；v8+）                                         |
-| 软删过滤                | `idx_*_deleted_at` 单列                                                                       |
-| 菜单物化路径查祖先/子树 | `(tree_path)` 前缀匹配                                                                        |
+| 场景                    | 索引                                                                                           |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| 按用户 + 时间查日志     | `(sys_user_id, created_at)`（v5+ `api_log` / `sys_login_log`；`operation_log` 仍为 `user_id`） |
+| 按用户 + 模块 + 时间    | `(sys_user_id, module, created_at)`（`api_log` 特有；v5+）                                     |
+| 按状态 + 时间筛选       | `(status_code, created_at)`（`api_log`）/ `(status, created_at)`（`temporal_task_execution`）  |
+| 关联表反向查询          | `(xxx_id, role_id)`（与 PK 反向）                                                              |
+| 字典/枚举筛选           | `(type_id, sort)`                                                                              |
+| 字典按平台过滤          | `idx_dict_data_platform`（`dict_data.platform`；v8+）                                          |
+| 软删过滤                | `idx_*_deleted_at` 单列                                                                        |
+| 菜单物化路径查祖先/子树 | `(tree_path)` 前缀匹配                                                                         |
 
 ### 6.3 索引命名
 
@@ -192,13 +192,13 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 ### 7.2 不建外键（软引用，`NULL` 或 `0` 占位）
 
-| 引用                                                             | 类型                 | 原因                                                              |
-| ---------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------- |
-| `created_by` / `updated_by` → `sys_user.id`                      | `NOT NULL DEFAULT 0` | 0=系统操作；用户删除时不应级联清空历史                            |
-| `sys_user.language_code` → `i18n_locale.code`                    | `NULL`               | 同上（i18n_locale.code 软引用）                                   |
-| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id` | `NOT NULL DEFAULT 0` | 多态主体（`ANY_*` 时为 0），无法 FK                               |
-| `temporal_task_execution.config_id` → `temporal_task_config.id`  | `NULL`               | 执行可能先于配置存在                                              |
-| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`  | `NULL`           | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| 引用                                                                | 类型                 | 原因                                                              |
+| ------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------- |
+| `created_by` / `updated_by` → `sys_user.id`                         | `NOT NULL DEFAULT 0` | 0=系统操作；用户删除时不应级联清空历史                            |
+| `sys_user.language_code` → `i18n_locale.code`                       | `NULL`               | 同上（i18n_locale.code 软引用）                                   |
+| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`    | `NOT NULL DEFAULT 0` | 多态主体（`ANY_*` 时为 0），无法 FK                               |
+| `temporal_task_execution.config_id` → `temporal_task_config.id`     | `NULL`               | 执行可能先于配置存在                                              |
+| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id` | `NULL`               | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ### 7.3 自引用外键
 

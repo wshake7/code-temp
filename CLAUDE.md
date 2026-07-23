@@ -30,6 +30,7 @@ ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
 - Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
 - Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
 - Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
+
 <!-- codebase-memory-mcp:end -->
 
 <!-- Smart-Search START -->

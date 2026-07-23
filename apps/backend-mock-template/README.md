@@ -13,11 +13,11 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 
 环境变量（可选，开发默认见 `.env.development`，`pnpm start` / nitro dev 自动加载）：
 
-| 变量 | 默认 | 说明 |
-|------|------|------|
-| `AUTH_TOKEN_TIMEOUT_SECONDS` | `2592000`（30 天） | 会话超时；每次请求重置 |
-| `AUTH_IS_CONCURRENT` | `true` | 是否允许多端登录 |
-| `AUTH_IS_SHARE` | `false` | 同账号是否共享同一 token |
+| 变量                         | 默认               | 说明                     |
+| ---------------------------- | ------------------ | ------------------------ |
+| `AUTH_TOKEN_TIMEOUT_SECONDS` | `2592000`（30 天） | 会话超时；每次请求重置   |
+| `AUTH_IS_CONCURRENT`         | `true`             | 是否允许多端登录         |
+| `AUTH_IS_SHARE`              | `false`            | 同账号是否共享同一 token |
 
 修改 `.env.development` 后需重启 mock。进程重启后会话清空（mock 可接受）。
 

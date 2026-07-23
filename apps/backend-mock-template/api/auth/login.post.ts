@@ -1,16 +1,6 @@
-import {
-  defineEventHandler,
-  getHeader,
-  getRequestIP,
-  readBody,
-  setResponseStatus,
-} from "h3";
+import { defineEventHandler, getHeader, getRequestIP, readBody, setResponseStatus } from "h3";
 import { createSession } from "~/utils/session-utils";
-import {
-  appendLoginLog,
-  ensureUserSeeds,
-  getMockSysUserList,
-} from "~/utils/mock-data";
+import { appendLoginLog, ensureUserSeeds, getMockSysUserList } from "~/utils/mock-data";
 import { forbiddenResponse, useResponseError, useResponseSuccess } from "~/utils/response";
 
 function clientMeta(event: Parameters<typeof getHeader>[0]) {

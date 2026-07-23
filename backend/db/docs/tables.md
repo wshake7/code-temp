@@ -251,23 +251,23 @@
 
 ### 5.2 `dict_data` — 字典数据
 
-| 字段         | 类型            | 必填 | 默认           | 说明                                                                 |
-| ------------ | --------------- | ---- | -------------- | -------------------------------------------------------------------- |
-| `id`         | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                                 |
-| `type_id`    | BIGINT UNSIGNED | 是   | -              | 所属类型                                                             |
-| `value`      | VARCHAR(64)     | 是   | -              | 字典值                                                               |
-| `label`      | VARCHAR(128)    | 是   | -              | 字典标签                                                             |
-| `sort`       | INT             | 是   | 0              | 排序                                                                 |
-| `is_default` | TINYINT(1)      | 是   | 0              | 是否该类型默认值                                                     |
-| `platform`   | VARCHAR(32)     | 是   | `'general'`    | 归属平台（v8+）：`general` / `react-admin` / `vue-admin`             |
+| 字段         | 类型            | 必填 | 默认           | 说明                                                                     |
+| ------------ | --------------- | ---- | -------------- | ------------------------------------------------------------------------ |
+| `id`         | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                                     |
+| `type_id`    | BIGINT UNSIGNED | 是   | -              | 所属类型                                                                 |
+| `value`      | VARCHAR(64)     | 是   | -              | 字典值                                                                   |
+| `label`      | VARCHAR(128)    | 是   | -              | 字典标签                                                                 |
+| `sort`       | INT             | 是   | 0              | 排序                                                                     |
+| `is_default` | TINYINT(1)      | 是   | 0              | 是否该类型默认值                                                         |
+| `platform`   | VARCHAR(32)     | 是   | `'general'`    | 归属平台（v8+）：`general` / `react-admin` / `vue-admin`                 |
 | `tag_type`   | VARCHAR(32)     | 是   | `'default'`    | 预设样式标识（v9+）；前端映射 ant Tag / vben Tag color；`default`=无样式 |
-| `is_enabled` | TINYINT(1)      | 是   | 1              |                                                                      |
-| `deleted_at` | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                                   |
-| `remark`     | VARCHAR(512)    | 是   | `''`           |                                                                      |
-| `created_at` | TIMESTAMP       | 是   | NOW()          |                                                                      |
-| `updated_at` | TIMESTAMP       | 是   | NOW()          |                                                                      |
-| `created_by` | BIGINT UNSIGNED | 是   | 0              |                                                                      |
-| `updated_by` | BIGINT UNSIGNED | 是   | 0              |                                                                      |
+| `is_enabled` | TINYINT(1)      | 是   | 1              |                                                                          |
+| `deleted_at` | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                                       |
+| `remark`     | VARCHAR(512)    | 是   | `''`           |                                                                          |
+| `created_at` | TIMESTAMP       | 是   | NOW()          |                                                                          |
+| `updated_at` | TIMESTAMP       | 是   | NOW()          |                                                                          |
+| `created_by` | BIGINT UNSIGNED | 是   | 0              |                                                                          |
+| `updated_by` | BIGINT UNSIGNED | 是   | 0              |                                                                          |
 
 **索引**：`PRIMARY(id)` / `UNIQUE(type_id, value, platform, deleted_at)` / `idx_type_id_sort` / `idx_platform` / `idx_is_enabled` / `idx_deleted_at`
 
