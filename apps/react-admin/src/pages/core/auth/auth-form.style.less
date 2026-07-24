@@ -182,6 +182,25 @@
   }
 }
 
+/* ALTCHA 人机校验：与账号/密码输入框同宽对齐（覆盖默认 max-width: 320px） */
+.altcha-widget-host {
+  display: block;
+  width: 100%;
+  --altcha-max-width: 100%;
+
+  altcha-widget {
+    display: block;
+    width: 100%;
+  }
+
+  .altcha,
+  .altcha-main {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 /* 底部链接 */
 .auth-footer-link {
   text-align: center;

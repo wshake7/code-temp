@@ -54,6 +54,12 @@ export function AltchaWidget({
     widget.setAttribute('challenge', challenge);
     widget.setAttribute('language', language);
     widget.setAttribute('name', 'altcha');
+    // hideLogo/hideFooter 不是 HTML 属性，需走 configuration JSON
+    // @see altcha create_custom_element props: configuration only
+    widget.setAttribute(
+      'configuration',
+      JSON.stringify({ hideLogo: true, hideFooter: true }),
+    );
 
     const handleStateChange = (ev: Event) => {
       const detail = (ev as CustomEvent<{ payload?: string; state: AltchaState }>).detail;
@@ -79,7 +85,14 @@ export function AltchaWidget({
     };
   }, [challenge, language]);
 
-  return <div ref={hostRef} className="w-full" />;
+  // 与上方密码/账号输入框同宽对齐；覆盖 ALTCHA 默认 max-width: 320px
+  return (
+    <div
+      ref={hostRef}
+      className="altcha-widget-host w-full"
+      style={{ ['--altcha-max-width' as string]: '100%' }}
+    />
+  );
 }
 
 export default AltchaWidget;
