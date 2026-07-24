@@ -4,7 +4,6 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { listLoginLogsApi } from '@/api/rest/login-log';
 import type { LoginLogListItem, LoginLogSource } from '@/api/rest/types';
-import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import LoginLogDetailDrawer from './modules/detail-drawer';
 
 const LOGIN_METHOD_OPTIONS = {
@@ -14,7 +13,8 @@ const LOGIN_METHOD_OPTIONS = {
   SMS: { text: 'SMS' },
 };
 
-const LoginLogPage = () => {
+/** 登录日志列表面板（供「日志审计」页 Tab 嵌入） */
+export function LoginLogPanel() {
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [source, setSource] = useState<LoginLogSource>('hot');
   const [detailOpen, setDetailOpen] = useState(false);
@@ -136,7 +136,7 @@ const LoginLogPage = () => {
   ];
 
   return (
-    <ContentContainer>
+    <>
       <ProTable<LoginLogListItem>
         actionRef={actionRef}
         rowKey="id"
@@ -175,8 +175,8 @@ const LoginLogPage = () => {
           setDetailRow(null);
         }}
       />
-    </ContentContainer>
+    </>
   );
-};
+}
 
-export default LoginLogPage;
+export default LoginLogPanel;

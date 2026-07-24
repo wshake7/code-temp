@@ -213,7 +213,7 @@ const systemMenus = (level: "full" | "partial") => {
   ];
 };
 
-/** 日志审计菜单（对齐 sys_login_log / api_log；full 角色可见） */
+/** 日志审计菜单（单菜单进页，页内 Tab 切换登录/API 日志） */
 const logMenus = () => [
   {
     meta: {
@@ -223,29 +223,7 @@ const logMenus = () => [
     },
     name: "Log",
     path: "/log",
-    redirect: "/log/login-log",
-    children: [
-      {
-        name: "LogLoginLog",
-        path: "/log/login-log",
-        component: "/log/login-log/index",
-        meta: {
-          icon: "lucide:user-lock",
-          order: 1,
-          title: "log.loginLog.title",
-        },
-      },
-      {
-        name: "LogApiLog",
-        path: "/log/api-log",
-        component: "/log/api-log/index",
-        meta: {
-          icon: "lucide:file-clock",
-          order: 2,
-          title: "log.apiLog.title",
-        },
-      },
-    ],
+    component: "/log/index",
   },
 ];
 
@@ -1633,46 +1611,48 @@ function buildSysMenuSeeds(): SysMenu[] {
       sort: 1,
       ...base,
     },
-    // 日志审计 — sys_login_log
+    // 日志审计 — 单 MENU 进页；BUTTON 发 list 权限码供页内 Tab 显隐
     {
       id: 300,
       parent_id: null,
       name: "log.title",
-      type: "DIR",
+      type: "MENU",
       path: "/log",
-      component: null,
+      component: "/log/index",
       icon: "lucide:logs",
       permission_code: null,
       sort: 2004,
       ...base,
-      redirect: "/log/login-log",
-      metadata: JSON.stringify({ routeName: "Log", order: 2004 }),
+      // fullPathKey:false — 页内 ?tab= 切换不产生重复顶栏标签（Vue tabbar）
+      metadata: JSON.stringify({
+        routeName: "Log",
+        order: 2004,
+        fullPathKey: false,
+      }),
     },
     {
       id: 301,
       parent_id: 300,
       name: "log.loginLog.title",
-      type: "MENU",
-      path: "/log/login-log",
-      component: "/log/login-log/index",
-      icon: "lucide:user-lock",
+      type: "BUTTON",
+      path: null,
+      component: null,
+      icon: "",
       permission_code: "log:login-log:list",
       sort: 1,
       ...base,
-      metadata: JSON.stringify({ routeName: "LogLoginLog", order: 1 }),
     },
     {
       id: 302,
       parent_id: 300,
       name: "log.apiLog.title",
-      type: "MENU",
-      path: "/log/api-log",
-      component: "/log/api-log/index",
-      icon: "lucide:file-clock",
+      type: "BUTTON",
+      path: null,
+      component: null,
+      icon: "",
       permission_code: "log:api-log:list",
       sort: 2,
       ...base,
-      metadata: JSON.stringify({ routeName: "LogApiLog", order: 2 }),
     },
   ];
 
@@ -1952,9 +1932,9 @@ export function ensureMenuApiSeeds(): void {
     mockSysMenuApiList.push(
       { menu_id: 205, api_id: 7, created_at: now, created_by: 0 },
       { menu_id: 205, api_id: 8, created_at: now, created_by: 0 },
-      // LogLoginLog(301) → 登录日志列表
+      // 登录日志 list 按钮(301) → 登录日志列表接口
       { menu_id: 301, api_id: 16, created_at: now, created_by: 0 },
-      // LogApiLog(302) → API 日志列表
+      // API 日志 list 按钮(302) → API 日志列表接口
       { menu_id: 302, api_id: 17, created_at: now, created_by: 0 },
     );
   }
@@ -2541,8 +2521,8 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
 
   // Dashboard branch + buttons included where useful.
   const dashboard = [100, 101, 102];
-  // 日志审计（与 MOCK_MENUS / Vue 静态路由对齐）
-  const logBranch = [300, 301, 302];
+  // 日志审计（单 MENU 300；301/302 为 BUTTON，父级授权即可发码）
+  const logBranch = [300];
   // Full system menus + button children
   const systemFull = [
     200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206, 2061,
@@ -3427,7 +3407,7 @@ function buildApiLogSeeds(): ApiLog[] {
       request_query: "",
       request_body: "{}",
       request_header: '{"content-type":"application/json"}',
-      referer: "http://localhost:5173/log/login-log",
+      referer: "http://localhost:5173/log?tab=login",
       response: '{"code":405,"message":"Method Not Allowed"}',
       before_change: "",
       after_change: "",

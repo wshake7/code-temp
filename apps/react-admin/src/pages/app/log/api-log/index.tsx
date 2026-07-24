@@ -4,7 +4,6 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { listApiLogsApi } from '@/api/rest/api-log';
 import type { ApiLogListItem, ApiLogSource } from '@/api/rest/types';
-import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import ApiLogDetailDrawer from './modules/detail-drawer';
 
 const METHOD_OPTIONS = {
@@ -24,7 +23,8 @@ function methodColor(method: string) {
   return 'default';
 }
 
-const ApiLogPage = () => {
+/** API 日志列表面板（供「日志审计」页 Tab 嵌入） */
+export function ApiLogPanel() {
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [source, setSource] = useState<ApiLogSource>('hot');
   const [detailOpen, setDetailOpen] = useState(false);
@@ -153,7 +153,7 @@ const ApiLogPage = () => {
   ];
 
   return (
-    <ContentContainer>
+    <>
       <ProTable<ApiLogListItem>
         actionRef={actionRef}
         rowKey="id"
@@ -192,8 +192,8 @@ const ApiLogPage = () => {
           setDetailRow(null);
         }}
       />
-    </ContentContainer>
+    </>
   );
-};
+}
 
-export default ApiLogPage;
+export default ApiLogPanel;
