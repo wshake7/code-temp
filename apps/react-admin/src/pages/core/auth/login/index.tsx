@@ -4,6 +4,7 @@ import { Form, Input, Button, Checkbox, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import AltchaWidget from './AltchaWidget';
 import '../auth-form.style.less';
 
 const Login: React.FC = () => {
@@ -12,13 +13,13 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { message } = App.useApp();
-
-  const handleSubmit = async (values: { username: string; password: string; remember?: boolean }) => {
+  const handleSubmit = async (values: { username: string; password: string; remember?: boolean; altcha?: string }) => {
     try {
       await login(
         {
           username: values.username,
           password: values.password,
+          altcha: values.altcha,
         },
         { remember: values.remember ?? true },
       );
@@ -86,6 +87,18 @@ const Login: React.FC = () => {
           />
         </Form.Item>
 
+        <Form.Item
+          name="altcha"
+          className="auth-form-item"
+          rules={[
+            {
+              required: true,
+              message: t('altchaRequired', { defaultValue: '请先完成人机校验' }),
+            },
+          ]}
+        >
+          <AltchaWidget language="zh" />
+        </Form.Item>
         <Form.Item className="auth-remember-checkbox">
           <div className="flex items-center justify-between">
             <Form.Item name="remember" valuePropName="checked" noStyle>

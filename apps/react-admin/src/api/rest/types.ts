@@ -3,6 +3,8 @@
 export interface LoginRequest {
   username: string;
   password: string;
+  /** ALTCHA PoW payload（Base64 编码），登录前需通过人机校验 */
+  altcha?: string;
 }
 
 export interface LoginResponse {

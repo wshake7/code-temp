@@ -1,5 +1,6 @@
 import { defineEventHandler, getHeader, getRequestIP, readBody, setResponseStatus } from "h3";
 import { createSession } from "~/utils/session-utils";
+import { verifyAltchaPayload } from "~/utils/altcha";
 import { appendLoginLog, ensureUserSeeds, getMockSysUserList } from "~/utils/mock-data";
 import { forbiddenResponse, useResponseError, useResponseSuccess } from "~/utils/response";
 
@@ -15,7 +16,11 @@ function clientMeta(event: Parameters<typeof getHeader>[0]) {
 export default defineEventHandler(async (event) => {
   ensureUserSeeds();
 
-  const { password, username } = await readBody<{ password?: string; username?: string }>(event);
+  const { password, username, altcha } = await readBody<{
+    password?: string;
+    username?: string;
+    altcha?: string;
+  }>(event);
   const { userAgent, loginIp } = clientMeta(event);
 
   if (!password || !username) {
@@ -29,6 +34,20 @@ export default defineEventHandler(async (event) => {
     });
     setResponseStatus(event, 400);
     return useResponseError("BadRequestException", "Username and password are required");
+  }
+
+  // ALTCHA PoW 人机校验：未通过直接拒绝，不计入账号密码失败日志。
+  const altchaOk = await verifyAltchaPayload(altcha ?? "");
+  if (!altchaOk) {
+    appendLoginLog({
+      username,
+      success: 0,
+      reason: "ALTCHA verification failed",
+      statusCode: 403,
+      loginIp,
+      userAgent,
+    });
+    return forbiddenResponse(event, "ALTCHA verification failed.");
   }
 
   const sharedList = getMockSysUserList();

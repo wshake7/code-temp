@@ -28,6 +28,7 @@ catalog:
   cspell: latest
   commitlint: latest
   "@commitlint/config-conventional": latest
+  altcha-lib: 2.3.1
 overrides:
   vite: "catalog:"
   vitest: "catalog:"

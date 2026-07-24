@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "catalog:",
+    "altcha-lib": "catalog:",
     "nitropack": "catalog:"
   },
   "devDependencies": {
