@@ -779,3 +779,60 @@ export interface LoginLogListQuery {
   loginTimeTo?: string;
   [k: string]: unknown;
 }
+
+/** API 调用日志来源：热表 / 归档 */
+export type ApiLogSource = 'hot' | 'archive';
+
+/** API 调用日志列表项（对齐 api_log / api_log_archive camel 输出） */
+export interface ApiLogListItem {
+  id: number;
+  method: string;
+  module: string;
+  path: string;
+  statusCode: number | null;
+  success: 0 | 1;
+  reason: string;
+  costTime: number;
+  requestId: string;
+  sysUserId: number | null;
+  username: string;
+  requestUri: string;
+  requestQuery: string;
+  requestBody: string;
+  requestHeader: string;
+  referer: string;
+  response: string;
+  beforeChange: string;
+  afterChange: string;
+  formatChange: string;
+  clientId: string;
+  clientName: string;
+  clientIp: string;
+  userAgent: string;
+  browserName: string;
+  browserVersion: string;
+  osName: string;
+  osVersion: string;
+  location: string;
+  createdAt: string;
+  /** 仅 source=archive 时有值 */
+  archivedAt?: string;
+}
+
+export interface ApiLogListQuery {
+  page?: number;
+  pageSize?: number;
+  /** hot=热表 archive=归档，默认 hot */
+  source?: ApiLogSource;
+  method?: string;
+  module?: string;
+  path?: string;
+  success?: 0 | 1;
+  statusCode?: number;
+  username?: string;
+  clientIp?: string;
+  requestId?: string;
+  createdAtFrom?: string;
+  createdAtTo?: string;
+  [k: string]: unknown;
+}

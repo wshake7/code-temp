@@ -1,7 +1,7 @@
 /**
- * @deprecated stub
+ * @deprecated 请使用 `@/api/hooks/api-log`
  */
-export const __deprecated = true;
-export function fetchListApiAuditLogs() {
- throw new Error('[api-audit-log] 已废弃'); 
-}
+export {
+  fetchListApiLogs as fetchListApiAuditLogs,
+  useListApiLogs,
+} from './api-log';

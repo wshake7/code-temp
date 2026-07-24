@@ -3,7 +3,7 @@ import { createLazyRoute } from '@/core/router';
 
 /**
  * 日志审计管理路由
- * 登录日志已实现；其余子页暂用 ComingSoon，避免缺页。
+ * 登录日志 / API 日志已实现；其余子页暂用 ComingSoon，避免缺页。
  */
 export const logRoutes: AppRouteObject[] = [
   {
@@ -26,11 +26,11 @@ export const logRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'api-audit-log',
-        path: 'api-audit-logs',
-        element: createLazyRoute(() => import('@/pages/core/error/ComingSoon')),
+        name: 'api-log',
+        path: 'api-log',
+        element: createLazyRoute(() => import('@/pages/app/log/api-log')),
         meta: {
-          title: 'routes:api-audit-log',
+          title: 'routes:api-log',
           icon: 'lucide:file-clock',
         },
       },
