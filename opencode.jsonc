@@ -2,11 +2,7 @@
   "mcp": {
     "code-review-graph": {
       "type": "local",
-      "command": [
-        "uvx",
-        "code-review-graph",
-        "serve"
-      ]
-    }
-  }
+      "command": ["uvx", "code-review-graph", "serve"],
+    },
+  },
 }
