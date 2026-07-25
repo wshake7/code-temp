@@ -1,10 +1,24 @@
 ---
 name: develop
-description: "Build a feature using Research > Plan > Implement > Review phases with validation gates."
+description: "单 session 功能构建：Research → Plan → Implement → Review。适合范围清晰、无需深度访谈的工作。"
 argument-hint: "<feature description>"
 ---
 
-Research → Plan → Implement → Review。除 Research → Plan 外，其余阶段过渡必须走门禁，禁止自动进入下一阶段。
+# develop
+
+对齐 ask-matt **main flow** 的「单 session 直建」捷径：想法已经够清楚，直接 Research → Plan → Implement → Review。
+
+**不走本 command 时：**
+
+| 情境 | 改用 |
+|------|------|
+| 想法模糊，需要访谈打磨 | `/develop-grill` |
+| 还不确定方案，要先用 throwaway 原型验证 | `/prototype-design`（问题清晰）或 `/prototype-grill`（先访谈） |
+| 一个 session 装不下的巨大/模糊 effort | `/wayfinder`，再汇入 main flow |
+| 已有 agent-ready ticket | 直接 `/implement` |
+| 难复现 bug / regression | `/diagnosing-bugs` |
+
+Research → Plan **无门禁**（评分达标或用户决定带着差距继续后直接进入）；其余阶段过渡必须走门禁，禁止自动进入下一阶段。
 
 ## Feature: $ARGUMENTS
 
@@ -16,17 +30,24 @@ Research → Plan → Implement → Review。除 Research → Plan 外，其余�
 
 | 过渡 | 问题 | 继续 | 补充 |
 |------|------|------|------|
-| Plan → Implement | 是否批准实现？ | `批准并继续 (Recommended)` | `需要补充` |
+| Plan → Implement | 是否批准实现？ | `批准并继续 (Recommended)` | `需要补充` / `改走 multi-session` |
 | Review → Commit | 是否提交变更？ | `提交 (Recommended)` | `暂不提交` |
 
-Research → Plan **无需门禁**：评分达标（或用户已决定带着差距继续）后直接进入 Plan。
-
-- 只有选「继续」类选项才可进入下一阶段；「需要补充」则修订计划/补调研后再问一次
+- 只有选「继续」类选项才可进入下一阶段
+- 「需要补充」→ 修订后重新提问；「改走 multi-session」→ 转入下方 **规模分支 B**
 - 禁止凭 "ok" / "good" 等软确认跳过门禁
+
+### Context hygiene
+
+- Research → Plan →（单 session）Implement 前半：尽量留在**同一未中断** context window；不要中途 compact
+- 接近 **smart zone**（约 120k tokens）时：用 `/handoff` 导出，在 fresh session 从 Plan 或 ticket 继续，不要硬撑
+- multi-session 路径：每个 ticket 的 `/implement` 从 **fresh session** 开始；tickets 之间清空 context
+
+---
 
 ### Phase 1: Research
 
-探索 codebase，摸清范围后再打分。
+探索 codebase，摸清范围后再打分。目标是**可执行的范围感**，不是写论文。
 
 **探索清单：**
 
@@ -35,12 +56,13 @@ Research → Plan **无需门禁**：评分达标（或用户已决定带着差�
 3. **依赖与约束**：调用链、跨端约定（mock / React / Vue）、配置与 schema、权限与错误约定
 4. **边界与验证**：空值/并发/权限/失败路径；现有测试或手动验收方式
 
-**输出（进入 Plan 前必须展示）：**
+**输出（进入下一阶段前必须展示）：**
 
 - 相关文件/模块列表（尽量精确到路径）
 - 可复用模式与关键约束
 - 已知边界与未决假设（写入 Plan 的 Risks / 待确认点）
 - 五维评分表
+- **规模判断**（见下）
 
 #### 评分体系
 
@@ -60,24 +82,40 @@ Research → Plan **无需门禁**：评分达标（或用户已决定带着差�
 2. 汇总总分与通过/不通过
 3. 不通过时：点名最低维、差距、下一步行动（如「需要探索 X 的 API 边界」），而非笼统「需要更多研究」
 
-**决策：**
+**Research 决策：**
 
-- 总分 >= 70：展示上述输出后**直接进入 Phase 2**（无门禁）
-- 总分 < 70：补最低维后重评；循环直到 >= 70，或说明无法提升的维度并询问是否带着差距进入 Plan
+- 总分 >= 70：展示输出后进入 **规模分支**
+- 总分 < 70：补最低维后重评；循环直到 >= 70，或说明无法提升的维度并询问是否带着差距继续
+- 若未决点主要是**产品/设计决策**（而非 codebase 事实）：建议切换 `/develop-grill`，不要在 Plan 里用猜测填坑
+
+#### 规模分支（Research 后立刻判断）
+
+用一句话给出判断，并据此分流：
+
+| 判断 | 条件（经验） | 动作 |
+|------|--------------|------|
+| **A. 单 session** | 文件列表可控、一条 tracer bullet 能 demo、预估能在当前 window 内完成 | 进入 Phase 2 Plan |
+| **B. multi-session** | 多条独立可 demo 的 vertical slices、或 Approach 明显超出单 window | 综合 Research 结论跑 `/to-spec` → `/to-tickets`，**本 command 在 tickets 发布后结束**，并给出「按 blockers-first，每 ticket 新 session 跑 `/implement`」的交接说明 |
+| **C. 需先打磨** | 目标/边界/验收仍高度主观 | 建议 `/develop-grill`（展示原因，用户确认后切换） |
+
+不确定时默认 **A**，在 Plan 门禁保留「改走 multi-session」出口。
+
+---
 
 ### Phase 2: Plan
 
-基于 Research 发现起草计划。**只描述要做什么，不写实现代码。** 计划须可执行、可审查：路径尽量精确，步骤可独立验证。
+仅 **规模分支 A** 进入本阶段。基于 Research 起草计划。**只描述要做什么，不写实现代码。** 计划须可执行、可审查：路径尽量精确，步骤可独立验证。
 
 **起草要求：**
 
 1. Goal 对齐功能描述与 Research 结论；Out of scope 写清不做的部分
 2. 文件列表来自 Research；改/新建/可能删除分开写
-3. Approach 按依赖排序（数据/API → 业务 → UI → 测试），每步说明理由
+3. Approach 按依赖排序（数据/API → 业务 → UI → 测试），优先 **tracer bullet**（窄而贯通的端到端路径），每步说明理由
 4. Risks 写潜在问题与缓解；Test strategy 写手动/自动如何验收
 5. Research 中的未决假设写入 Risks 或明确默认选择（并在计划中标出）
+6. 若写着写着发现工作其实装不进单 session：停止硬塞，改走规模分支 B
 
-展示完整计划后走门禁（Plan → Implement）。选「需要补充」则修订计划或回 Research，再重新提问。
+展示完整计划后走门禁（Plan → Implement）。
 
 ```text
 PLAN: [Feature Name]
@@ -102,10 +140,31 @@ Test strategy:
 - [如何验证；涉及多端时分别写]
 ```
 
+---
+
 ### Phase 3: Implement
 
-用 `/implement` 执行已批准计划。
+用 `/implement` 执行已批准计划：
+
+- 在认可的 seams 上优先 `/tdd`（red-green 小步）
+- 定期 typecheck / 单测；收尾跑相关测试套件
+- **本 command 覆盖提交权**：实现阶段**不要**自动 commit；把提交留给 Phase 4 门禁
+- `/implement` 内的 `/code-review` 可在实现收尾时跑；其发现在 Phase 4 一并展示
+
+若实现中发现计划错误：停下来修订 Plan（或回 Research），不要默默扩大范围。
+
+---
 
 ### Phase 4: Review & Commit
 
-用 `/code-review`：读变更全文；有精确行号才报；`grep` 查 console.log / TODO / 密钥，只报实际命中；不报未验证猜测。展示摘要后走提交门禁；**不自动提交**。
+1. 用 `/code-review`（若实现阶段未跑）或汇总已有 review：读变更全文；有精确行号才报；`grep` 查 console.log / TODO / 密钥，只报实际命中；不报未验证猜测
+2. 展示摘要：做了什么、测试结果、残留风险
+3. 走提交门禁；**不自动提交**。用户选提交后再 commit
+
+---
+
+### 完成时
+
+- **分支 A**：变更已 review，按用户选择提交或留下 diff
+- **分支 B**：spec + tickets 已发布；给出 frontier ticket 列表与「新 session + `/implement <ticket>`」指引
+- **分支 C**：已说明为何改走 `/develop-grill`，并等待用户切换

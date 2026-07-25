@@ -1,17 +1,24 @@
 ---
 name: develop-grill
-description: >
-  通过 Research > Grill > Plan > Implement > Review 五阶段构建功能，
-  阶段之间有验证门与压力测试访谈。适用于用户说 /develop-grill、想在实现前
-  充分打磨需求，或需要带 Grill 门禁的完整开发流程时。
+description: "idea → ship 完整路径：Research → Grill →（可选 Prototype）→ 规模分支（Plan|to-spec/to-tickets）→ Implement → Review。"
 argument-hint: "<feature description>"
-disable-model-invocation: true
-user-invocable: true
-metadata:
-  short-description: "Research → Grill → Plan → Implement → Review"
 ---
 
-Research → Grill → Plan → Implement → Review。除 Research → Grill 外，其余阶段过渡必须走门禁，禁止自动进入下一阶段。
+# develop-grill
+
+对齐 ask-matt **main flow**（idea → ship）的编排版：先摸清 codebase，再访谈打磨，再按规模选择单 session 实现或拆 ticket 分批实现。
+
+**不走本 command 时：**
+
+| 情境 | 改用 |
+|------|------|
+| 范围已清晰、无需访谈 | `/develop` |
+| 目标是验证设计而非交付功能 | `/prototype-design` 或 `/prototype-grill`（本 command 内的 Prototype 仅作绕行） |
+| 没有 codebase 的纯设计讨论 | `/grill-me` |
+| 一个 session 都看不清路径的巨大 fog | `/wayfinder`，路径清晰后再 `/to-spec` 或本 command |
+| 已有 agent-ready ticket | 直接 `/implement` |
+
+Research → Grill **无门禁**；Grill 之后的阶段过渡必须走门禁（Prototype 绕行除外，见下）。禁止静默跨阶段。
 
 ## Feature: $ARGUMENTS
 
@@ -19,23 +26,33 @@ Research → Grill → Plan → Implement → Review。除 Research → Grill �
 
 ### 门禁（通用）
 
-展示当前阶段结论后，**立刻**用 `ask_user_question`（一次一问）。禁止只写「停止/等待批准」或静默继续。
+展示当前阶段结论后，**立刻**用 AskUserQuestion（一次一问）。禁止只写「停止/等待批准」或静默继续。
 
 | 过渡 | 问题 | 继续 | 补充 |
 |------|------|------|------|
-| Grill → Plan | 是否进入计划？ | `进入计划 (Recommended)` | `需要补充` |
-| Plan → Implement | 是否批准实现？ | `批准并继续 (Recommended)` | `需要补充` |
+| Grill → 下一跳 | 共同理解是否足够继续？ | `进入下一阶段 (Recommended)` | `继续访谈` / `先 Prototype` |
+| Plan → Implement | 是否批准实现？ | `批准并继续 (Recommended)` | `需要补充` / `改走 multi-session` |
+| Spec/Tickets 发布前 | 拆分是否批准？ | 由 `/to-tickets` 自身 quiz 处理 | — |
 | Review → Commit | 是否提交变更？ | `提交 (Recommended)` | `暂不提交` |
 
-Research → Grill **无需门禁**：评分达标（或用户已决定带着差距继续）后直接进入 Grill。
-
-- 只有选「继续」类选项才可进入下一阶段；「需要补充」则修订/补调研/继续访谈后再问一次
-- Grill 结束前：不起草计划、文件列表或实现产物
+- 只有选「继续」类选项才可进入下一阶段
 - 禁止凭 "ok" / "good" 等软确认跳过门禁
+- Grill 结束前：不起草完整 Plan、不写实现产物（允许极短的「待确认假设」列表）
+
+### Context hygiene
+
+来自 ask-matt，必须遵守：
+
+1. **Research → Grill →（Prototype 回收）→ to-spec / to-tickets 或 Plan**：尽量留在**同一未中断** context window；不要中途 compact，让 grilling、spec、tickets 建立在同一组思考上
+2. 接近 **smart zone**（约 120k tokens）：用 `/handoff` 导出，在 fresh session 引用该文件继续；**不要**在降级状态下硬写 spec/tickets
+3. **每个 `/implement`**（含 multi-session 的每个 ticket）从 **fresh session** 开始；tickets 之间清空 context
+4. `/handoff` = 分叉到新 session；`/compact` = 同 session 压缩——只在阶段断点用 compact，阶段中途不用
+
+---
 
 ### Phase 1: Research
 
-探索 codebase，摸清范围后再打分。优先 codebase-memory / 图查询，不足再 grep。
+探索 codebase，摸清范围后再打分。为 Grill 准备**事实材料**（路径、模式、约束），把**决策**留给 Grill。
 
 **探索清单：**
 
@@ -48,7 +65,7 @@ Research → Grill **无需门禁**：评分达标（或用户已决定带着差
 
 - 相关文件/模块列表（尽量精确到路径）
 - 可复用模式与关键约束
-- 已知边界与待确认决策（留给 Grill）
+- 已知边界与**待确认决策**（明确标成 Grill 议题，不要自行拍板）
 - 五维评分表
 
 #### 评分体系
@@ -67,35 +84,71 @@ Research → Grill **无需门禁**：评分达标（或用户已决定带着差
 
 1. 逐维给分 + 一句话理由（引用具体路径/符号，避免空话）
 2. 汇总总分与通过/不通过
-3. 不通过时：点名最低维、差距、下一步行动（如「需要探索 X 的 API 边界」），而非笼统「需要更多研究」
+3. 不通过时：点名最低维、差距、下一步行动
 
 **决策：**
 
-- 总分 >= 70：展示上述输出后**直接进入 Phase 2**（无门禁）
+- 总分 >= 70：展示输出后**直接进入 Phase 2**（无门禁）
 - 总分 < 70：补最低维后重评；循环直到 >= 70，或说明无法提升的维度并询问是否带着差距进入 Grill
+- 若 fog 极大（连调查路径都看不见）：建议改 `/wayfinder`，而不是在本 command 里空转 Research
+
+---
 
 ### Phase 2: Grill
 
-使用 `/grill-with-docs`（含 `/grilling` 与 domain-modeling）驱动访谈：
+使用 `/grill-with-docs`（含 `/grilling` 与 `/domain-modeling`）驱动访谈：
 
-- 一次一问；推荐选项 label 加 `(Recommended)`
-- fact 自己查 codebase，decision 交给用户；推到底
+- 一次一问；推荐选项加 `(Recommended)`
+- **fact** 自己查 codebase（可回 Research 补查）；**decision** 交给用户；推到底
 - 每次回答末尾加 `notes:`（偏好、权衡、未决分支）
-- 收尾写共同理解摘要，再走门禁
+- 维持 `CONTEXT.md` / glossary / ADR 纪律（由 domain-modeling 负责）
+- 收尾输出**共同理解摘要**（问题、方案边界、关键决策、Out of scope、开放问题），再走门禁
 
-### Phase 3: Plan
+**Grill → 下一跳门禁**选项语义：
 
-基于 Research 发现 + Grill 共同理解起草计划。**只描述要做什么，不写实现代码。** 计划须可执行、可审查：路径尽量精确，步骤可独立验证。
+| 用户选择 | 动作 |
+|----------|------|
+| `进入下一阶段` | 进入 Phase 2.5 判断（Prototype / 规模分支） |
+| `继续访谈` | 回到 Grill，针对开放问题继续 |
+| `先 Prototype` | 进入 Phase 2.5 Prototype 绕行 |
 
-**起草要求：**
+---
 
-1. Goal 对齐 Grill 结论；Out of scope 写清不做的部分
-2. 文件列表来自 Research，并反映 Grill 决策；改/新建/可能删除分开写
-3. Approach 按依赖排序（数据/API → 业务 → UI → 测试），每步说明理由
-4. Risks 写潜在问题与缓解；Test strategy 写手动/自动如何验收
-5. 若 Grill 改了范围，先修订 Research 中过时假设，再出计划
+### Phase 2.5: Prototype 绕行（可选）
 
-展示完整计划后走门禁（Plan → Implement）。选「需要补充」则修订计划或回 Grill/Research，再重新提问。
+仅当某个问题**无法在对话里可靠解决**时绕行——典型：状态机/业务逻辑手感、必须亲眼看到的 UI。
+
+流程（ask-matt Crossing sessions）：
+
+1. `/handoff` 导出当前 idea thread（含 Grill 摘要与待验证问题）
+2. 在 **fresh session** 基于 handoff 跑 **`/prototype-design`**（问题已清晰）或底层 `/prototype`；整段原型编排也可用 `/prototype-grill`（少见，本路径通常 Grill 已做过）
+3. 再用 `/handoff` 把 **Capture verdict** 带回来；回到本 thread（或新 session 引用两份 handoff）后，把决策写回共同理解 / ADR
+4. 然后进入 **规模分支**——不要跳过规模判断直接写代码
+
+纸面能说清的问题**不要** prototype。整段工作若从一开始就是「只探索设计」，应直接开 `/prototype-grill`，而不是本 command。
+
+---
+
+### Phase 3: 规模分支
+
+共同理解稳定后（且 Prototype 如需要已回收），判断能否在**一个 context window** 内实现：
+
+| 分支 | 何时 | 动作 |
+|------|------|------|
+| **A. 单 session** | 一条（或极少）tracer bullet 可 demo；预估当前 window 装得下 | Phase 3A Plan → Implement → Review |
+| **B. multi-session** | 多条独立 vertical slices；或明显超出单 window | Phase 3B `/to-spec` → `/to-tickets`，然后**按 ticket 分 session `/implement`** |
+
+拿不准时：若 Grill 摘要里的 User-facing 行为 ≥ 3 条可独立验收的切片，倾向 **B**。
+
+#### 3A. Plan → Implement → Review（单 session）
+
+**Plan**（只描述做什么，不写实现代码）：
+
+1. Goal / Out of scope 对齐 Grill 共同理解
+2. 文件列表来自 Research，并反映 Grill 决策
+3. Approach 按依赖排序，优先窄而贯通的 tracer bullet
+4. Risks + Test strategy；Grill 改过的范围要覆盖 Research 中过时假设
+5. 若起草中发现装不进单 session → 改走 3B，不要硬塞
 
 ```text
 PLAN: [Feature Name]
@@ -120,10 +173,49 @@ Test strategy:
 - [如何验证；涉及多端时分别写]
 ```
 
-### Phase 4: Implement
+展示计划后走 **Plan → Implement** 门禁。
 
-用 `/implement` 执行已批准计划。
+**Implement**：用 `/implement` 执行已批准计划（优先 `/tdd`）。**不要**在本 command 里自动 commit；提交留给 Review 门禁。
 
-### Phase 5: Review & Commit
+**Review & Commit**：`/code-review`（实现阶段已跑则汇总）；展示摘要后走提交门禁；**不自动提交**。
 
-用 `/code-review`：读变更全文；有精确行号才报；搜 console.log / TODO / 密钥，只报实际命中；不报未验证猜测。展示摘要后走提交门禁；**不自动提交**。
+#### 3B. to-spec → to-tickets → 分 session implement（multi-session）
+
+仍在**同一 context window**（若未超 smart zone）中：
+
+1. **`/to-spec`**：综合 Grill + Research（+ Prototype 决策），**不再访谈**；确认测试 seams 后发布 spec（`ready-for-agent`）
+2. **`/to-tickets`**：拆成 tracer-bullet tickets，声明 **blocking edges**；quiz 用户粒度与依赖后发布
+   - Local tracker：`.scratch/<feature>/issues/` 每 ticket 一文件
+   - 真实 tracker：native blocking / 文内 Blocked by
+3. **本 command 在此收尾（推荐）**：列出 frontier（blockers 已完成、可立即开工的 tickets），并给出：
+
+```text
+下一步（每个 ticket 一个 fresh session）：
+1. 打开新 session
+2. /implement <ticket 引用>
+3. 完成后取下一条 frontier ticket
+不要在同一 session 连续 implement 多个 tickets。
+```
+
+仅当用户**明确要求**在本 session 做第一个 ticket 时，才对 **一条** frontier ticket 跑 `/implement`；做完后仍建议 handoff/新 session 再继续。
+
+**不要**对 `/to-tickets` 产出的 tickets 再跑 `/triage`——它们已是 agent-ready。
+
+---
+
+### 阶段衔接速查
+
+```text
+Research（事实） 
+  → Grill（决策，stateful docs）
+    → [可选] Prototype 绕行（handoff 来回）
+      → 规模判断
+           ├─ A: Plan → 门禁 → Implement → Review → 提交门禁
+           └─ B: to-spec → to-tickets →（新 session）implement × N
+```
+
+### 完成时
+
+- **3A**：变更已 review，按用户选择提交或留下 diff；CONTEXT/ADR 已更新（若 Grill 写过）
+- **3B**：spec + tickets 已发布；frontier 与 per-ticket `/implement` 指引已给出
+- 任一阶段因 context 压力退出：已 `/handoff`，并写明下一 session 应从哪一阶段/哪个 artifact 恢复
