@@ -123,13 +123,16 @@ OUT OF SCOPE: [本原型明确不碰的]
 
 ### Phase 2: Build
 
-门禁通过后，按分支执行底层 skill（读全量指示并遵守）：
+门禁通过后，按分支**加载并执行** `/prototype`（与 `/tdd`、`/grilling` 一样按 skill 名解析，不写文件系统路径；各 CLI 的 skill 根目录可能不同）。
 
-- **Logic** → `/prototype` 的 [LOGIC.md](../../skills/prototype/LOGIC.md)
+1. 用当前环境的 skill 机制打开 `/prototype` 的 `SKILL.md`
+2. 在**该 skill 自己的目录**内读分支文件并全量遵守（`LOGIC.md` / `UI.md` 与 `SKILL.md` 同目录）：
+
+- **Logic** → `/prototype` 的 `LOGIC.md`
   - 先写问题 comment/README
   - pure logic 与 TUI 分离；TUI 只是薄壳
   - 一帧内：当前 state + 快捷键；每 action 整帧重绘
-- **UI** → `/prototype` 的 [UI.md](../../skills/prototype/UI.md)
+- **UI** → `/prototype` 的 `UI.md`
   - 默认 **3** 个**结构上**不同的 variants（最多 5）；禁止只换配色的假对比
   - 优先现有路由 + `?variant=`；浮动底栏切换
   - 保留真实 data fetching，只替换渲染子树（sub-shape A）

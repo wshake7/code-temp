@@ -132,10 +132,13 @@ RUN (draft): [预期启动方式]
 
 ### Phase 4: Build
 
-与 `/prototype-design` Phase 2 相同，调用 `/prototype`：
+与 `/prototype-design` Phase 2 相同：按 skill 名加载并执行 `/prototype`（不写文件系统路径）。
 
-- **Logic** → [LOGIC.md](../../skills/prototype/LOGIC.md)：pure module + 最小 TUI
-- **UI** → [UI.md](../../skills/prototype/UI.md)：默认 3 个结构不同的 variants + `?variant=` + 浮动条；优先宿主页
+1. 打开 `/prototype` 的 `SKILL.md`
+2. 在**该 skill 自己的目录**内读分支文件并全量遵守：
+
+- **Logic** → `/prototype` 的 `LOGIC.md`：pure module + 最小 TUI
+- **UI** → `/prototype` 的 `UI.md`：默认 3 个结构不同的 variants + `?variant=` + 浮动条；优先宿主页
 
 给出 run 命令 → 进入 Play。
 
