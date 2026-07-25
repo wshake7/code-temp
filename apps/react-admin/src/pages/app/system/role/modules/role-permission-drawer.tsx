@@ -22,6 +22,7 @@ import {
   useSetRoleApis,
   useSetRoleMenus,
 } from '@/api/hooks/role';
+import { useApisByMenus } from '@/api/hooks/menu';
 import type {
   RoleApiBindItem,
   RoleMenuBindItem,
@@ -79,7 +80,7 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
   const { data: boundMenus } = useRoleMenus(roleId, { enabled: open && roleId !== null });
   const setMenusMut = useSetRoleMenus({
     onSuccess: () => {
-      message.success('菜单授权已保存');
+      message.success('菜单授权已保存；可切换到「接口权限」从已选菜单带出接口');
       useAccessRefreshStore.getState().refreshAccess();
     },
     onError: (err) => message.error(`保存失败：${(err as Error).message ?? '未知错误'}`),
@@ -92,6 +93,11 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
   const setApisMut = useSetRoleApis({
     onSuccess: () => message.success('接口授权已保存'),
     onError: (err) => message.error(`保存失败：${(err as Error).message ?? '未知错误'}`),
+  });
+
+  const apisByMenusMut = useApisByMenus({
+    onError: (err) =>
+      message.error(`带出接口失败：${(err as Error).message ?? '未知错误'}`),
   });
 
   // 菜单树 + 初始选中
@@ -157,6 +163,29 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
     });
   };
 
+  /** 从当前勾选菜单的 menu_api 绑定并入接口勾选（不覆盖已选手选） */
+  const handlePullApisFromMenus = async () => {
+    if (menuChecked.size === 0) {
+      message.warning('请先在「菜单权限」中勾选菜单');
+      return;
+    }
+    const res = await apisByMenusMut.mutateAsync([...menuChecked]);
+    const prevChecked = apiChecked;
+    const added = res.apiIds.filter((id) => !prevChecked.has(id)).length;
+    setApiChecked((prev) => {
+      const next = new Set(prev);
+      res.apiIds.forEach((id) => next.add(id));
+      return next;
+    });
+    if (res.apiIds.length === 0) {
+      message.info('已选菜单尚未绑定接口（请先在菜单管理中绑定）');
+    } else {
+      message.success(
+        `已从菜单带出 ${res.apiIds.length} 个接口（新增 ${added}）`,
+      );
+    }
+  };
+
   const handleSaveMenu = () => {
     if (roleId === null) return;
     setMenusMut.mutate({ id: roleId, menuIds: [...menuChecked] });
@@ -168,7 +197,8 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
     refetchApis();
   };
 
-  const submitting = setMenusMut.isPending || setApisMut.isPending;
+  const submitting =
+    setMenusMut.isPending || setApisMut.isPending || apisByMenusMut.isPending;
 
   return (
     <Drawer
@@ -201,7 +231,7 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
         items={[
           { key: 'menu', label: `菜单权限（${menuChecked.size}）` },
           { key: 'api', label: `接口权限（${apiChecked.size}）` },
-          { key: 'data', label: '数据权限', disabled: false },
+          { key: 'data', label: '数据权限', disabled: true },
         ]}
       />
 
@@ -209,6 +239,7 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
         <div>
           <div style={{ marginBottom: 8, color: '#666' }}>
             勾选菜单及其下的按钮权限点，保存后全量替换该角色的菜单授权。
+            接口授权需在「接口权限」中单独保存；可使用「从已选菜单带出接口」。
           </div>
           <Tree
             checkable
@@ -225,15 +256,27 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
 
       {activeTab === 'api' && (
         <div>
-          <Input.Search
-            placeholder="按路径或名称搜索接口..."
-            allowClear
-            value={apiSearch}
-            onChange={(e) => setApiSearch(e.target.value)}
-            style={{ marginBottom: 12 }}
-          />
+          <Space style={{ marginBottom: 12 }} wrap>
+            <Input.Search
+              placeholder="按路径或名称搜索接口..."
+              allowClear
+              value={apiSearch}
+              onChange={(e) => setApiSearch(e.target.value)}
+              style={{ width: 280 }}
+            />
+            <Button
+              onClick={() => void handlePullApisFromMenus()}
+              loading={apisByMenusMut.isPending}
+              disabled={menuChecked.size === 0}
+            >
+              从已选菜单带出接口
+            </Button>
+          </Space>
           <div style={{ marginBottom: 8, color: '#666' }}>
             已选 <strong>{apiChecked.size}</strong> 个接口
+            <span style={{ marginLeft: 8, fontSize: 12 }}>
+              （带出 = 并入 menu_api 绑定，不取消已选手选；依赖菜单管理中的接口绑定）
+            </span>
           </div>
           <Collapse
             defaultActiveKey={[]}
@@ -290,18 +333,6 @@ const RolePermissionDrawer = ({ open, roleId, onClose }: Props) => {
               };
             })}
           />
-        </div>
-      )}
-
-      {activeTab === 'data' && (
-        <div
-          style={{
-            padding: '40px 0',
-            textAlign: 'center',
-            color: '#999',
-          }}
-        >
-          开发中
         </div>
       )}
     </Drawer>

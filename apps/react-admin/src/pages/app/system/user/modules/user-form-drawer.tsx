@@ -102,8 +102,8 @@ const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
     onError: (err) => message.error(`保存失败：${(err as Error).message ?? '未知错误'}`),
   });
 
-  // 角色下拉：全量角色
-  const { data: roleOptions } = useAllRoles(undefined, { enabled: open });
+  // 角色下拉：仅启用角色（禁用角色不可新绑）
+  const { data: roleOptions } = useAllRoles({ status: 1 }, { enabled: open });
   // 语言下拉：全量语言
   const { data: localeOptions } = useListAllI18nLocale(undefined, { enabled: open });
 

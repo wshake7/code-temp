@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, setResponseStatus } from "h3";
 import {
   clearApiMenus,
+  clearRoleApisByApiId,
   ensureMenuApiSeeds,
   getMockSysApiList,
   softDeleteApi,
@@ -48,6 +49,7 @@ export default defineEventHandler(async (event) => {
   if (action === "delete") {
     for (const t of targets) {
       clearApiMenus(t.id);
+      clearRoleApisByApiId(t.id);
       softDeleteApi(t.id);
     }
     return useResponseSuccess({

@@ -9,6 +9,7 @@ import {
   batchMenuApi,
   createMenuApi,
   deleteMenuApi,
+  getApisByMenusApi,
   getMenuApisApi,
   listAllMenusApi,
   listMenusApi,
@@ -125,6 +126,20 @@ export function useSetMenuApis(
 ) {
   return useMutation({
     mutationFn: ({ id, apiIds }) => setMenuApisApi(id, apiIds),
+    ...options,
+  });
+}
+
+/** 按菜单聚合已绑定接口 ID（角色授权带出用） */
+export function useApisByMenus(
+  options?: UseMutationOptions<
+    { menuIds: number[]; apiIds: number[] },
+    Error,
+    number[]
+  >,
+) {
+  return useMutation({
+    mutationFn: (menuIds) => getApisByMenusApi(menuIds),
     ...options,
   });
 }

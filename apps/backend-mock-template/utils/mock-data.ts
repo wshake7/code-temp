@@ -1291,6 +1291,27 @@ export function getMenuApiIds(menuId: number): number[] {
   return mockSysMenuApiList.filter((r) => r.menu_id === menuId).map((r) => r.api_id);
 }
 
+/**
+ * 按菜单 ID 列表聚合 sys_menu_api → 去重的未软删 api_id。
+ * 供角色授权「从已选菜单带出接口」使用（结构化快捷绑定，非直接授权）。
+ */
+export function getApiIdsByMenuIds(menuIds: number[]): number[] {
+  if (!menuIds.length) return [];
+  const menuIdSet = new Set(menuIds);
+  const validApiIds = new Set(
+    mockSysApiList.filter((a) => a.deleted_at === 0).map((a) => a.id),
+  );
+  const out: number[] = [];
+  const seen = new Set<number>();
+  for (const row of mockSysMenuApiList) {
+    if (!menuIdSet.has(row.menu_id)) continue;
+    if (!validApiIds.has(row.api_id) || seen.has(row.api_id)) continue;
+    seen.add(row.api_id);
+    out.push(row.api_id);
+  }
+  return out.sort((a, b) => a - b);
+}
+
 /** 全量替换某菜单的接口绑定（覆盖写）。返回最终绑定的 api_id 列表。 */
 export function setMenuApis(menuId: number, apiIds: number[]): number[] {
   // 删除旧的
@@ -2375,6 +2396,24 @@ export function setRoleApis(roleId: number, apiIds: number[]): number[] {
 function clearRoleApis(roleId: number): void {
   for (let i = mockSysRoleApiList.length - 1; i >= 0; i--) {
     if (mockSysRoleApiList[i].role_id === roleId) {
+      mockSysRoleApiList.splice(i, 1);
+    }
+  }
+}
+
+/** 清除所有角色对该菜单的授权（菜单软删前调用） */
+export function clearRoleMenusByMenuId(menuId: number): void {
+  for (let i = mockSysRoleMenuList.length - 1; i >= 0; i--) {
+    if (mockSysRoleMenuList[i].menu_id === menuId) {
+      mockSysRoleMenuList.splice(i, 1);
+    }
+  }
+}
+
+/** 清除所有角色对该接口的授权（接口软删前调用） */
+export function clearRoleApisByApiId(apiId: number): void {
+  for (let i = mockSysRoleApiList.length - 1; i >= 0; i--) {
+    if (mockSysRoleApiList[i].api_id === apiId) {
       mockSysRoleApiList.splice(i, 1);
     }
   }

@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, setResponseStatus } from "h3";
 import {
   clearMenuApis,
+  clearRoleMenusByMenuId,
   ensureMenuApiSeeds,
   getMockSysMenuList,
   hasMenuChildren,
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
     }
     for (const t of targets) {
       clearMenuApis(t.id);
+      clearRoleMenusByMenuId(t.id);
       softDeleteMenu(t.id);
     }
     return useResponseSuccess({

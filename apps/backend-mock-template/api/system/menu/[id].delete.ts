@@ -1,6 +1,7 @@
 import { defineEventHandler, getRouterParam, setResponseStatus } from "h3";
 import {
   clearMenuApis,
+  clearRoleMenusByMenuId,
   ensureMenuApiSeeds,
   getMockSysMenuList,
   hasMenuChildren,
@@ -37,6 +38,7 @@ export default defineEventHandler(async (event) => {
   }
 
   clearMenuApis(id);
+  clearRoleMenusByMenuId(id);
   const removed = softDeleteMenu(id);
   return useResponseSuccess(toCamelRow(removed!));
 });
