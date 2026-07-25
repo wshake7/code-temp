@@ -80,8 +80,6 @@ export function getErrorMsg(error: unknown) {
 
   const { reason, message, code } = resData;
 
-  console.log('resData:', resData);
-
   // =========================================
   // 1. 优先：reason → request.reason.xxx
   // =========================================
