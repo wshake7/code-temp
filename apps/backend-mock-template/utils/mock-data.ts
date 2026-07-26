@@ -227,13 +227,27 @@ const logMenus = () => [
   },
 ];
 
+/** 任务调度菜单（一级入口；页内 Tab 切换配置/执行记录） */
+const taskMenus = () => [
+  {
+    meta: {
+      icon: "lucide:timer",
+      order: 2003,
+      title: "task.title",
+    },
+    name: "Task",
+    path: "/task",
+    component: "/task/index",
+  },
+];
+
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...logMenus(), ...systemMenus("full")],
+    menus: [...dashboardMenus, ...taskMenus(), ...logMenus(), ...systemMenus("full")],
     username: "vben",
   },
   {
-    menus: [...dashboardMenus, ...logMenus(), ...systemMenus("partial")],
+    menus: [...dashboardMenus, ...taskMenus(), ...logMenus(), ...systemMenus("partial")],
     username: "admin",
   },
   {
@@ -1654,6 +1668,48 @@ function buildSysMenuSeeds(): SysMenu[] {
       sort: 2,
       ...base,
     },
+    // 任务调度 — 一级菜单；页内 Tab 切换配置/执行记录
+    {
+      id: 400,
+      parent_id: null,
+      name: "task.title",
+      type: "MENU",
+      path: "/task",
+      component: "/task/index",
+      icon: "lucide:timer",
+      permission_code: null,
+      sort: 2003,
+      ...base,
+      metadata: JSON.stringify({
+        routeName: "Task",
+        order: 2003,
+        fullPathKey: false,
+      }),
+    },
+    {
+      id: 401,
+      parent_id: 400,
+      name: "task.config.title",
+      type: "BUTTON",
+      path: null,
+      component: null,
+      icon: "",
+      permission_code: "task:config:list",
+      sort: 1,
+      ...base,
+    },
+    {
+      id: 402,
+      parent_id: 400,
+      name: "task.execution.title",
+      type: "BUTTON",
+      path: null,
+      component: null,
+      icon: "",
+      permission_code: "task:execution:list",
+      sort: 2,
+      ...base,
+    },
   ];
 
   for (const d of defs) {
@@ -2174,6 +2230,70 @@ export const API_SYNC_MANIFEST = [
     permissionCode: "log:api-log:list",
     apiGroup: "日志审计",
   },
+  // —— 任务调度 ——
+  {
+    name: "任务配置分页",
+    method: "GET",
+    path: "/api/system/task-config/list",
+    permissionCode: "task:config:list",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "任务配置详情",
+    method: "GET",
+    path: "/api/system/task-config/:id",
+    permissionCode: "task:config:list",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "创建任务配置",
+    method: "POST",
+    path: "/api/system/task-config",
+    permissionCode: "task:config:create",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "更新任务配置",
+    method: "PUT",
+    path: "/api/system/task-config/:id",
+    permissionCode: "task:config:update",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "删除任务配置",
+    method: "DELETE",
+    path: "/api/system/task-config/:id",
+    permissionCode: "task:config:delete",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "批量操作任务配置",
+    method: "POST",
+    path: "/api/system/task-config/batch",
+    permissionCode: "task:config:batch",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "手动触发任务配置",
+    method: "POST",
+    path: "/api/system/task-config/:id/trigger",
+    permissionCode: "task:config:trigger",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "任务执行分页",
+    method: "GET",
+    path: "/api/system/task-execution/list",
+    permissionCode: "task:execution:list",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "任务执行详情",
+    method: "GET",
+    path: "/api/system/task-execution/:id",
+    permissionCode: "task:execution:list",
+    apiGroup: "任务调度",
+  },
 ] as const;
 
 /** 按 method+path 查找种子接口 id（deleted_at=0） */
@@ -2249,6 +2369,9 @@ export function ensureMenuApiSeeds(): void {
     bind(301, "GET", "/api/system/login-log/list");
     // API 日志 list 按钮(302)
     bind(302, "GET", "/api/system/api-log/list");
+    // 任务调度：配置 list + 执行 list（按钮 401/402）
+    bind(401, "GET", "/api/system/task-config/list");
+    bind(402, "GET", "/api/system/task-execution/list");
   }
 }
 
@@ -2835,6 +2958,8 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
   const dashboard = [100, 101, 102];
   // 日志审计（单 MENU 300；301/302 为 BUTTON，父级授权即可发码）
   const logBranch = [300];
+  // 任务调度（一级 MENU 400；401/402 为页内 Tab 权限按钮）
+  const taskBranch = [400];
   // Full system menus + button children
   const systemFull = [
     200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206, 2061,
@@ -2843,11 +2968,11 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
   const systemPartial = [200, 201, 2011, 2012, 2013, 202, 2021, 203, 204];
 
   // super_admin(id=1) = vben full
-  for (const mid of [...dashboard, ...logBranch, ...systemFull]) {
+  for (const mid of [...dashboard, ...logBranch, ...taskBranch, ...systemFull]) {
     rows.push({ role_id: 1, menu_id: mid, created_at: now, created_by: 0 });
   }
-  // admin(id=2) = partial system + dashboard + 登录日志
-  for (const mid of [...dashboard, ...logBranch, ...systemPartial]) {
+  // admin(id=2) = partial system + dashboard + 日志 + 任务调度
+  for (const mid of [...dashboard, ...logBranch, ...taskBranch, ...systemPartial]) {
     rows.push({ role_id: 2, menu_id: mid, created_at: now, created_by: 0 });
   }
   // user(id=3) = jack dashboard only
@@ -2872,12 +2997,17 @@ function buildSysRoleApiSeeds(): SysRoleApi[] {
     rows.push({ role_id: 1, api_id: api.id, created_at: now, created_by: 0 });
   }
 
-  // admin(id=2) 授权用户管理 + 登录/API 日志列表
+  // admin(id=2) 授权用户管理 + 登录/API 日志 + 任务调度
   for (const api of active) {
     const isUser = api.path === "/api/system/user" || api.path.startsWith("/api/system/user/");
     const isLoginLog = api.path === "/api/system/login-log/list";
     const isApiLog = api.path === "/api/system/api-log/list";
-    if (isUser || isLoginLog || isApiLog) {
+    const isTask =
+      api.path === "/api/system/task-config" ||
+      api.path.startsWith("/api/system/task-config/") ||
+      api.path === "/api/system/task-execution" ||
+      api.path.startsWith("/api/system/task-execution/");
+    if (isUser || isLoginLog || isApiLog || isTask) {
       rows.push({ role_id: 2, api_id: api.id, created_at: now, created_by: 0 });
     }
   }
@@ -3967,5 +4097,345 @@ export function ensureApiLogSeeds(): void {
   }
   if (mockApiLogArchiveList.length === 0) {
     mockApiLogArchiveList.push(...buildApiLogArchiveSeeds());
+  }
+}
+
+// ============================================================
+// Temporal 任务调度 — temporal_task_config / temporal_task_execution
+// 字段对齐 backend/db/schema.sql §8 / §22；mock-only，不接真实 Temporal。
+// ============================================================
+
+export type TaskExecutionStatus =
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED"
+  | "TERMINATED"
+  | "TIMED_OUT"
+  | "CONTINUED_AS_NEW";
+
+export interface TemporalTaskConfig {
+  id: number;
+  code: string;
+  name: string;
+  workflow_type: string;
+  task_queue: string;
+  /** NULL = 仅手动触发 */
+  cron_expr: string | null;
+  /** 重试策略 JSON 对象 */
+  retry_policy: Record<string, unknown> | null;
+  timeout_seconds: number | null;
+  remark: string;
+  is_enabled: 0 | 1;
+  deleted_at: number;
+  created_at: string;
+  updated_at: string;
+  created_by: number;
+  updated_by: number;
+}
+
+export interface TemporalTaskExecution {
+  id: number;
+  /** 软外键 → temporal_task_config.id；配置软删后可悬空 */
+  config_id: number | null;
+  workflow_id: string;
+  run_id: string;
+  workflow_type: string;
+  task_queue: string;
+  status: TaskExecutionStatus;
+  started_at: string;
+  closed_at: string | null;
+  input_summary: Record<string, unknown> | null;
+  result_summary: Record<string, unknown> | null;
+  failure_reason: string | null;
+  created_at: string;
+}
+
+const mockTemporalTaskConfigList: TemporalTaskConfig[] = [];
+const mockTemporalTaskExecutionList: TemporalTaskExecution[] = [];
+
+export function getMockTemporalTaskConfigList() {
+  return mockTemporalTaskConfigList;
+}
+
+export function getMockTemporalTaskExecutionList() {
+  return mockTemporalTaskExecutionList;
+}
+
+let taskConfigIdSeq = 0;
+let taskExecutionIdSeq = 0;
+
+export function nextTaskConfigId(): number {
+  taskConfigIdSeq += 1;
+  return taskConfigIdSeq;
+}
+
+export function nextTaskExecutionId(): number {
+  taskExecutionIdSeq += 1;
+  return taskExecutionIdSeq;
+}
+
+function buildTemporalTaskConfigSeeds(): TemporalTaskConfig[] {
+  const base = {
+    deleted_at: 0,
+    created_by: 0,
+    updated_by: 0,
+  };
+  return [
+    {
+      id: 1,
+      code: "report_daily",
+      name: "日报生成",
+      workflow_type: "ReportDailyWorkflow",
+      task_queue: "reports",
+      cron_expr: "0 0 2 * * ?",
+      retry_policy: { maxAttempts: 3, initialInterval: "30s", backoff: 2.0 },
+      timeout_seconds: 3600,
+      remark: "每日凌晨生成运营日报",
+      is_enabled: 1,
+      created_at: "2025-02-01T11:00:00.000Z",
+      updated_at: "2025-02-01T11:00:00.000Z",
+      ...base,
+    },
+    {
+      id: 2,
+      code: "order_settlement",
+      name: "订单结算",
+      workflow_type: "OrderSettlementWorkflow",
+      task_queue: "finance",
+      cron_expr: "0 0 1 * * ?",
+      retry_policy: { maxAttempts: 5, initialInterval: "60s", backoff: 2.0 },
+      timeout_seconds: 7200,
+      remark: "订单日终结算",
+      is_enabled: 1,
+      created_at: "2025-02-01T11:01:00.000Z",
+      updated_at: "2025-02-01T11:01:00.000Z",
+      ...base,
+    },
+    {
+      id: 3,
+      code: "data_archive",
+      name: "数据归档",
+      workflow_type: "DataArchiveWorkflow",
+      task_queue: "maintenance",
+      cron_expr: "0 0 3 * * ?",
+      retry_policy: { maxAttempts: 2, initialInterval: "120s", backoff: 1.5 },
+      timeout_seconds: 14400,
+      remark: "历史数据归档",
+      is_enabled: 1,
+      created_at: "2025-02-15T12:00:00.000Z",
+      updated_at: "2025-02-15T12:00:00.000Z",
+      ...base,
+    },
+    {
+      id: 4,
+      code: "cache_warmup",
+      name: "缓存预热",
+      workflow_type: "CacheWarmupWorkflow",
+      task_queue: "maintenance",
+      cron_expr: null,
+      retry_policy: { maxAttempts: 2, initialInterval: "10s", backoff: 1.0 },
+      timeout_seconds: 600,
+      remark: "仅手动触发",
+      is_enabled: 1,
+      created_at: "2025-03-01T10:00:00.000Z",
+      updated_at: "2025-03-01T10:00:00.000Z",
+      ...base,
+    },
+    {
+      id: 5,
+      code: "session_cleanup",
+      name: "会话清理",
+      workflow_type: "SessionCleanupWorkflow",
+      task_queue: "maintenance",
+      cron_expr: "0 */30 * * * ?",
+      retry_policy: { maxAttempts: 1 },
+      timeout_seconds: 300,
+      remark: "已禁用示例",
+      is_enabled: 0,
+      created_at: "2025-04-01T10:00:00.000Z",
+      updated_at: "2025-04-01T10:00:00.000Z",
+      ...base,
+    },
+  ];
+}
+
+function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
+  return [
+    {
+      id: 1,
+      config_id: 1,
+      workflow_id: "wf-report-20260620-0200",
+      run_id: "run-aaa111",
+      workflow_type: "ReportDailyWorkflow",
+      task_queue: "reports",
+      status: "COMPLETED",
+      started_at: "2026-06-20T02:00:00.000Z",
+      closed_at: "2026-06-20T02:08:42.000Z",
+      input_summary: { date: "2026-06-20" },
+      result_summary: { rows: 1280 },
+      failure_reason: null,
+      created_at: "2026-06-20T02:00:00.000Z",
+    },
+    {
+      id: 2,
+      config_id: 2,
+      workflow_id: "wf-settle-20260620-0100",
+      run_id: "run-bbb222",
+      workflow_type: "OrderSettlementWorkflow",
+      task_queue: "finance",
+      status: "COMPLETED",
+      started_at: "2026-06-20T01:00:00.000Z",
+      closed_at: "2026-06-20T01:32:11.000Z",
+      input_summary: null,
+      result_summary: { settled: 42 },
+      failure_reason: null,
+      created_at: "2026-06-20T01:00:00.000Z",
+    },
+    {
+      id: 3,
+      config_id: 3,
+      workflow_id: "wf-archive-20260620-0300",
+      run_id: "run-ccc333",
+      workflow_type: "DataArchiveWorkflow",
+      task_queue: "maintenance",
+      status: "FAILED",
+      started_at: "2026-06-20T03:00:00.000Z",
+      closed_at: "2026-06-20T03:05:21.000Z",
+      input_summary: null,
+      result_summary: null,
+      failure_reason: "connection timeout to archive-db",
+      created_at: "2026-06-20T03:00:00.000Z",
+    },
+    {
+      id: 4,
+      config_id: 1,
+      workflow_id: "wf-report-20260619-0200",
+      run_id: "run-aaa110",
+      workflow_type: "ReportDailyWorkflow",
+      task_queue: "reports",
+      status: "COMPLETED",
+      started_at: "2026-06-19T02:00:00.000Z",
+      closed_at: "2026-06-19T02:07:55.000Z",
+      input_summary: { date: "2026-06-19" },
+      result_summary: { rows: 1199 },
+      failure_reason: null,
+      created_at: "2026-06-19T02:00:00.000Z",
+    },
+    {
+      id: 5,
+      config_id: 2,
+      workflow_id: "wf-settle-20260619-0100",
+      run_id: "run-bbb221",
+      workflow_type: "OrderSettlementWorkflow",
+      task_queue: "finance",
+      status: "COMPLETED",
+      started_at: "2026-06-19T01:00:00.000Z",
+      closed_at: "2026-06-19T01:28:43.000Z",
+      input_summary: null,
+      result_summary: { settled: 38 },
+      failure_reason: null,
+      created_at: "2026-06-19T01:00:00.000Z",
+    },
+    {
+      id: 6,
+      config_id: 4,
+      workflow_id: "wf-warmup-20260620-0814",
+      run_id: "run-ddd444",
+      workflow_type: "CacheWarmupWorkflow",
+      task_queue: "maintenance",
+      status: "RUNNING",
+      started_at: "2026-06-20T08:14:00.000Z",
+      closed_at: null,
+      input_summary: { keys: ["home", "catalog"] },
+      result_summary: null,
+      failure_reason: null,
+      created_at: "2026-06-20T08:14:00.000Z",
+    },
+    {
+      id: 7,
+      config_id: 5,
+      workflow_id: "wf-cleanup-20260620-0930",
+      run_id: "run-eee555",
+      workflow_type: "SessionCleanupWorkflow",
+      task_queue: "maintenance",
+      status: "TIMED_OUT",
+      started_at: "2026-06-20T09:30:00.000Z",
+      closed_at: "2026-06-20T09:35:00.000Z",
+      input_summary: null,
+      result_summary: null,
+      failure_reason: "timeout 300s exceeded",
+      created_at: "2026-06-20T09:30:00.000Z",
+    },
+    {
+      id: 8,
+      config_id: 1,
+      workflow_id: "wf-report-20260618-0200",
+      run_id: "run-aaa109",
+      workflow_type: "ReportDailyWorkflow",
+      task_queue: "reports",
+      status: "COMPLETED",
+      started_at: "2026-06-18T02:00:00.000Z",
+      closed_at: "2026-06-18T02:08:12.000Z",
+      input_summary: { date: "2026-06-18" },
+      result_summary: { rows: 1305 },
+      failure_reason: null,
+      created_at: "2026-06-18T02:00:00.000Z",
+    },
+  ];
+}
+
+/** 为启用中的配置合成一条 mock 执行记录（手动/批量触发）。 */
+export function appendMockTaskExecution(
+  config: TemporalTaskConfig,
+  opts?: { status?: TaskExecutionStatus; failureReason?: string | null },
+): TemporalTaskExecution {
+  const now = isoNow();
+  const stamp = now.replace(/[-:TZ.]/g, "").slice(0, 14);
+  const id = nextTaskExecutionId();
+  const status = opts?.status ?? "RUNNING";
+  const closed = status === "RUNNING" ? null : now;
+  const row: TemporalTaskExecution = {
+    id,
+    config_id: config.id,
+    workflow_id: `wf-${config.code}-${stamp}-${id}`,
+    run_id: `run-${stamp}-${id}`,
+    workflow_type: config.workflow_type,
+    task_queue: config.task_queue,
+    status,
+    started_at: now,
+    closed_at: closed,
+    input_summary: { trigger: "manual", configCode: config.code },
+    result_summary: status === "COMPLETED" ? { ok: true } : null,
+    failure_reason: opts?.failureReason ?? null,
+    created_at: now,
+  };
+  mockTemporalTaskExecutionList.unshift(row);
+  return row;
+}
+
+/** 解析配置名：配置软删或缺失时返回 null（前端展示 —） */
+export function resolveTaskConfigName(configId: number | null): string | null {
+  if (configId == null) return null;
+  const found = mockTemporalTaskConfigList.find((c) => c.id === configId);
+  if (!found || found.deleted_at !== 0) return null;
+  return found.name;
+}
+
+let temporalTaskSeedsReady = false;
+
+/** 确保 Temporal 任务配置/执行种子已写入（幂等）。 */
+export function ensureTemporalTaskSeeds(): void {
+  if (temporalTaskSeedsReady) return;
+  temporalTaskSeedsReady = true;
+  if (mockTemporalTaskConfigList.length === 0) {
+    const configs = buildTemporalTaskConfigSeeds();
+    mockTemporalTaskConfigList.push(...configs);
+    taskConfigIdSeq = Math.max(...configs.map((c) => c.id), 0);
+  }
+  if (mockTemporalTaskExecutionList.length === 0) {
+    const execs = buildTemporalTaskExecutionSeeds();
+    mockTemporalTaskExecutionList.push(...execs);
+    taskExecutionIdSeq = Math.max(...execs.map((e) => e.id), 0);
   }
 }
