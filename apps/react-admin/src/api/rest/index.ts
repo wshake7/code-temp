@@ -8,3 +8,5 @@ export * as DictTypeApi from './dict-type';
 export * as DictDataApi from './dict-data';
 export * as LoginLogApi from './login-log';
 export * as ApiLogApi from './api-log';
+export * as TaskConfigApi from './task-config';
+export * as TaskExecutionApi from './task-execution';

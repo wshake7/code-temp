@@ -1,0 +1,216 @@
+import { useEffect, useRef, useState } from 'react';
+import { Tag } from 'antd';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
+import { ProTable } from '@ant-design/pro-components';
+import { useTranslation } from 'react-i18next';
+import { listTaskConfigApi } from '@/api/rest/task-config';
+import { listTaskExecutionApi } from '@/api/rest/task-execution';
+import type { TaskExecution, TaskExecutionStatus } from '@/api/rest/types';
+import { onTaskExecutionChanged } from '../modules/events';
+import TaskExecutionDetailDrawer from './modules/detail-drawer';
+import { formatDuration, statusColor } from './modules/shared';
+
+const STATUS_OPTIONS: TaskExecutionStatus[] = [
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+  'TERMINATED',
+  'TIMED_OUT',
+  'CONTINUED_AS_NEW',
+];
+
+/** 执行记录列表面板（供「任务调度」页 Tab 嵌入；无删除入口） */
+export function TaskExecutionPanel() {
+  const { t } = useTranslation('task');
+  const actionRef = useRef<ActionType | undefined>(undefined);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailRow, setDetailRow] = useState<TaskExecution | null>(null);
+  const [configOptions, setConfigOptions] = useState<{ label: string; value: number }[]>([]);
+
+  useEffect(() => {
+    listTaskConfigApi({ page: 1, pageSize: 200 })
+      .then((res) => {
+        setConfigOptions(
+          (res.items ?? []).map((c) => ({
+            label: `${c.name}（${c.code}）`,
+            value: c.id,
+          })),
+        );
+      })
+      .catch(() => undefined);
+  }, []);
+
+  // 配置 Tab 触发成功后刷新本表（双 Tab keep-alive）
+  useEffect(() => onTaskExecutionChanged(() => {
+    actionRef.current?.reload?.();
+  }), []);
+
+  const openDetail = (row: TaskExecution) => {
+    setDetailRow(row);
+    setDetailOpen(true);
+  };
+
+  async function fetchRows(params: {
+    current?: number;
+    pageSize?: number;
+    configId?: number;
+    status?: string;
+    startedAt?: [string, string];
+  }) {
+    const { current = 1, pageSize = 20, configId, status, startedAt } = params;
+    const res = await listTaskExecutionApi({
+      page: current,
+      pageSize,
+      configId: configId || undefined,
+      status: status || undefined,
+      startedAtFrom: startedAt?.[0],
+      startedAtTo: startedAt?.[1],
+    });
+    return { data: res.items, total: res.total, success: true };
+  }
+
+  const statusValueEnum = Object.fromEntries(
+    STATUS_OPTIONS.map((s) => [s, { text: s }]),
+  );
+
+  const columns: ProColumns<TaskExecution>[] = [
+    { title: 'ID', dataIndex: 'id', width: 70, search: false },
+    {
+      title: t('configName'),
+      dataIndex: 'configId',
+      width: 140,
+      ellipsis: true,
+      valueType: 'select',
+      fieldProps: {
+        options: configOptions,
+        showSearch: true,
+        allowClear: true,
+        optionFilterProp: 'label',
+        placeholder: t('configFilterPlaceholder'),
+      },
+      render: (_, r) =>
+        r.configName ? (
+          r.configName
+        ) : (
+          <span style={{ color: '#999' }}>—</span>
+        ),
+    },
+    {
+      title: t('workflowId'),
+      dataIndex: 'workflowId',
+      width: 200,
+      ellipsis: true,
+      search: false,
+    },
+    {
+      title: t('runId'),
+      dataIndex: 'runId',
+      width: 140,
+      ellipsis: true,
+      search: false,
+    },
+    {
+      title: t('execStatus'),
+      dataIndex: 'status',
+      width: 140,
+      valueType: 'select',
+      valueEnum: statusValueEnum,
+      render: (_, r) => <Tag color={statusColor(r.status)}>{r.status}</Tag>,
+    },
+    {
+      title: t('startedAt'),
+      dataIndex: 'startedAt',
+      width: 180,
+      valueType: 'dateTimeRange',
+      search: {
+        transform: (value: [string, string]) => ({
+          startedAt: value,
+        }),
+      },
+      render: (_, r) => r.startedAt || '-',
+    },
+    {
+      title: t('closedAt'),
+      dataIndex: 'closedAt',
+      width: 180,
+      search: false,
+      render: (_, r) => r.closedAt || <span style={{ color: '#999' }}>-</span>,
+    },
+    {
+      title: t('duration'),
+      dataIndex: 'duration',
+      width: 100,
+      search: false,
+      render: (_, r) => formatDuration(r.startedAt, r.closedAt),
+    },
+    {
+      title: t('failureReason'),
+      dataIndex: 'failureReason',
+      width: 200,
+      search: false,
+      ellipsis: true,
+      render: (_, r) => {
+        if (!r.failureReason) {
+          return <span style={{ color: '#999' }}>-</span>;
+        }
+        return (
+          <a
+            onClick={(e) => {
+              e.stopPropagation();
+              openDetail(r);
+            }}
+          >
+            {r.failureReason}
+          </a>
+        );
+      },
+    },
+    {
+      title: t('action'),
+      valueType: 'option',
+      key: 'option',
+      width: 90,
+      fixed: 'right',
+      render: (_, record) => [
+        <a
+          key="detail"
+          onClick={(e) => {
+            e.stopPropagation();
+            openDetail(record);
+          }}
+        >
+          {t('viewDetail')}
+        </a>,
+      ],
+    },
+  ];
+
+  return (
+    <>
+      <ProTable<TaskExecution>
+        actionRef={actionRef}
+        rowKey="id"
+        columns={columns}
+        request={fetchRows}
+        search={{ labelWidth: 'auto', defaultCollapsed: false }}
+        pagination={{ defaultPageSize: 20, showSizeChanger: true }}
+        options={{ density: true, reload: true, setting: true }}
+        dateFormatter="string"
+        headerTitle={t('executionListTitle')}
+        scroll={{ x: 1400 }}
+        // 明确不提供删除 / 批量删除
+      />
+      <TaskExecutionDetailDrawer
+        open={detailOpen}
+        row={detailRow}
+        onClose={() => {
+          setDetailOpen(false);
+          setDetailRow(null);
+        }}
+      />
+    </>
+  );
+}
+
+export default TaskExecutionPanel;
