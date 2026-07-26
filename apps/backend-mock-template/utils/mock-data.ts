@@ -1663,17 +1663,538 @@ function buildSysMenuSeeds(): SysMenu[] {
   return mockSysMenuList.slice();
 }
 
-/** 种子：接口列表（复刻 admin.js DATA.apis） */
+/**
+ * 后端路由清单（sys_api 种子 + sync 共用唯一源）。
+ * 只收录现有 mock 中真实存在的系统管理接口；不含 /api/admin 伪造路径、
+ * 不含 dept / table / demo / timezone 等非本产品系统模块。
+ */
+export const API_SYNC_MANIFEST = [
+  // —— 会话壳 ——
+  {
+    name: "权限码列表",
+    method: "GET",
+    path: "/api/auth/codes",
+    permissionCode: "auth:codes",
+    apiGroup: "会话",
+  },
+  {
+    name: "当前用户信息",
+    method: "GET",
+    path: "/api/user/info",
+    permissionCode: "user:info",
+    apiGroup: "会话",
+  },
+  {
+    name: "用户菜单路由",
+    method: "GET",
+    path: "/api/menu/all",
+    permissionCode: "menu:all",
+    apiGroup: "会话",
+  },
+  {
+    name: "文件上传",
+    method: "POST",
+    path: "/api/upload",
+    permissionCode: "system:upload",
+    apiGroup: "会话",
+  },
+  // —— 用户管理 ——
+  {
+    name: "用户分页列表",
+    method: "GET",
+    path: "/api/system/user/list",
+    permissionCode: "system:user:list",
+    apiGroup: "用户管理",
+  },
+  {
+    name: "创建用户",
+    method: "POST",
+    path: "/api/system/user",
+    permissionCode: "system:user:create",
+    apiGroup: "用户管理",
+  },
+  {
+    name: "更新用户",
+    method: "PUT",
+    path: "/api/system/user/:id",
+    permissionCode: "system:user:update",
+    apiGroup: "用户管理",
+  },
+  {
+    name: "删除用户",
+    method: "DELETE",
+    path: "/api/system/user/:id",
+    permissionCode: "system:user:delete",
+    apiGroup: "用户管理",
+  },
+  {
+    name: "启停用户",
+    method: "PUT",
+    path: "/api/system/user/:id/status",
+    permissionCode: "system:user:status",
+    apiGroup: "用户管理",
+  },
+  {
+    name: "重置用户密码",
+    method: "POST",
+    path: "/api/system/user/:id/password",
+    permissionCode: "system:user:password",
+    apiGroup: "用户管理",
+  },
+  // —— 角色管理 ——
+  {
+    name: "角色分页列表",
+    method: "GET",
+    path: "/api/system/role/list",
+    permissionCode: "system:role:list",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "角色全量列表",
+    method: "GET",
+    path: "/api/system/role/all",
+    permissionCode: "system:role:list",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "创建角色",
+    method: "POST",
+    path: "/api/system/role",
+    permissionCode: "system:role:create",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "更新角色",
+    method: "PUT",
+    path: "/api/system/role/:id",
+    permissionCode: "system:role:update",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "删除角色",
+    method: "DELETE",
+    path: "/api/system/role/:id",
+    permissionCode: "system:role:delete",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "角色已绑菜单",
+    method: "GET",
+    path: "/api/system/role/:id/menus",
+    permissionCode: "system:role:menu",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "分配角色菜单",
+    method: "POST",
+    path: "/api/system/role/:id/menus",
+    permissionCode: "system:role:menu",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "角色已绑接口",
+    method: "GET",
+    path: "/api/system/role/:id/apis",
+    permissionCode: "system:role:api",
+    apiGroup: "角色管理",
+  },
+  {
+    name: "分配角色接口",
+    method: "POST",
+    path: "/api/system/role/:id/apis",
+    permissionCode: "system:role:api",
+    apiGroup: "角色管理",
+  },
+  // —— 菜单管理 ——
+  {
+    name: "菜单分页列表",
+    method: "GET",
+    path: "/api/system/menu/list",
+    permissionCode: "system:menu:list",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "菜单全量列表",
+    method: "GET",
+    path: "/api/system/menu/all",
+    permissionCode: "system:menu:list",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "创建菜单",
+    method: "POST",
+    path: "/api/system/menu",
+    permissionCode: "system:menu:create",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "更新菜单",
+    method: "PUT",
+    path: "/api/system/menu/:id",
+    permissionCode: "system:menu:update",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "删除菜单",
+    method: "DELETE",
+    path: "/api/system/menu/:id",
+    permissionCode: "system:menu:delete",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "批量操作菜单",
+    method: "POST",
+    path: "/api/system/menu/batch",
+    permissionCode: "system:menu:batch",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "菜单名是否存在",
+    method: "GET",
+    path: "/api/system/menu/name-exists",
+    permissionCode: "system:menu:list",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "菜单路径是否存在",
+    method: "GET",
+    path: "/api/system/menu/path-exists",
+    permissionCode: "system:menu:list",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "菜单已绑接口",
+    method: "GET",
+    path: "/api/system/menu/:id/apis",
+    permissionCode: "system:menu:api",
+    apiGroup: "菜单管理",
+  },
+  {
+    name: "设置菜单接口",
+    method: "POST",
+    path: "/api/system/menu/:id/apis",
+    permissionCode: "system:menu:api",
+    apiGroup: "菜单管理",
+  },
+  // —— 接口管理 ——
+  {
+    name: "接口分页列表",
+    method: "GET",
+    path: "/api/system/api/list",
+    permissionCode: "system:api:list",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "接口全量列表",
+    method: "GET",
+    path: "/api/system/api/all",
+    permissionCode: "system:api:list",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "接口分组列表",
+    method: "GET",
+    path: "/api/system/api/groups",
+    permissionCode: "system:api:list",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "创建接口",
+    method: "POST",
+    path: "/api/system/api",
+    permissionCode: "system:api:create",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "更新接口",
+    method: "PUT",
+    path: "/api/system/api/:id",
+    permissionCode: "system:api:update",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "删除接口",
+    method: "DELETE",
+    path: "/api/system/api/:id",
+    permissionCode: "system:api:delete",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "批量操作接口",
+    method: "POST",
+    path: "/api/system/api/batch",
+    permissionCode: "system:api:batch",
+    apiGroup: "接口管理",
+  },
+  {
+    name: "同步接口",
+    method: "POST",
+    path: "/api/system/api/sync",
+    permissionCode: "system:api:sync",
+    apiGroup: "接口管理",
+  },
+  // —— 字典管理 ——
+  {
+    name: "字典类型分页",
+    method: "GET",
+    path: "/api/system/dict-type/list",
+    permissionCode: "system:dict:list",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "字典类型全量",
+    method: "GET",
+    path: "/api/system/dict-type/all",
+    permissionCode: "system:dict:list",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "字典类型详情",
+    method: "GET",
+    path: "/api/system/dict-type/:id",
+    permissionCode: "system:dict:list",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "创建字典类型",
+    method: "POST",
+    path: "/api/system/dict-type",
+    permissionCode: "system:dict:create",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "更新字典类型",
+    method: "PUT",
+    path: "/api/system/dict-type/:id",
+    permissionCode: "system:dict:update",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "删除字典类型",
+    method: "DELETE",
+    path: "/api/system/dict-type/:id",
+    permissionCode: "system:dict:delete",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "批量操作字典类型",
+    method: "POST",
+    path: "/api/system/dict-type/batch",
+    permissionCode: "system:dict:batch",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "字典数据分页",
+    method: "GET",
+    path: "/api/system/dict-data/list",
+    permissionCode: "system:dict:data:list",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "按类型查字典数据",
+    method: "GET",
+    path: "/api/system/dict-data/by-type/:code",
+    permissionCode: "system:dict:data:list",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "创建字典数据",
+    method: "POST",
+    path: "/api/system/dict-data",
+    permissionCode: "system:dict:data:create",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "更新字典数据",
+    method: "PUT",
+    path: "/api/system/dict-data/:id",
+    permissionCode: "system:dict:data:update",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "删除字典数据",
+    method: "DELETE",
+    path: "/api/system/dict-data/:id",
+    permissionCode: "system:dict:data:delete",
+    apiGroup: "字典管理",
+  },
+  {
+    name: "批量操作字典数据",
+    method: "POST",
+    path: "/api/system/dict-data/batch",
+    permissionCode: "system:dict:data:batch",
+    apiGroup: "字典管理",
+  },
+  // —— 国际化 ——
+  {
+    name: "语言分页列表",
+    method: "GET",
+    path: "/api/system/i18n-locale/list",
+    permissionCode: "system:i18n:list",
+    apiGroup: "国际化",
+  },
+  {
+    name: "语言全量列表",
+    method: "GET",
+    path: "/api/system/i18n-locale/all",
+    permissionCode: "system:i18n:list",
+    apiGroup: "国际化",
+  },
+  {
+    name: "语言详情",
+    method: "GET",
+    path: "/api/system/i18n-locale/:id",
+    permissionCode: "system:i18n:list",
+    apiGroup: "国际化",
+  },
+  {
+    name: "创建语言",
+    method: "POST",
+    path: "/api/system/i18n-locale",
+    permissionCode: "system:i18n:create",
+    apiGroup: "国际化",
+  },
+  {
+    name: "更新语言",
+    method: "PUT",
+    path: "/api/system/i18n-locale/:id",
+    permissionCode: "system:i18n:update",
+    apiGroup: "国际化",
+  },
+  {
+    name: "删除语言",
+    method: "DELETE",
+    path: "/api/system/i18n-locale/:id",
+    permissionCode: "system:i18n:delete",
+    apiGroup: "国际化",
+  },
+  {
+    name: "批量操作语言",
+    method: "POST",
+    path: "/api/system/i18n-locale/batch",
+    permissionCode: "system:i18n:batch",
+    apiGroup: "国际化",
+  },
+  {
+    name: "导出语言",
+    method: "GET",
+    path: "/api/system/i18n-locale/export",
+    permissionCode: "system:i18n:export",
+    apiGroup: "国际化",
+  },
+  {
+    name: "批量导出语言",
+    method: "POST",
+    path: "/api/system/i18n-locale/export-batch",
+    permissionCode: "system:i18n:export",
+    apiGroup: "国际化",
+  },
+  {
+    name: "翻译分页列表",
+    method: "GET",
+    path: "/api/system/i18n-translation/list",
+    permissionCode: "system:i18n:list",
+    apiGroup: "国际化",
+  },
+  {
+    name: "按语言查翻译",
+    method: "GET",
+    path: "/api/system/i18n-translation/by-locale/:code",
+    permissionCode: "system:i18n:list",
+    apiGroup: "国际化",
+  },
+  {
+    name: "按 key 查翻译",
+    method: "GET",
+    path: "/api/system/i18n-translation/by-key/:key",
+    permissionCode: "system:i18n:list",
+    apiGroup: "国际化",
+  },
+  {
+    name: "创建翻译",
+    method: "POST",
+    path: "/api/system/i18n-translation",
+    permissionCode: "system:i18n:create",
+    apiGroup: "国际化",
+  },
+  {
+    name: "更新翻译",
+    method: "PUT",
+    path: "/api/system/i18n-translation/:id",
+    permissionCode: "system:i18n:update",
+    apiGroup: "国际化",
+  },
+  {
+    name: "删除翻译",
+    method: "DELETE",
+    path: "/api/system/i18n-translation/:id",
+    permissionCode: "system:i18n:delete",
+    apiGroup: "国际化",
+  },
+  {
+    name: "批量操作翻译",
+    method: "POST",
+    path: "/api/system/i18n-translation/batch",
+    permissionCode: "system:i18n:batch",
+    apiGroup: "国际化",
+  },
+  {
+    name: "按 key 批量 upsert 翻译",
+    method: "POST",
+    path: "/api/system/i18n-translation/batch-upsert-by-key",
+    permissionCode: "system:i18n:update",
+    apiGroup: "国际化",
+  },
+  {
+    name: "导入翻译预览",
+    method: "POST",
+    path: "/api/system/i18n-translation/import-preview",
+    permissionCode: "system:i18n:import",
+    apiGroup: "国际化",
+  },
+  {
+    name: "批量导入翻译",
+    method: "POST",
+    path: "/api/system/i18n-translation/import-batch",
+    permissionCode: "system:i18n:import",
+    apiGroup: "国际化",
+  },
+  // —— 日志审计 ——
+  {
+    name: "登录日志分页列表",
+    method: "GET",
+    path: "/api/system/login-log/list",
+    permissionCode: "log:login-log:list",
+    apiGroup: "日志审计",
+  },
+  {
+    name: "API 日志分页列表",
+    method: "GET",
+    path: "/api/system/api-log/list",
+    permissionCode: "log:api-log:list",
+    apiGroup: "日志审计",
+  },
+] as const;
+
+/** 按 method+path 查找种子接口 id（deleted_at=0） */
+function findSysApiId(method: string, path: string): number | undefined {
+  const m = method.toUpperCase();
+  return mockSysApiList.find((a) => a.deleted_at === 0 && a.method === m && a.path === path)?.id;
+}
+
+/** 种子：接口列表（与 API_SYNC_MANIFEST / 真实 mock 路由 1:1） */
 function buildSysApiSeeds(): SysApi[] {
   const now = "2025-01-10T08:00:00.000Z";
-  const defs: Array<Omit<SysApi, "method"> & { method: string }> = [
-    {
-      id: 1,
-      name: "用户分页列表",
-      method: "GET",
-      path: "/api/admin/users",
-      permission_code: "admin:user:list",
-      api_group: "用户管理",
+  let id = 0;
+  for (const item of API_SYNC_MANIFEST) {
+    id += 1;
+    mockSysApiList.push({
+      id,
+      name: item.name,
+      method: item.method.toUpperCase(),
+      path: item.path,
+      permission_code: item.permissionCode,
+      api_group: item.apiGroup,
       remark: "",
       is_enabled: 1,
       deleted_at: 0,
@@ -1681,237 +2202,9 @@ function buildSysApiSeeds(): SysApi[] {
       updated_at: now,
       created_by: 0,
       updated_by: 0,
-    },
-    {
-      id: 2,
-      name: "创建用户",
-      method: "POST",
-      path: "/api/admin/users",
-      permission_code: "admin:user:create",
-      api_group: "用户管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 3,
-      name: "更新用户",
-      method: "PUT",
-      path: "/api/admin/users/:id",
-      permission_code: "admin:user:update",
-      api_group: "用户管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 4,
-      name: "删除用户",
-      method: "DELETE",
-      path: "/api/admin/users/:id",
-      permission_code: "admin:user:delete",
-      api_group: "用户管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 5,
-      name: "角色列表",
-      method: "GET",
-      path: "/api/admin/roles",
-      permission_code: "admin:role:list",
-      api_group: "角色管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 6,
-      name: "角色授权菜单",
-      method: "POST",
-      path: "/api/admin/roles/:id/menus",
-      permission_code: "admin:role:assign:menu",
-      api_group: "角色管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 7,
-      name: "菜单树",
-      method: "GET",
-      path: "/api/admin/menus/tree",
-      permission_code: "admin:menu:list",
-      api_group: "菜单管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 8,
-      name: "接口同步",
-      method: "POST",
-      path: "/api/admin/apis/sync",
-      permission_code: "admin:api:sync",
-      api_group: "接口管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 9,
-      name: "字典类型列表",
-      method: "GET",
-      path: "/api/admin/dict/types",
-      permission_code: "admin:dict:list",
-      api_group: "字典管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 10,
-      name: "字典数据",
-      method: "GET",
-      path: "/api/admin/dict/data/:type",
-      permission_code: "admin:dict:data:list",
-      api_group: "字典管理",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 11,
-      name: "任务列表",
-      method: "GET",
-      path: "/api/admin/tasks",
-      permission_code: "admin:task:list",
-      api_group: "任务调度",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 12,
-      name: "手动触发任务",
-      method: "POST",
-      path: "/api/admin/tasks/:id/trigger",
-      permission_code: "admin:task:trigger",
-      api_group: "任务调度",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 13,
-      name: "登录",
-      method: "POST",
-      path: "/api/auth/login",
-      permission_code: "auth:login",
-      api_group: "认证",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 15,
-      name: "登出",
-      method: "POST",
-      path: "/api/auth/logout",
-      permission_code: "auth:logout",
-      api_group: "认证",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 16,
-      name: "登录日志分页列表",
-      method: "GET",
-      path: "/api/system/login-log/list",
-      permission_code: "log:login-log:list",
-      api_group: "日志审计",
-      remark: "sys_login_log / archive 列表",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 17,
-      name: "API 日志分页列表",
-      method: "GET",
-      path: "/api/system/api-log/list",
-      permission_code: "log:api-log:list",
-      api_group: "日志审计",
-      remark: "api_log / archive 列表",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-  ];
-  for (const d of defs) {
-    mockSysApiList.push({ ...d, method: d.method.toUpperCase() });
+    });
   }
-  apiIdSeq = Math.max(...defs.map((d) => d.id), 0);
+  apiIdSeq = id;
   return mockSysApiList.slice();
 }
 
@@ -1925,18 +2218,37 @@ export function ensureMenuApiSeeds(): void {
   if (mockSysApiList.length === 0) {
     buildSysApiSeeds();
   }
-  // sys_menu_api 种子：菜单管理绑定示例 + 登录日志绑定列表接口
+  // sys_menu_api：按 method+path 绑定，避免硬编码 api_id
   if (mockSysMenuApiList.length === 0) {
     const now = "2025-01-10T08:00:00.000Z";
-    // SystemMenu(205) binds sample APIs 7/8
-    mockSysMenuApiList.push(
-      { menu_id: 205, api_id: 7, created_at: now, created_by: 0 },
-      { menu_id: 205, api_id: 8, created_at: now, created_by: 0 },
-      // 登录日志 list 按钮(301) → 登录日志列表接口
-      { menu_id: 301, api_id: 16, created_at: now, created_by: 0 },
-      // API 日志 list 按钮(302) → API 日志列表接口
-      { menu_id: 302, api_id: 17, created_at: now, created_by: 0 },
-    );
+    const bind = (menuId: number, method: string, path: string) => {
+      const apiId = findSysApiId(method, path);
+      if (apiId !== undefined) {
+        mockSysMenuApiList.push({
+          menu_id: menuId,
+          api_id: apiId,
+          created_at: now,
+          created_by: 0,
+        });
+      }
+    };
+    // 用户管理(201)
+    bind(201, "GET", "/api/system/user/list");
+    // 角色管理(202)
+    bind(202, "GET", "/api/system/role/list");
+    // 字典管理(203)
+    bind(203, "GET", "/api/system/dict-type/list");
+    // 国际化(204)
+    bind(204, "GET", "/api/system/i18n-locale/list");
+    // 菜单管理(205)
+    bind(205, "GET", "/api/system/menu/list");
+    // 接口管理(206)：列表 + 同步
+    bind(206, "GET", "/api/system/api/list");
+    bind(206, "POST", "/api/system/api/sync");
+    // 登录日志 list 按钮(301)
+    bind(301, "GET", "/api/system/login-log/list");
+    // API 日志 list 按钮(302)
+    bind(302, "GET", "/api/system/api-log/list");
   }
 }
 
@@ -2545,17 +2857,29 @@ function buildSysRoleMenuSeeds(): SysRoleMenu[] {
   return rows;
 }
 
-/** 种子：角色-接口授权示例（admin 拥有用户管理 4 个接口）。 */
+/** 种子：角色-接口授权（按 path 解析 id，避免硬编码）。 */
 function buildSysRoleApiSeeds(): SysRoleApi[] {
+  // role_api 依赖 sys_api 种子；ensureUserSeeds 可能早于 ensureMenuApiSeeds
+  if (mockSysApiList.length === 0) {
+    buildSysApiSeeds();
+  }
   const now = "2025-01-10T08:00:00.000Z";
   const rows: SysRoleApi[] = [];
+  const active = mockSysApiList.filter((a) => a.deleted_at === 0);
+
   // super_admin(id=1) 授权全部接口
-  for (const aid of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]) {
-    rows.push({ role_id: 1, api_id: aid, created_at: now, created_by: 0 });
+  for (const api of active) {
+    rows.push({ role_id: 1, api_id: api.id, created_at: now, created_by: 0 });
   }
-  // admin(id=2) 授权用户管理接口 + 登录/API 日志列表
-  for (const aid of [1, 2, 3, 4, 16, 17]) {
-    rows.push({ role_id: 2, api_id: aid, created_at: now, created_by: 0 });
+
+  // admin(id=2) 授权用户管理 + 登录/API 日志列表
+  for (const api of active) {
+    const isUser = api.path === "/api/system/user" || api.path.startsWith("/api/system/user/");
+    const isLoginLog = api.path === "/api/system/login-log/list";
+    const isApiLog = api.path === "/api/system/api-log/list";
+    if (isUser || isLoginLog || isApiLog) {
+      rows.push({ role_id: 2, api_id: api.id, created_at: now, created_by: 0 });
+    }
   }
   return rows;
 }
@@ -3645,108 +3969,3 @@ export function ensureApiLogSeeds(): void {
     mockApiLogArchiveList.push(...buildApiLogArchiveSeeds());
   }
 }
-
-/**
- * 后端路由清单（sync 用）。手维护常量；与真实 nitro 路由会漂移，demo 可接受。
- * 覆盖 system 下常见 CRUD + auth。
- */
-export const API_SYNC_MANIFEST = [
-  {
-    name: "登录",
-    method: "POST",
-    path: "/api/auth/login",
-    permissionCode: "auth:login",
-    apiGroup: "认证",
-  },
-  {
-    name: "登出",
-    method: "POST",
-    path: "/api/auth/logout",
-    permissionCode: "auth:logout",
-    apiGroup: "认证",
-  },
-  {
-    name: "用户分页列表",
-    method: "GET",
-    path: "/api/admin/users",
-    permissionCode: "admin:user:list",
-    apiGroup: "用户管理",
-  },
-  {
-    name: "创建用户",
-    method: "POST",
-    path: "/api/admin/users",
-    permissionCode: "admin:user:create",
-    apiGroup: "用户管理",
-  },
-  {
-    name: "更新用户",
-    method: "PUT",
-    path: "/api/admin/users/:id",
-    permissionCode: "admin:user:update",
-    apiGroup: "用户管理",
-  },
-  {
-    name: "删除用户",
-    method: "DELETE",
-    path: "/api/admin/users/:id",
-    permissionCode: "admin:user:delete",
-    apiGroup: "用户管理",
-  },
-  {
-    name: "角色列表",
-    method: "GET",
-    path: "/api/admin/roles",
-    permissionCode: "admin:role:list",
-    apiGroup: "角色管理",
-  },
-  {
-    name: "菜单树",
-    method: "GET",
-    path: "/api/admin/menus/tree",
-    permissionCode: "admin:menu:list",
-    apiGroup: "菜单管理",
-  },
-  {
-    name: "字典类型列表",
-    method: "GET",
-    path: "/api/admin/dict/types",
-    permissionCode: "admin:dict:list",
-    apiGroup: "字典管理",
-  },
-  {
-    name: "字典数据",
-    method: "GET",
-    path: "/api/admin/dict/data/:type",
-    permissionCode: "admin:dict:data:list",
-    apiGroup: "字典管理",
-  },
-  {
-    name: "任务列表",
-    method: "GET",
-    path: "/api/admin/tasks",
-    permissionCode: "admin:task:list",
-    apiGroup: "任务调度",
-  },
-  {
-    name: "手动触发任务",
-    method: "POST",
-    path: "/api/admin/tasks/:id/trigger",
-    permissionCode: "admin:task:trigger",
-    apiGroup: "任务调度",
-  },
-  {
-    name: "登录日志分页列表",
-    method: "GET",
-    path: "/api/system/login-log/list",
-    permissionCode: "log:login-log:list",
-    apiGroup: "日志审计",
-  },
-  {
-    name: "API 日志分页列表",
-    method: "GET",
-    path: "/api/system/api-log/list",
-    permissionCode: "log:api-log:list",
-    apiGroup: "日志审计",
-  },
-] as const;

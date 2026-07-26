@@ -59,7 +59,13 @@ export interface UserListItem {
 
 export interface PageResult<T> {
   items: T[];
+  /** 分页总数：接口管理为「分组数」 */
   total: number;
+  /**
+   * 接口条数（筛选后）。
+   * 仅接口列表等「按组分页」接口会返回；普通分页可不传。
+   */
+  itemTotal?: number;
 }
 
 export interface UserListQuery {

@@ -1,10 +1,17 @@
 import { defineEventHandler, getQuery } from "h3";
 import { ensureMenuApiSeeds, getMockSysApiList, type SysApi } from "~/utils/mock-data";
 import { toCamelRow } from "~/utils/menu-api-camel";
-import { usePageResponseSuccess, unAuthorizedResponse } from "~/utils/response";
+import { pagination, unAuthorizedResponse, useResponseSuccess } from "~/utils/response";
 import { verifyAccessToken } from "~/utils/session-utils";
 
-/** 接口管理：分页列表（sys_api） */
+/**
+ * 接口管理：分页列表（sys_api）
+ *
+ * 分页单位是 **分组（api_group）**，不是单条接口：
+ * - page / pageSize 作用于分组列表
+ * - total 为分组总数
+ * - items 为当前页各组下的全部接口（扁平，前端再组树）
+ */
 export default defineEventHandler(async (event) => {
   const userinfo = verifyAccessToken(event);
   if (!userinfo) {
@@ -34,7 +41,33 @@ export default defineEventHandler(async (event) => {
   if (["0", "1"].includes(status as string)) {
     filtered = filtered.filter((a) => a.is_enabled === Number(status));
   }
-  filtered.sort((a, b) => a.id - b.id);
 
-  return usePageResponseSuccess(page as string, pageSize as string, filtered.map(toCamelRow));
+  // 按分组归桶；空分组名归为「未分组」（与前端 buildApiGroupTree 一致）
+  const groupMap = new Map<string, SysApi[]>();
+  for (const a of filtered) {
+    const g = a.api_group?.trim() || "未分组";
+    const arr = groupMap.get(g) ?? [];
+    arr.push(a);
+    groupMap.set(g, arr);
+  }
+
+  const groupNames = [...groupMap.keys()].toSorted((a, b) => a.localeCompare(b, "zh-CN"));
+  const pageNo = Number.parseInt(String(page), 10) || 1;
+  const size = Number.parseInt(String(pageSize), 10) || 20;
+  const pagedGroupNames = pagination(pageNo, size, groupNames);
+
+  const pageApis: SysApi[] = [];
+  for (const g of pagedGroupNames) {
+    const apis = groupMap.get(g) ?? [];
+    apis.sort((a, b) => a.id - b.id);
+    pageApis.push(...apis);
+  }
+
+  return useResponseSuccess({
+    items: pageApis.map(toCamelRow),
+    /** 分组总数（分页 total，pageSize 作用于分组） */
+    total: groupNames.length,
+    /** 筛选后的接口条数（与分页无关，供「共 N 条数据」展示） */
+    itemTotal: filtered.length,
+  });
 });
