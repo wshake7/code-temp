@@ -43,7 +43,10 @@ type ApiTreeNode = SysApi & {
   rowKey: string;
 };
 
-/** 按 apiGroup 合成分组树；空分组名归为「未分组」。仅在当前页结果内组树。 */
+/**
+ * 按 apiGroup 合成分组树；空分组名归为「未分组」。
+ * 列表接口按「分组」分页：list 为当前页各组的完整接口集合。
+ */
 function buildApiGroupTree(list: SysApi[]): ApiTreeNode[] {
   const groups = new Map<string, SysApi[]>();
   list.forEach((a) => {
@@ -136,6 +139,8 @@ const ApiPage = () => {
   // 全部展开/折叠：受控 expandedRowKeys，与菜单管理语义一致
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [currentTree, setCurrentTree] = useState<ApiTreeNode[]>([]);
+  /** 筛选后的接口条数（与分页 total=分组数 并列展示） */
+  const [itemTotal, setItemTotal] = useState(0);
   const allExpandableKeys = useMemo(
     () => collectExpandableKeys(currentTree),
     [currentTree],
@@ -152,7 +157,7 @@ const ApiPage = () => {
     return out;
   }, [groups]);
 
-  /* ---------- ProTable request：当前页扁平列表 → 分组树 ---------- */
+  /* ---------- ProTable request：后端按分组分页，扁平 items → 分组树 ---------- */
   async function fetchApiRows(params: {
     current?: number;
     pageSize?: number;
@@ -163,6 +168,7 @@ const ApiPage = () => {
     isEnabled?: 0 | 1;
   }) {
     const { current = 1, pageSize = 20, name, path, method, apiGroup, isEnabled } = params;
+    // pageSize 作用于「分组」数量；total 为分组总数，itemTotal 为接口条数
     const res = await listApisApi({
       page: current,
       pageSize,
@@ -172,7 +178,7 @@ const ApiPage = () => {
       group: apiGroup || undefined,
       status: isEnabled,
     });
-    // 树形仅在当前页范围内生效：与菜单管理 buildTree 一致
+    setItemTotal(res.itemTotal ?? 0);
     return { data: buildApiGroupTree(res.items), total: res.total, success: true };
   }
 
@@ -316,10 +322,10 @@ const ApiPage = () => {
         onDataSourceChange={(ds) => setCurrentTree((ds as ApiTreeNode[]) ?? [])}
         search={{ labelWidth: 'auto' }}
         pagination={{
-          // 用 defaultPageSize 代替 pageSize：与字典/菜单保持一致
+          // pageSize = 每页分组数（默认 20 组）；total 为分组数
           defaultPageSize: 20,
           showSizeChanger: true,
-          showTotal: (t) => `共 ${t} 条`,
+          showTotal: (t) => `共 ${t} 个分组，${itemTotal} 条数据`,
         }}
         scroll={{ x: 1200 }}
         toolBarRender={() => [

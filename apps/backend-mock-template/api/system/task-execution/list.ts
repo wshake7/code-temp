@@ -1,0 +1,55 @@
+import { defineEventHandler, getQuery } from "h3";
+import {
+  ensureTemporalTaskSeeds,
+  getMockTemporalTaskExecutionList,
+  resolveTaskConfigName,
+  type TemporalTaskExecution,
+} from "~/utils/mock-data";
+import { toTaskCamelRow } from "~/utils/task-camel";
+import { usePageResponseSuccess } from "~/utils/response";
+
+/**
+ * 任务执行记录分页列表（无删除接口）。
+ * 筛选：configId / status / startedAtFrom / startedAtTo
+ * 配置软删后仍可 list；configName 缺失时为 null（前端展示 —）。
+ */
+export default defineEventHandler(async (event) => {
+  ensureTemporalTaskSeeds();
+
+  const query = getQuery(event);
+  const { page = 1, pageSize = 20, configId, status, startedAtFrom, startedAtTo } = query;
+
+  let filtered: TemporalTaskExecution[] = [...getMockTemporalTaskExecutionList()];
+
+  if (configId !== undefined && configId !== null && String(configId) !== "") {
+    const cid = Number(configId);
+    if (Number.isFinite(cid)) {
+      filtered = filtered.filter((r) => r.config_id === cid);
+    }
+  }
+  if (status) {
+    const s = String(status).toUpperCase();
+    filtered = filtered.filter((r) => r.status === s);
+  }
+  if (startedAtFrom) {
+    const from = Date.parse(String(startedAtFrom));
+    if (!Number.isNaN(from)) {
+      filtered = filtered.filter((r) => Date.parse(r.started_at) >= from);
+    }
+  }
+  if (startedAtTo) {
+    const to = Date.parse(String(startedAtTo));
+    if (!Number.isNaN(to)) {
+      filtered = filtered.filter((r) => Date.parse(r.started_at) <= to);
+    }
+  }
+
+  // 最新优先
+  filtered.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at) || b.id - a.id);
+
+  const rows = filtered.map((r) => ({
+    ...toTaskCamelRow(r),
+    configName: resolveTaskConfigName(r.config_id),
+  }));
+  return usePageResponseSuccess(page as string, pageSize as string, rows);
+});

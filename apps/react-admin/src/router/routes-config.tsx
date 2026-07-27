@@ -34,12 +34,13 @@ export function normalizePageMapKey(component: string): string | null {
 }
 
 // 自动导入 modules 下的所有路由模块（仅包含业务功能路由）
-// dashboard + system（含 user/role/dict/i18n/menu/api）
+// dashboard + system（含 user/role/dict/i18n/menu/api）+ log + task
 const modulesRoutes = import.meta.glob<AppRouteObject[][]>(
   [
     './modules/dashboard.tsx',
     './modules/system.tsx',
     './modules/log.tsx',
+    './modules/task.tsx',
   ],
   { eager: true },
 );
@@ -59,6 +60,7 @@ const rawPageModules = import.meta.glob(
     '../pages/app/dashboard/**/*.tsx',
     '../pages/app/system/**/*.tsx',
     '../pages/app/log/**/*.tsx',
+    '../pages/app/task/**/*.tsx',
   ],
   { eager: true },
 );

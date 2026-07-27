@@ -94,6 +94,8 @@ const MenuPage = () => {
   // ProTable 内部驱动 dataSource；onDataSourceChange 把当前页的树回传出来，
   // 给工具栏「展开/折叠全部」按钮算可展开节点用。
   const [currentTree, setCurrentTree] = useState<SysMenu[]>([]);
+  /** 筛选范围内的菜单条数（与分页 total=根节点数 并列展示） */
+  const [itemTotal, setItemTotal] = useState(0);
   const allExpandableIds = useMemo(
     () => collectExpandableIds(currentTree),
     [currentTree],
@@ -115,11 +117,7 @@ const MenuPage = () => {
     setDrawerOpen(true);
   };
 
-  /* ---------- ProTable request：与字典一致，分页由 ProTable 接管 ---------- */
-  // 后端走 /system/menu/list（已支持 page/pageSize），返回当前页的扁平菜单；
-  // 前端用 buildTree 把当前页构成本地树后回填给 ProTable。树形仅在当前页范围内生效：
-  // 父节点不在当前页时按根节点展示，不会跨页拼树——后端排序稳定，搜索结果以扁平列表展示
-  // 也合理（菜单名/权限码/类型搜索）。
+  /* ---------- ProTable request：后端按最外层根分页，扁平 items → 树 ---------- */
   async function fetchMenuRows(params: {
     current?: number;
     pageSize?: number;
@@ -129,6 +127,7 @@ const MenuPage = () => {
     isEnabled?: 0 | 1;
   }) {
     const { current = 1, pageSize = 20, name, type, permissionCode, isEnabled } = params;
+    // pageSize 作用于「根菜单」数量；total 为根数，itemTotal 为菜单条数
     const res = await listMenusApi({
       page: current,
       pageSize,
@@ -137,6 +136,7 @@ const MenuPage = () => {
       permissionCode: permissionCode || undefined,
       status: isEnabled,
     });
+    setItemTotal(res.itemTotal ?? 0);
     return { data: buildTree(res.items), total: res.total, success: true };
   }
 
@@ -253,10 +253,10 @@ const MenuPage = () => {
         onDataSourceChange={(ds) => setCurrentTree((ds as SysMenu[]) ?? [])}
         search={{ labelWidth: 'auto' }}
         pagination={{
-          // 用 defaultPageSize 代替 pageSize：与字典保持一致
+          // pageSize = 每页最外层根菜单数（默认 20）；total 为根数
           defaultPageSize: 20,
           showSizeChanger: true,
-          showTotal: (t) => `共 ${t} 条`,
+          showTotal: (t) => `共 ${t} 个根菜单，${itemTotal} 条数据`,
         }}
         scroll={{ x: 1100 }}
         toolBarRender={() => [

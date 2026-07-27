@@ -12,6 +12,7 @@ const WRITE_WHITELIST = [
   "/api/system/i18n-translation",
   "/api/system/menu",
   "/api/system/api",
+  "/api/system/task-config",
 ];
 
 function isWhitelisted(path: string) {

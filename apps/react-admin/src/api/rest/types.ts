@@ -59,7 +59,13 @@ export interface UserListItem {
 
 export interface PageResult<T> {
   items: T[];
+  /** 分页总数：接口管理为「分组数」 */
   total: number;
+  /**
+   * 接口条数（筛选后）。
+   * 仅接口列表等「按组分页」接口会返回；普通分页可不传。
+   */
+  itemTotal?: number;
 }
 
 export interface UserListQuery {
@@ -836,5 +842,126 @@ export interface ApiLogListQuery {
   requestId?: string;
   createdAtFrom?: string;
   createdAtTo?: string;
+  [k: string]: unknown;
+}
+
+// ============================================================
+// Temporal 任务调度 — task-config / task-execution
+// 字段对齐 mock camelCase 输出（backend schema §8 / §22）
+// ============================================================
+
+/** Temporal 工作流执行状态（与 mock 枚举一致） */
+export type TaskExecutionStatus =
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'TERMINATED'
+  | 'TIMED_OUT'
+  | 'CONTINUED_AS_NEW';
+
+/** 任务配置 */
+export interface TaskConfig {
+  id: number;
+  code: string;
+  name: string;
+  workflowType: string;
+  taskQueue: string;
+  /** null = 仅手动触发 */
+  cronExpr: string | null;
+  /** 重试策略 JSON 对象 */
+  retryPolicy: Record<string, unknown> | null;
+  timeoutSeconds: number | null;
+  remark: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: number;
+  updatedBy: number;
+}
+
+export interface TaskConfigQuery {
+  page?: number;
+  pageSize?: number;
+  code?: string | string[];
+  name?: string;
+  /** isEnabled 过滤：0 | 1 */
+  status?: 0 | 1;
+  [k: string]: unknown;
+}
+
+export interface CreateTaskConfigRequest {
+  code: string;
+  name: string;
+  workflowType: string;
+  taskQueue: string;
+  cronExpr?: string | null;
+  retryPolicy?: Record<string, unknown> | null;
+  timeoutSeconds?: number | null;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export interface UpdateTaskConfigRequest {
+  id: number;
+  code?: string;
+  name?: string;
+  workflowType?: string;
+  taskQueue?: string;
+  cronExpr?: string | null;
+  retryPolicy?: Record<string, unknown> | null;
+  timeoutSeconds?: number | null;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export type TaskConfigBatchAction = 'enable' | 'disable' | 'delete' | 'trigger';
+
+export interface TaskConfigBatchRequest {
+  action: TaskConfigBatchAction;
+  ids: number[];
+}
+
+export interface TaskConfigBatchResult {
+  action: string;
+  affected: number;
+  ids: number[];
+  executionIds?: number[];
+  skippedDisabled?: number[];
+}
+
+export interface TaskConfigTriggerResult {
+  config: TaskConfig;
+  execution: TaskExecution;
+}
+
+/** 任务执行记录 */
+export interface TaskExecution {
+  id: number;
+  /** 软外键；配置软删后可悬空 */
+  configId: number | null;
+  /** list/detail 解析出的配置名；缺失时为 null（前端展示 —） */
+  configName?: string | null;
+  workflowId: string;
+  runId: string;
+  workflowType: string;
+  taskQueue: string;
+  status: TaskExecutionStatus;
+  startedAt: string;
+  closedAt: string | null;
+  inputSummary: Record<string, unknown> | null;
+  resultSummary: Record<string, unknown> | null;
+  failureReason: string | null;
+  createdAt: string;
+}
+
+export interface TaskExecutionQuery {
+  page?: number;
+  pageSize?: number;
+  configId?: number;
+  status?: TaskExecutionStatus | string;
+  startedAtFrom?: string;
+  startedAtTo?: string;
   [k: string]: unknown;
 }

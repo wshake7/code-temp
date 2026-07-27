@@ -8,3 +8,5 @@ export * from './user';
 export * from './dict';
 export * from './login-log';
 export * from './api-log';
+export * from './task-config';
+export * from './task-execution';
