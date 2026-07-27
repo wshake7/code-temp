@@ -32,12 +32,41 @@ Research → Grill **无门禁**；Grill 之后的阶段过渡必须走门禁（
 |------|------|------|------|
 | Grill → 下一跳 | 共同理解是否足够继续？ | `进入下一阶段 (Recommended)` | `继续访谈` / `先 Prototype` |
 | Plan → Implement | 是否批准实现？ | `批准并继续 (Recommended)` | `需要补充` / `改走 multi-session` |
+| Plan → Implement（多切片时） | 如何编排实现顺序？ | 见下方 **实现编排门禁** | — |
 | Spec/Tickets 发布前 | 拆分是否批准？ | 由 `/to-tickets` 自身 quiz 处理 | — |
 | Review → Commit | 是否提交变更？ | `提交 (Recommended)` | `暂不提交` |
 
 - 只有选「继续」类选项才可进入下一阶段
 - 禁止凭 "ok" / "good" 等软确认跳过门禁
 - Grill 结束前：不起草完整 Plan、不写实现产物（允许极短的「待确认假设」列表）
+
+#### 实现编排门禁（仅当计划含多个可独立验证的切片时触发）
+
+当 Plan 的 Approach 里存在**多个互不阻塞、可分别 demo 的切片**（典型场景：一处共享基础 + 若干独立上层改动，或多个并列模块），在「批准实现」之后、进入 Implement 之前，**立刻**用 AskUserQuestion 追问一次编排方式。一次一问，给出 Plan 中实际的切片名而不是泛指。
+
+判定是否触发：
+
+- 切片之间**有依赖**（如切片 B 依赖切片 A 改的契约）→ **不触发**，按依赖顺序串行，无需询问
+- 切片之间**相互独立**（改切片 A 不影响切片 B）→ **触发**
+
+问题模板（`切片A / 切片B / 切片C` 按实际切片名替换）：
+
+> 计划包含 切片A / 切片B / 切片C 三处独立改动，希望按什么顺序实现？
+
+选项（推荐项置顶并标注 Recommended；示例中 切片A 视为共享基础，切片B / 切片C 视为依赖它的独立切片，按实际情况调整）：
+
+| 选项 | 含义 | 适用 |
+|------|------|------|
+| `串行：切片A → 切片B → 切片C → code-review (Recommended)` | 依次实现，每步 typecheck/验证后再进入下一步，收尾统一 `/code-review` | 切片有隐含耦合、想逐步确认、或切片本身较重 |
+| `并行：切片A → (切片B + 切片C 并行子代理) → code-review` | 共享基础先串行落地；独立切片派给并行 subagent 同时推进，合并后再 `/code-review` | 切片真正独立、各自规模适中、context window 充裕 |
+| `全部并行：(切片A + 切片B + 切片C 并行子代理) → code-review` | 所有切片同时派给 subagent，收尾合并 review | 切片完全独立且无共享前置，追求最快交付 |
+| `需要补充` | 对编排有疑问，回到 Plan 修订 | 依赖关系不清、切片划分不合理 |
+
+约束：
+
+- 选定编排后**写入 Plan 的 Approach 顶部**作为「实现顺序」一行，Implement 据此执行
+- 并行选项仅在不违反 Context hygiene（见下）的前提下可用；接近 smart zone 时强制降级为串行或 `/handoff`
+- 并行 subagent 的产出必须回主 session 合并 typecheck + 相关测试，再进 Review
 
 ### Context hygiene
 
@@ -58,7 +87,7 @@ Research → Grill **无门禁**；Grill 之后的阶段过渡必须走门禁（
 
 1. **相关代码**：入口、路由/API、数据模型、UI 页面、测试与 fixtures
 2. **已有模式**：同域 CRUD / 鉴权 / 列表筛选等可复用实现；记录可对照路径
-3. **依赖与约束**：调用链、跨端约定（mock / React / Vue）、配置与 schema、权限与错误约定
+3. **依赖与约束**：调用链、跨端/跨层约定、配置与 schema、权限与错误约定
 4. **边界与验证**：空值/并发/权限/失败路径；现有测试或手动验收方式
 
 **输出（进入 Grill 前必须展示）：**
@@ -175,7 +204,7 @@ Test strategy:
 
 展示计划后走 **Plan → Implement** 门禁。
 
-**Implement**：用 `/implement` 执行已批准计划（优先 `/tdd`）。**不要**在本 command 里自动 commit；提交留给 Review 门禁。
+**Implement**：按门禁选定的**实现顺序**执行已批准计划（串行 / 并行 subagent / 全并行）；若门禁未触发编排问题，按 Approach 中依赖顺序串行执行。用 `/implement` 执行（优先 `/tdd`）；**并行编排时**每个 subagent 独立完成自己切片的 typecheck/单测，主 session 合并后再次跑全量 typecheck + 相关测试套件。**不要**在本 command 里自动 commit；提交留给 Review 门禁。若实现中发现切片其实有依赖（原以为可并行）：暂停并行，回门禁重选串行。
 
 **Review & Commit**：`/code-review`（实现阶段已跑则汇总）；展示摘要后走提交门禁；**不自动提交**。
 
