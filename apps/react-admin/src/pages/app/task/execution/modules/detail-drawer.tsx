@@ -1,7 +1,7 @@
 import { Descriptions, Drawer, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { TaskExecution } from '@/api/rest/types';
-import { statusColor } from './shared';
+import { statusColor, statusLabelKey } from './shared';
 
 interface Props {
   open: boolean;
@@ -26,6 +26,12 @@ function formatJson(v: Record<string, unknown> | null | undefined) {
 const TaskExecutionDetailDrawer = ({ open, row, onClose }: Props) => {
   const { t } = useTranslation('task');
 
+  const statusLabel = (status: string) => {
+    const key = statusLabelKey(status);
+    const label = t(key);
+    return label === key ? status : label;
+  };
+
   return (
     <Drawer
       title={t('executionDetail')}
@@ -45,7 +51,7 @@ const TaskExecutionDetailDrawer = ({ open, row, onClose }: Props) => {
           <Descriptions.Item label={t('workflowType')}>{dash(row.workflowType)}</Descriptions.Item>
           <Descriptions.Item label={t('taskQueue')}>{dash(row.taskQueue)}</Descriptions.Item>
           <Descriptions.Item label={t('execStatus')}>
-            <Tag color={statusColor(row.status)}>{row.status}</Tag>
+            <Tag color={statusColor(row.status)}>{statusLabel(row.status)}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label={t('startedAt')}>{dash(row.startedAt)}</Descriptions.Item>
           <Descriptions.Item label={t('closedAt')}>{dash(row.closedAt)}</Descriptions.Item>

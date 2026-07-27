@@ -68,6 +68,11 @@ export function TaskConfigPanel() {
   };
 
   const handleTrigger = async (row: TaskConfig) => {
+    // 与 Vue 一致：禁用配置前端先拦截，避免仅展示英文 mock 原文
+    if (row.isEnabled !== 1) {
+      message.error(t('triggerDisabledHint'));
+      return;
+    }
     try {
       await triggerTaskConfigApi(row.id);
       message.success(t('triggerSuccess'));

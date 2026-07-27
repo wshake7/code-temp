@@ -8,7 +8,7 @@ import { listTaskExecutionApi } from '@/api/rest/task-execution';
 import type { TaskExecution, TaskExecutionStatus } from '@/api/rest/types';
 import { onTaskExecutionChanged } from '../modules/events';
 import TaskExecutionDetailDrawer from './modules/detail-drawer';
-import { formatDuration, statusColor } from './modules/shared';
+import { formatDuration, statusColor, statusLabelKey } from './modules/shared';
 
 const STATUS_OPTIONS: TaskExecutionStatus[] = [
   'RUNNING',
@@ -70,8 +70,14 @@ export function TaskExecutionPanel() {
     return { data: res.items, total: res.total, success: true };
   }
 
+  const statusLabel = (status: string) => {
+    const key = statusLabelKey(status);
+    const label = t(key);
+    return label === key ? status : label;
+  };
+
   const statusValueEnum = Object.fromEntries(
-    STATUS_OPTIONS.map((s) => [s, { text: s }]),
+    STATUS_OPTIONS.map((s) => [s, { text: statusLabel(s) }]),
   );
 
   const columns: ProColumns<TaskExecution>[] = [
@@ -116,7 +122,9 @@ export function TaskExecutionPanel() {
       width: 140,
       valueType: 'select',
       valueEnum: statusValueEnum,
-      render: (_, r) => <Tag color={statusColor(r.status)}>{r.status}</Tag>,
+      render: (_, r) => (
+        <Tag color={statusColor(r.status)}>{statusLabel(r.status)}</Tag>
+      ),
     },
     {
       title: t('startedAt'),

@@ -96,5 +96,13 @@
   "resultSummary": "结果摘要",
   "createdAt": "创建时间",
   "viewDetail": "详情",
-  "executionDetail": "执行记录详情"
+  "executionDetail": "执行记录详情",
+  "triggerDisabledHint": "禁用的任务无法触发",
+  "statusRUNNING": "运行中",
+  "statusCOMPLETED": "已完成",
+  "statusFAILED": "失败",
+  "statusCANCELLED": "已取消",
+  "statusTERMINATED": "已终止",
+  "statusTIMED_OUT": "超时",
+  "statusCONTINUED_AS_NEW": "续跑"
 }

@@ -96,5 +96,13 @@
   "resultSummary": "Result Summary",
   "createdAt": "Created At",
   "viewDetail": "Detail",
-  "executionDetail": "Execution Detail"
+  "executionDetail": "Execution Detail",
+  "triggerDisabledHint": "Disabled tasks cannot be triggered",
+  "statusRUNNING": "Running",
+  "statusCOMPLETED": "Completed",
+  "statusFAILED": "Failed",
+  "statusCANCELLED": "Cancelled",
+  "statusTERMINATED": "Terminated",
+  "statusTIMED_OUT": "Timed Out",
+  "statusCONTINUED_AS_NEW": "Continued as New"
 }

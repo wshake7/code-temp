@@ -1,20 +1,27 @@
-/** 执行状态 → antd Tag color */
+/** 执行状态 → antd Tag color（与 Vue 端 STATUS_TAG_COLOR 对齐） */
 export function statusColor(status: string): string {
   switch (status) {
     case 'COMPLETED':
       return 'success';
     case 'RUNNING':
-    case 'CONTINUED_AS_NEW':
       return 'processing';
+    case 'CONTINUED_AS_NEW':
+      return 'blue';
     case 'FAILED':
-    case 'TIMED_OUT':
-      return 'error';
-    case 'CANCELLED':
     case 'TERMINATED':
+      return 'error';
+    case 'TIMED_OUT':
+      return 'warning';
+    case 'CANCELLED':
       return 'default';
     default:
       return 'default';
   }
+}
+
+/** 执行状态 i18n key；未知状态回退原文 */
+export function statusLabelKey(status: string): string {
+  return `status${status}`;
 }
 
 /** 由 startedAt / closedAt 推导耗时展示 */
