@@ -42,6 +42,10 @@
         <spring.flayway.verison>4.0.7</spring.flayway.verison>
         <spring-cloud-alibaba.version>2025.1.0.0</spring-cloud-alibaba.version>
 
+        <!-- jcasbin（授权引擎；2026-07-28 集成） -->
+        <jcasbin.version>1.99.0</jcasbin.version>
+        <jcasbin-jdbc-adapter.version>2.13.0</jcasbin-jdbc-adapter.version>
+
         <!-- Java 工具链（2026-06-14 集成） -->
         <spotless.version>3.6.0</spotless.version>
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
@@ -161,6 +165,39 @@
             <dependency>
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+            </dependency>
+
+            <!-- jcasbin 核心 -->
+            <dependency>
+                <groupId>org.casbin</groupId>
+                <artifactId>jcasbin</artifactId>
+                <version>${jcasbin.version}</version>
+            </dependency>
+            <!-- jcasbin JDBC Adapter（连 MySQL casbin_rule 表） -->
+            <dependency>
+                <groupId>org.casbin</groupId>
+                <artifactId>jdbc-adapter</artifactId>
+                <version>${jcasbin-jdbc-adapter.version}</version>
+                <exclusions>
+                    <!-- 排除 jcasbin 传递依赖（由我们显式 pin 版本） -->
+                    <exclusion>
+                        <groupId>org.casbin</groupId>
+                        <artifactId>jcasbin</artifactId>
+                    </exclusion>
+                    <!-- 排除不需要的 JDBC 驱动（只用 MySQL） -->
+                    <exclusion>
+                        <groupId>com.oracle.database.jdbc</groupId>
+                        <artifactId>ojdbc6</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.microsoft.sqlserver</groupId>
+                        <artifactId>mssql-jdbc</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>
