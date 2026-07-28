@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import React from 'react';
-import { Avatar, Dropdown, Tooltip, Button, Breadcrumb, Input, Popover } from 'antd';
+import { Avatar, Dropdown, Tooltip, Button, Breadcrumb } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   UserOutlined,
@@ -9,7 +9,6 @@ import {
   MenuUnfoldOutlined,
   MenuFoldOutlined,
   ReloadOutlined,
-  SearchOutlined,
   SunOutlined,
   MoonOutlined,
   GlobalOutlined,
@@ -20,6 +19,8 @@ import { useMatches, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { getIconFromName } from '@/layouts/MainLayout/utils/iconResolver';
+import { GlobalSearch } from '@/layouts/MainLayout/components/GlobalSearch';
+import type { SearchableMenu } from '@/layouts/MainLayout/components/GlobalSearch';
 
 import { useI18n } from '@/core/i18n';
 import { usePreferencesStore } from '@/core/preferences/store';
@@ -36,6 +37,8 @@ interface HeaderContentProps {
   isDark: boolean;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  /** 侧栏同源菜单树，供全局搜索过滤跳转 */
+  menuData?: SearchableMenu[];
   widgetConfig: {
     fullscreen: boolean;
     globalSearch: boolean;
@@ -58,6 +61,7 @@ export const HeaderContent = ({
   isDark,
   onToggleTheme,
   onOpenSettings,
+  menuData = [],
   widgetConfig,
 }: HeaderContentProps) => {
   const { t } = useI18n('common');
@@ -320,77 +324,8 @@ export const HeaderContent = ({
 
       {/* ========== 右侧区域：搜索 + 设置 + 主题 + 语言 + 全屏 + 通知 + 头像 ========== */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-        {/* 搜索按钮（带快捷键提示） */}
-        {widgetConfig.globalSearch && (
-          <Popover
-            trigger="click"
-            placement="bottomRight"
-            content={
-              <div style={{ width: 320, padding: 8 }}>
-                <Input.Search
-                  placeholder={t('header.searchPlaceholder')}
-                  size="large"
-                  onSearch={(value) => {
-                    console.log('Search:', value);
-                    // 后续可实现全局搜索逻辑
-                  }}
-                  autoFocus
-                />
-              </div>
-            }
-          >
-            <div
-              className="search-trigger-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 12px',
-                borderRadius: 20,
-                backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
-                border: `1px solid ${isDark ? '#404040' : '#d9d9d9'}`,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = isDark ? '#363636' : '#e8e8e8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = isDark ? '#2a2a2a' : '#f5f5f5';
-              }}
-            >
-              <SearchOutlined
-                style={{
-                  color: isDark ? '#a6a6a6' : '#8c8c8c',
-                  fontSize: 14,
-                }}
-              />
-              <span
-                style={{
-                  color: isDark ? '#a6a6a6' : '#8c8c8c',
-                  fontSize: 13,
-                }}
-              >
-                {t('header.search')}
-              </span>
-              <kbd
-                style={{
-                  display: 'inline-block',
-                  padding: '2px 6px',
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  lineHeight: 1.4,
-                  color: isDark ? '#8c8c8c' : '#595959',
-                  backgroundColor: isDark ? '#1f1f1f' : '#e8e8e8',
-                  border: `1px solid ${isDark ? '#404040' : '#d9d9d9'}`,
-                  borderRadius: 3,
-                }}
-              >
-                {t('header.searchShortcut')}
-              </kbd>
-            </div>
-          </Popover>
-        )}
+        {/* 全局菜单搜索（过滤侧栏菜单并跳转） */}
+        {widgetConfig.globalSearch && <GlobalSearch menus={menuData} isDark={isDark} />}
 
         {/* 设置按钮 */}
         <Tooltip title={t('header.settings')}>

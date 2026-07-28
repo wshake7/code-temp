@@ -25,7 +25,13 @@
     "switchLanguage": "Switch Language",
     "search": "Search",
     "searchPlaceholder": "Search menu or features...",
-    "searchShortcut": "Ctrl K"
+    "searchShortcut": "Ctrl K",
+    "searchNoResults": "No results found for",
+    "searchNoRecent": "No recent searches",
+    "searchRecent": "Recent",
+    "searchSelect": "Select",
+    "searchNavigate": "Navigate",
+    "searchClose": "Close"
   },
   "refresh": "Refresh",
   "home": "Home",

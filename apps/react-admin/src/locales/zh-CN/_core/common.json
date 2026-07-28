@@ -26,7 +26,13 @@
     "switchLanguage": "切换语言",
     "search": "搜索",
     "searchPlaceholder": "搜索菜单或功能...",
-    "searchShortcut": "Ctrl K"
+    "searchShortcut": "Ctrl K",
+    "searchNoResults": "未找到与以下关键字相关的结果",
+    "searchNoRecent": "没有搜索历史",
+    "searchRecent": "最近搜索",
+    "searchSelect": "选择",
+    "searchNavigate": "导航",
+    "searchClose": "关闭"
   },
   "refresh": "刷新",
   "iframe": {
