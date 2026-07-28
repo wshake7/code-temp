@@ -26,9 +26,9 @@
     </modules>
 
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- 框架版本 -->
@@ -344,7 +344,7 @@
                           - Xplugin:ErrorProne 启用 javac plugin
                           10 个 add-exports / 2 个 add-opens 放 .mvn/jvm.config。
                           jvm.config 只对 mvn 主 JVM 生效;但 MCP 3.11.0 fork=true 模式下
-                          实际看到 [forked debug release 17] —— fork 进程继承 mvn JVM
+                          实际看到 [forked debug release 21] —— fork 进程继承 mvn JVM
                           的 add-exports 是 jvm.config 之外的另一条路;我们靠 project
                           <dependencies> 让 error_prone_core 在 classpath 上
                           (ServiceLoader 找得到),add-exports 在 MCP 透传给 forked JVM。
@@ -362,8 +362,32 @@
                         <arg>-XDcompilePolicy=simple</arg>
                         <arg>--should-stop=ifError=FLOW</arg>
                         <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
-                        <arg>-Xplugin:ErrorProne</arg>
+                        <!-- EP 额外选项必须跟在 -Xplugin:ErrorProne 同一 arg 内；
+                             跳过 APT 生成源（Easy-Query SysUserProxy 等）避免机写 Javadoc 报噪 -->
+                        <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-sources/.*</arg>
                     </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- 导出 ${org.mockito:mockito-core:jar} 等属性，供 surefire javaagent 使用 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Surefire：JDK 21+ 以 Mockito 为正式 javaagent，避免 inline mock 动态 attach 警告 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
                 </configuration>
             </plugin>
 

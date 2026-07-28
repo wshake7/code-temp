@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -82,9 +81,7 @@ class SpringConfigImportCheckTest {
     private String readClasspathFile(String path) throws IOException {
         try (InputStream in = getClass().getClassLoader().getResourceAsStream(path)) {
             assertThat(in).as("classpath:" + path + " must exist").isNotNull();
-            try (Scanner s = new Scanner(in, StandardCharsets.UTF_8)) {
-                return s.useDelimiter("\\A").hasNext() ? s.next() : "";
-            }
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 }

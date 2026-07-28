@@ -3,11 +3,9 @@ package com.wshake.infra.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
+import java.nio.file.Files;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,10 +138,6 @@ class RedissonAutoconfigCheckTest {
         assertThat(file)
                 .as("file " + path + " (cwd=" + new File(".").getAbsolutePath() + ")")
                 .exists();
-        try (InputStream in = new FileInputStream(file)) {
-            try (Scanner s = new Scanner(in, StandardCharsets.UTF_8)) {
-                return s.useDelimiter("\\A").hasNext() ? s.next() : "";
-            }
-        }
+        return Files.readString(file.toPath(), StandardCharsets.UTF_8);
     }
 }

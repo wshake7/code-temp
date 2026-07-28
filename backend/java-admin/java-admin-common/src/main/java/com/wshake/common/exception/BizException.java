@@ -14,7 +14,7 @@ import lombok.Getter;
 @Getter
 public class BizException extends RuntimeException {
 
-    /** 业务码（来自 {@link ResultCode} 或自定义） */
+    /** 业务码（来自 ResultCode 或自定义）。 */
     private final int code;
 
     public BizException(int code, String msg) {

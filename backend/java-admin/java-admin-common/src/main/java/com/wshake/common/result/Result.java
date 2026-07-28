@@ -20,7 +20,7 @@ import lombok.Data;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Result<T> {
 
-    /** 业务码：0 = 成功；非 0 见 {@link ResultCode} */
+    /** 业务码：0 = 成功；非 0 见 ResultCode 枚举。 */
     @Schema(
             description = "业务码;0=成功,非 0 见 ResultCode 枚举",
             example = "0",
@@ -31,7 +31,7 @@ public class Result<T> {
     @Schema(description = "人类可读消息", example = "ok")
     private String msg;
 
-    /** 业务数据；error 时为 {@code null}（Jackson 不输出） */
+    /** 业务数据；error 时为 null（Jackson 不输出该字段）。 */
     @Schema(description = "业务数据;error 时为 null(Jackson 不输出该字段)")
     private T data;
 

@@ -21,7 +21,7 @@ public class NacosConfigToggleProperties {
 
     /**
      * 是否启用 Nacos Config client 装配。
-     * 默认 {@code false}：dev profile 默认关（不走 Nacos），prod profile 用 env 变量打开。
+     * 默认 false：dev profile 默认关（不走 Nacos），prod profile 用 env 变量打开。
      */
     private boolean enabled = false;
 }

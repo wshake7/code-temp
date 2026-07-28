@@ -46,11 +46,12 @@ public class CasbinConfig {
             Model model = new Model();
             model.loadModelFromText(modelText);
 
+            // JDBCAdapter(DataSource, removePolicyFailed, tableName, autoCreateTable)
             JDBCAdapter adapter = new JDBCAdapter(
                     dataSource,
-                    casbinProperties.isAutoCreateTable(),
+                    casbinProperties.isRemovePolicyFailed(),
                     casbinProperties.getTableName(),
-                    casbinProperties.isRemovePolicyFailed());
+                    casbinProperties.isAutoCreateTable());
             Enforcer enforcer = new Enforcer(model, adapter);
             enforcer.loadPolicy();
             return enforcer;

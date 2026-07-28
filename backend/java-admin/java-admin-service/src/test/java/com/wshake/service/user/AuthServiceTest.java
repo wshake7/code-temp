@@ -2,6 +2,7 @@ package com.wshake.service.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,7 @@ import com.wshake.common.exception.AuthException;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.SysUserRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -114,12 +116,8 @@ class AuthServiceTest {
         user.setPassword(password);
         user.setNickname(nickname);
         user.setStatus(status);
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
+        user.setCreateTime(LocalDateTime.now(ZoneOffset.UTC));
+        user.setUpdateTime(LocalDateTime.now(ZoneOffset.UTC));
         return user;
-    }
-
-    private static <T> T any() {
-        return org.mockito.ArgumentMatchers.any();
     }
 }

@@ -14,7 +14,7 @@ import lombok.Data;
 @Schema(description = "登录成功响应")
 public class LoginResponse {
 
-    /** Sa-Token token 值（前端写入 {@code satoken} header） */
+    /** Sa-Token token 值（前端写入 satoken 请求头）。 */
     @Schema(
             description = "Sa-Token token 值;前端写入请求头 satoken 或 Authorization: Bearer <token>",
             example = "9c8a7b6e-1234-5678-90ab-cdef12345678")
