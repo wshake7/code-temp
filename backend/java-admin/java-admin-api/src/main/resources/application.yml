@@ -38,6 +38,17 @@ spring:
             group: DEFAULT_GROUP
             refresh-enabled: true
 
+  # Temporal（io.temporal:temporal-spring-boot-starter）
+  # 自动配置条件：connection.target 非空 OR test-server.enabled=true
+  # 默认 target 为空 → 不连 Server；本地：TEMPORAL_TARGET=127.0.0.1:4723
+  temporal:
+    connection:
+      # 空字符串 → 禁用自动配置；compose 宿主机 4723→容器 7233
+      target: ${TEMPORAL_TARGET:}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+    # 无 Workflow/Activity 实现前保持 false
+    start-workers: ${TEMPORAL_START_WORKERS:false}
+
   # Nacos 启用开关（被 NacosConfigToggleProperties @ConfigurationProperties 绑定）
   # 默认 false：dev profile 不连 Nacos，prod 用 env 变量打开
   # 与 spring.cloud.nacos.config.enabled 同义

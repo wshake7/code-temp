@@ -94,6 +94,12 @@
             <artifactId>jdbc-adapter</artifactId>
         </dependency>
 
+        <!-- Temporal（基础设施：Client/Worker 自动配置；业务 Workflow 后续再加） -->
+        <dependency>
+            <groupId>io.temporal</groupId>
+            <artifactId>temporal-spring-boot-starter</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

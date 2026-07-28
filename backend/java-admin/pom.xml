@@ -46,6 +46,9 @@
         <jcasbin.version>1.99.0</jcasbin.version>
         <jcasbin-jdbc-adapter.version>2.13.0</jcasbin-jdbc-adapter.version>
 
+        <!-- Temporal Java SDK / Spring Boot Starter（2026-07-28 集成；供后续 Workflow 使用） -->
+        <temporal.version>1.37.0</temporal.version>
+
         <!-- Java 工具链（2026-06-14 集成） -->
         <spotless.version>3.6.0</spotless.version>
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
@@ -198,6 +201,15 @@
                         <artifactId>mssql-jdbc</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <!-- Temporal Spring Boot Starter（含 temporal-sdk + autoconfigure；官方支持 SB 2/3/4）
+                 自动配置条件：spring.temporal.connection.target 非空，或 test-server.enabled=true。
+                 默认 target 留空 → 不连 Server，避免本地未起 Temporal 时启动失败。 -->
+            <dependency>
+                <groupId>io.temporal</groupId>
+                <artifactId>temporal-spring-boot-starter</artifactId>
+                <version>${temporal.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

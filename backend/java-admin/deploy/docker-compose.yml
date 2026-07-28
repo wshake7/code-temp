@@ -84,6 +84,46 @@ services:
       start_period: 30s
 
   # ----------------------------
+  # Temporal Server（auto-setup，dev 自管存储）
+  # 宿主机端口 4000 段：4723 → 容器 gRPC 7233
+  # 启用应用侧连接：TEMPORAL_TARGET=127.0.0.1:4723
+  # ----------------------------
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    container_name: java-admin-temporal
+    restart: unless-stopped
+    ports:
+      - "${TEMPORAL_PORT:-4723}:7233"
+    networks:
+      - java-admin-net
+    healthcheck:
+      # auto-setup 镜像内 tctl/temporal CLI 可用时探测前端；失败则仅依赖 restart 策略
+      test: ["CMD-SHELL", "temporal operator cluster health --address 127.0.0.1:7233 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  # ----------------------------
+  # Temporal Web UI（默认与 Server 一起起）
+  # 宿主机 4808 → 容器 8080；打开 http://localhost:4808
+  # ----------------------------
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    container_name: java-admin-temporal-ui
+    restart: unless-stopped
+    ports:
+      - "${TEMPORAL_UI_PORT:-4808}:8080"
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:${TEMPORAL_UI_PORT:-4808}
+    depends_on:
+      temporal:
+        condition: service_started
+    networks:
+      - java-admin-net
+
+  # ----------------------------
   # Adminer（仅 --profile dev 启动）
   # ----------------------------
   adminer:
