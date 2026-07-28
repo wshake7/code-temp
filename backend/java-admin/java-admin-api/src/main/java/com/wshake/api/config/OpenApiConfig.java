@@ -24,8 +24,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /** 构造 OpenAPI 文档元数据（title / version / contact / securityScheme）。 */
     @Bean
-    public OpenAPI customOpenAPI() {
+    public OpenAPI customOpenApi() {
         return new OpenAPI()
                 .info(new Info()
                         .title("java-admin API 文档")

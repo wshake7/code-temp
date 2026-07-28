@@ -27,10 +27,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class AuthServiceTest {
 
     @Mock
-    SysUserRepository sysUserRepository;
+    private SysUserRepository sysUserRepository;
 
     @InjectMocks
-    AuthService authService;
+    private AuthService authService;
 
     @Test
     void login_withCorrectCredentials_returnsUser() {
@@ -108,15 +108,15 @@ class AuthServiceTest {
     }
 
     private static SysUser fixture(String username, String password, String nickname, int status) {
-        SysUser u = new SysUser();
-        u.setId(1L);
-        u.setUsername(username);
-        u.setPassword(password);
-        u.setNickname(nickname);
-        u.setStatus(status);
-        u.setCreateTime(LocalDateTime.now());
-        u.setUpdateTime(LocalDateTime.now());
-        return u;
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setUsername(username);
+        user.setPassword(password);
+        user.setNickname(nickname);
+        user.setStatus(status);
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        return user;
     }
 
     private static <T> T any() {

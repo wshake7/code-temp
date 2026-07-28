@@ -31,8 +31,11 @@ public class RequestLogAspect {
     @Pointcut("execution(* com.wshake.api.controller..*(..))")
     public void controllerPointcut() {}
 
+    /** 环绕 Controller 方法，记录请求参数、耗时、返回值摘要及异常。 */
     @Around("controllerPointcut()")
+    // CHECKSTYLE.OFF: IllegalThrows
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
+        // CHECKSTYLE.ON: IllegalThrows
         long start = System.currentTimeMillis();
         String method = pjp.getSignature().toShortString();
         Object[] args = pjp.getArgs();
@@ -58,16 +61,18 @@ public class RequestLogAspect {
         }
     }
 
-    private String safeToJson(Object o) {
-        if (o == null) return "null";
+    private String safeToJson(Object obj) {
+        if (obj == null) {
+            return "null";
+        }
         try {
-            String json = objectMapper.writeValueAsString(o);
+            String json = objectMapper.writeValueAsString(obj);
             if (json.length() > 500) {
                 return json.substring(0, 500) + "...(truncated)";
             }
             return json;
         } catch (JsonProcessingException e) {
-            return String.valueOf(o);
+            return String.valueOf(obj);
         }
     }
 }

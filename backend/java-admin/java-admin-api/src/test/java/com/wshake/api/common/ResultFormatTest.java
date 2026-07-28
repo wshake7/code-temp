@@ -25,9 +25,9 @@ class ResultFormatTest {
 
     @Test
     void result_ok_hasOnlyThreeFields() throws Exception {
-        Result<String> r = Result.ok("hello");
+        Result<String> result = Result.ok("hello");
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         // 严格 3 字段
         assertThat(json).contains("\"code\":0");
@@ -40,9 +40,9 @@ class ResultFormatTest {
 
     @Test
     void result_error_hasOnlyThreeFields() throws Exception {
-        Result<Object> r = Result.error(2002, "凭证错误");
+        Result<Object> result = Result.error(2002, "凭证错误");
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"code\":2002");
         assertThat(json).contains("\"msg\":\"凭证错误\"");
@@ -61,9 +61,9 @@ class ResultFormatTest {
 
     @Test
     void objectResult_of_dataNull_serializesAsEmptyObject() throws Exception {
-        ObjectResult<Map<String, Object>> r = ObjectResult.of();
+        ObjectResult<Map<String, Object>> result = ObjectResult.of();
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"code\":0");
         assertThat(json).contains("\"msg\":\"ok\"");
@@ -73,18 +73,18 @@ class ResultFormatTest {
 
     @Test
     void objectResult_of_withMap_serializesEntries() throws Exception {
-        ObjectResult<Map<String, Object>> r = ObjectResult.of(Map.of("name", "admin"));
+        ObjectResult<Map<String, Object>> result = ObjectResult.of(Map.of("name", "admin"));
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"data\":{\"name\":\"admin\"}");
     }
 
     @Test
     void objectResult_of_withPojo_serializesFields() throws Exception {
-        ObjectResult<UserView> r = ObjectResult.of(new UserView(1L, "admin"));
+        ObjectResult<UserView> result = ObjectResult.of(new UserView(1L, "admin"));
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"data\":{");
         assertThat(json).contains("\"id\":1");
@@ -93,18 +93,18 @@ class ResultFormatTest {
 
     @Test
     void objectResult_isStillResultSubclass() {
-        ObjectResult<Map<String, Object>> r = ObjectResult.of();
-        assertThat(r).isInstanceOf(Result.class);
-        assertThat(r.isSuccess()).isTrue();
+        ObjectResult<Map<String, Object>> result = ObjectResult.of();
+        assertThat(result).isInstanceOf(Result.class);
+        assertThat(result.isSuccess()).isTrue();
     }
 
     // ---------------- ListResult ----------------
 
     @Test
     void listResult_of_dataNull_serializesAsEmptyArray() throws Exception {
-        ListResult<String> r = ListResult.of();
+        ListResult<String> result = ListResult.of();
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"code\":0");
         assertThat(json).contains("\"msg\":\"ok\"");
@@ -114,63 +114,63 @@ class ResultFormatTest {
 
     @Test
     void listResult_of_withList_serializesElements() throws Exception {
-        ListResult<String> r = ListResult.of(List.of("a", "b"));
+        ListResult<String> result = ListResult.of(List.of("a", "b"));
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"data\":[\"a\",\"b\"]");
     }
 
     @Test
     void listResult_of_emptyList_remainsEmptyArray() throws Exception {
-        ListResult<String> r = ListResult.of(List.of());
+        ListResult<String> result = ListResult.of(List.of());
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
 
         assertThat(json).contains("\"data\":[]");
     }
 
     @Test
     void listResult_isStillResultSubclass() {
-        ListResult<String> r = ListResult.of();
-        assertThat(r).isInstanceOf(Result.class);
-        assertThat(r.isSuccess()).isTrue();
+        ListResult<String> result = ListResult.of();
+        assertThat(result).isInstanceOf(Result.class);
+        assertThat(result.isSuccess()).isTrue();
     }
 
     // ---------------- Result.okObj / Result.okList 入口 ----------------
 
     @Test
     void result_okObj_returnsObjectResultSubclass_nullDataAsEmptyObject() throws Exception {
-        ObjectResult<Map<String, Object>> r = Result.okObj();
+        ObjectResult<Map<String, Object>> result = Result.okObj();
 
-        assertThat(r).isInstanceOf(ObjectResult.class);
-        String json = mapper.writeValueAsString(r);
+        assertThat(result).isInstanceOf(ObjectResult.class);
+        String json = mapper.writeValueAsString(result);
         assertThat(json).contains("\"data\":{}");
     }
 
     @Test
     void result_okObj_withPojo_serializesFields() throws Exception {
-        ObjectResult<UserView> r = Result.okObj(new UserView(2L, "alice"));
+        ObjectResult<UserView> result = Result.okObj(new UserView(2L, "alice"));
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
         assertThat(json).contains("\"id\":2");
         assertThat(json).contains("\"username\":\"alice\"");
     }
 
     @Test
     void result_okList_returnsListResultSubclass_nullDataAsEmptyArray() throws Exception {
-        ListResult<String> r = Result.okList();
+        ListResult<String> result = Result.okList();
 
-        assertThat(r).isInstanceOf(ListResult.class);
-        String json = mapper.writeValueAsString(r);
+        assertThat(result).isInstanceOf(ListResult.class);
+        String json = mapper.writeValueAsString(result);
         assertThat(json).contains("\"data\":[]");
     }
 
     @Test
     void result_okList_withList_serializesElements() throws Exception {
-        ListResult<String> r = Result.okList(List.of("x", "y"));
+        ListResult<String> result = Result.okList(List.of("x", "y"));
 
-        String json = mapper.writeValueAsString(r);
+        String json = mapper.writeValueAsString(result);
         assertThat(json).contains("\"data\":[\"x\",\"y\"]");
     }
 

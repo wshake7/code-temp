@@ -18,10 +18,12 @@ public class SysUserService {
 
     private final SysUserRepository sysUserRepository;
 
+    /** 根据主键查询用户；找不到返回 {@code null}。 */
     public SysUser findById(Long id) {
         return sysUserRepository.findById(id);
     }
 
+    /** 根据用户名查询用户；找不到返回 {@code null}。 */
     public SysUser findByUsername(String username) {
         return sysUserRepository.findByUsername(username);
     }

@@ -42,6 +42,7 @@ public class FlywayMigrator implements ApplicationRunner {
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
+    /** 启动时根据 profile 选择迁移目录并执行 Flyway migrate。 */
     @Override
     public void run(ApplicationArguments args) {
         String location = "dev".equals(activeProfile) ? "classpath:db/migration" : "classpath:db/migration-prod";

@@ -18,6 +18,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SaTokenConfig {
 
+    private SaTokenConfig() {}
+
     /**
      * 当前登录用户 id 取值（用于 Logback MDC）。
      */

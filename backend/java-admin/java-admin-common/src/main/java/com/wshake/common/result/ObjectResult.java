@@ -26,10 +26,10 @@ public class ObjectResult<T> extends Result<T> {
     /** 构造成功响应；{@code data} 为 null 时回退为空 Map（序列化为 <code>{}</code>）。 */
     @SuppressWarnings("unchecked")
     public static <T> ObjectResult<T> of(T data) {
-        ObjectResult<T> r = new ObjectResult<>();
-        r.setCode(ResultCode.SUCCESS.getCode());
-        r.setMsg(ResultCode.SUCCESS.getMsg());
-        r.setData(data != null ? data : (T) Collections.emptyMap());
-        return r;
+        ObjectResult<T> result = new ObjectResult<>();
+        result.setCode(ResultCode.SUCCESS.getCode());
+        result.setMsg(ResultCode.SUCCESS.getMsg());
+        result.setData(data != null ? data : (T) Collections.emptyMap());
+        return result;
     }
 }

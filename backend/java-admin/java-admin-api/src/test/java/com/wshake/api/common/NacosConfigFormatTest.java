@@ -119,11 +119,11 @@ class NacosConfigFormatTest {
      * 从 module 根（cwd）读文件。api 模块的测试运行 cwd = backend/java-admin/java-admin-api。
      */
     private String readFile(String path) throws IOException {
-        File f = new File(path);
-        assertThat(f)
+        File file = new File(path);
+        assertThat(file)
                 .as("file " + path + " (cwd=" + new File(".").getAbsolutePath() + ")")
                 .exists();
-        try (InputStream in = new FileInputStream(f)) {
+        try (InputStream in = new FileInputStream(file)) {
             try (Scanner s = new Scanner(in, StandardCharsets.UTF_8)) {
                 return s.useDelimiter("\\A").hasNext() ? s.next() : "";
             }

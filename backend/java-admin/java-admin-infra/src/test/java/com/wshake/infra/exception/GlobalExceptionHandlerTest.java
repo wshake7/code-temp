@@ -23,9 +23,9 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleBiz_returnsCorrectCodeAndStatus() {
-        BizException e = new BizException(4001, "用户已存在");
+        BizException ex = new BizException(4001, "用户已存在");
 
-        ResponseEntity<Result<Object>> resp = handler.handleBiz(e);
+        ResponseEntity<Result<Object>> resp = handler.handleBiz(ex);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(resp.getBody()).isNotNull();

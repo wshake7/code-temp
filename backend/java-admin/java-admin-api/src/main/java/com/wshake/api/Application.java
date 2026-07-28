@@ -15,6 +15,8 @@ import org.springframework.context.annotation.ComponentScan;
 @ComponentScan(basePackages = {"com.wshake.api", "com.wshake.infra", "com.wshake.service", "com.wshake.common"})
 public class Application {
 
+    private Application() {}
+
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }

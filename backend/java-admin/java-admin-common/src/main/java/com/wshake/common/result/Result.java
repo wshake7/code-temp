@@ -96,8 +96,9 @@ public class Result<T> {
         return new Result<>(code.getCode(), msg, null);
     }
 
+    /** 判断当前响应是否为成功响应（code == ResultCode.SUCCESS.getCode()）。 */
     @JsonIgnore
-    public boolean isSuccess() {
+    public final boolean isSuccess() {
         return this.code == ResultCode.SUCCESS.getCode();
     }
 }

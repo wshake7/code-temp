@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Redisson / Flyway / Jackson / Sa-Token 启动失败回归测试。
@@ -28,6 +30,8 @@ import org.junit.jupiter.api.Test;
  * @author wshake
  */
 class RedissonAutoconfigCheckTest {
+
+    private static final Logger log = LoggerFactory.getLogger(RedissonAutoconfigCheckTest.class);
 
     private static final String API_DIR = "../java-admin-api";
     private static final String INFRA_DIR = ".";
@@ -76,9 +80,9 @@ class RedissonAutoconfigCheckTest {
         // 此处不抛 AssertionError，仅打印信息以辅助调试。
         boolean hasV2Exclude = content.contains("RedissonAutoConfigurationV2");
         if (hasV2Exclude) {
-            System.out.println("[INFO] V2 exclude present in application.yml");
+            log.info("[INFO] V2 exclude present in application.yml");
         } else {
-            System.out.println("[INFO] V2 exclude NOT in application.yml; relying on auto-config compat");
+            log.info("[INFO] V2 exclude NOT in application.yml; relying on auto-config compat");
         }
     }
 
@@ -100,9 +104,9 @@ class RedissonAutoconfigCheckTest {
     @Test
     void flywayMigrator_classExists() {
         // Flyway 自动装配不触发，必须有 FlywayMigrator 手工跑迁移
-        File f = new File(INFRA_DIR + "/src/main/java/com/wshake/infra/config/FlywayMigrator.java");
-        assertThat(f)
-                .as("FlywayMigrator.java must exist at %s (manual Flyway runner for SB 4)", f.getAbsolutePath())
+        File file = new File(INFRA_DIR + "/src/main/java/com/wshake/infra/config/FlywayMigrator.java");
+        assertThat(file)
+                .as("FlywayMigrator.java must exist at %s (manual Flyway runner for SB 4)", file.getAbsolutePath())
                 .exists();
     }
 
@@ -132,11 +136,11 @@ class RedissonAutoconfigCheckTest {
      * 从 module 根（cwd）读文件。infra 模块的测试运行 cwd = backend/java-admin/java-admin-infra。
      */
     private String readFile(String path) throws IOException {
-        File f = new File(path);
-        assertThat(f)
+        File file = new File(path);
+        assertThat(file)
                 .as("file " + path + " (cwd=" + new File(".").getAbsolutePath() + ")")
                 .exists();
-        try (InputStream in = new FileInputStream(f)) {
+        try (InputStream in = new FileInputStream(file)) {
             try (Scanner s = new Scanner(in, StandardCharsets.UTF_8)) {
                 return s.useDelimiter("\\A").hasNext() ? s.next() : "";
             }

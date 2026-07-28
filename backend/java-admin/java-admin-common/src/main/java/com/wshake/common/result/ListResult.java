@@ -23,10 +23,10 @@ public class ListResult<T> extends Result<List<T>> {
 
     /** 构造成功响应；{@code data} 为 null 时回退为空 List（序列化为 <code>[]</code>）。 */
     public static <T> ListResult<T> of(List<T> data) {
-        ListResult<T> r = new ListResult<>();
-        r.setCode(ResultCode.SUCCESS.getCode());
-        r.setMsg(ResultCode.SUCCESS.getMsg());
-        r.setData(data != null ? data : Collections.emptyList());
-        return r;
+        ListResult<T> result = new ListResult<>();
+        result.setCode(ResultCode.SUCCESS.getCode());
+        result.setMsg(ResultCode.SUCCESS.getMsg());
+        result.setData(data != null ? data : Collections.emptyList());
+        return result;
     }
 }
