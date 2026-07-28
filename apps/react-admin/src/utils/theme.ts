@@ -257,14 +257,14 @@ export function applyTheme(colors: Record<string, string>) {
 /**
  * 切换暗黑模式
  *
+ * 同步 html.dark 与 color-scheme，供 light-dark()（如 ALTCHA）解析暗色 token。
+ *
  * @param isDark 是否启用暗黑模式
  */
 export function toggleDarkMode(isDark: boolean) {
-  if (isDark) {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
+  const root = document.documentElement;
+  root.classList.toggle("dark", isDark);
+  root.style.colorScheme = isDark ? "dark" : "light";
 }
 
 /**

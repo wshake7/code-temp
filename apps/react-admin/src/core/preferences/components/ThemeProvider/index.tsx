@@ -66,27 +66,34 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     };
   }, [effectiveMode, appPrefs.compact, themePrefs]);
 
-  // 4. 同步根背景色和文本颜色（解决暗黑模式白色闪烁）
+  // 4. 同步根背景色、文本颜色、color-scheme 与 .dark
+  // color-scheme 供 light-dark()（如 ALTCHA）解析暗色 token；.dark 对齐 Vue 与现有 .dark 选择器
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
+    const isDark = effectiveMode === 'dark';
 
-    const bgLayout = effectiveMode === 'dark' ? '#000000' : '#f5f5f5';
+    const bgLayout = isDark ? '#000000' : '#f5f5f5';
     root.style.backgroundColor = bgLayout;
     body.style.backgroundColor = bgLayout;
 
-    const colorText = effectiveMode === 'dark'
+    const colorText = isDark
       ? 'rgba(255, 255, 255, 0.85)'
       : 'rgba(0, 0, 0, 0.85)';
     root.style.color = colorText;
 
     // 标记主题模式，供 CSS 选择器使用
     root.setAttribute('data-theme', effectiveMode);
+    root.classList.toggle('dark', isDark);
+    // 驱动 CSS light-dark()（ALTCHA 等人机组件依赖此属性）
+    root.style.colorScheme = isDark ? 'dark' : 'light';
 
     return () => {
       root.style.backgroundColor = '';
       body.style.backgroundColor = '';
       root.style.color = '';
+      root.style.colorScheme = '';
+      root.classList.remove('dark');
       root.removeAttribute('data-theme');
     };
   }, [effectiveMode]);
