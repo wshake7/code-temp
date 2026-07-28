@@ -1,0 +1,98 @@
+package com.wshake.infra.security;
+
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.casbin.jcasbin.main.Enforcer;
+import org.springframework.stereotype.Service;
+
+/**
+ * jcasbin 业务封装 Service。
+ *
+ * <p>提供 policy 的增删查与鉴权判断，供业务代码（Controller / Service）调用。
+ * 直接操作 {@link Enforcer}，变更会通过 JDBC Adapter 持久化到 {@code casbin_rule} 表。
+ *
+ * <p>典型用法：
+ * <pre>{@code
+ * // 添加策略：用户 1 可 GET /api/v1/users/*
+ * casbinService.addPolicy("1", "/api/v1/users/*", "GET");
+ *
+ * // 鉴权判断
+ * boolean ok = casbinService.enforce("1", "/api/v1/users/1", "GET");
+ *
+ * // 移除策略
+ * casbinService.removePolicy("1", "/api/v1/users/*", "GET");
+ * }</pre>
+ *
+ * @author wshake
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class CasbinService {
+
+    private final Enforcer enforcer;
+
+    /**
+     * 鉴权判断：sub 能否对 obj 执行 act。
+     *
+     * @param sub 主体（用户 ID 字符串）
+     * @param obj 资源（API 路径，支持 keyMatch2 通配符）
+     * @param act 动作（HTTP 方法）
+     * @return true=允许 false=拒绝
+     */
+    public boolean enforce(String sub, String obj, String act) {
+        return enforcer.enforce(sub, obj, act);
+    }
+
+    /**
+     * 添加策略。
+     *
+     * @param sub 主体
+     * @param obj 资源
+     * @param act 动作
+     * @return true=添加成功（policy 不存在时）false=已存在
+     */
+    public boolean addPolicy(String sub, String obj, String act) {
+        boolean ok = enforcer.addPolicy(sub, obj, act);
+        if (ok) {
+            log.info("[CASBIN] policy added: {} {} {}", sub, obj, act);
+        }
+        return ok;
+    }
+
+    /**
+     * 移除策略。
+     *
+     * @param sub 主体
+     * @param obj 资源
+     * @param act 动作
+     * @return true=移除成功 false=不存在
+     */
+    public boolean removePolicy(String sub, String obj, String act) {
+        boolean ok = enforcer.removePolicy(sub, obj, act);
+        if (ok) {
+            log.info("[CASBIN] policy removed: {} {} {}", sub, obj, act);
+        }
+        return ok;
+    }
+
+    /**
+     * 获取所有策略。
+     *
+     * @return 策略列表，每条为 [sub, obj, act]
+     */
+    public List<List<String>> getPolicy() {
+        return enforcer.getPolicy();
+    }
+
+    /**
+     * 重新从数据库加载 policy。
+     *
+     * <p>当外部直接修改了 {@code casbin_rule} 表时调用，同步内存中的 policy。
+     */
+    public void reloadPolicy() {
+        enforcer.loadPolicy();
+        log.info("[CASBIN] policy reloaded from DB");
+    }
+}

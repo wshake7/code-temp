@@ -58,6 +58,13 @@ sa-token:
   is-read-cookie: false
   is-read-header: true
 
+# jcasbin（授权引擎；JDBC Adapter 连 MySQL casbin_rule 表）
+casbin:
+  model: casbin/model.conf
+  table-name: casbin_rule
+  auto-create-table: false
+  remove-policy-failed: false
+
 # Easy-Query 3.x（SQL-springboot4-starter 适配 SB 4）
 # name-conversion: underlined → entity 字段 userId 自动映射列 user_id
 easy-query:
