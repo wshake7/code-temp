@@ -477,10 +477,25 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 
 ### 17.3 Seed
 
-初始字典见 `backend/db/schema_data.sql`（依赖 `schema.sql` 先建表）：
+初始数据见 `backend/db/schema_data.sql`（依赖 `schema.sql` 先建表；对齐 mock）：
 
-- `sys_platform`：`general` / `react-admin` / `vue-admin`
+**字典**（`utils/mock/dict.ts`）：
+
+- `sys_user_sex`：`0` 男 / `1` 女 / `2` 未知（general）
+- `sys_yes_no`：`Y` 是 / `N` 否（general）
+- `sys_menu_type`：`DIR` / `MENU` / `BUTTON`（general）
+- `sys_notice_type`：`1` 通知 / `2` 公告 / `3` 提醒（general）
 - `sys_switch_status`：按 platform 各一组 enabled/disabled，并带对应 `tag_type`
+- `sys_default_status`：按 platform 各一组 default / not-default，并带对应 `tag_type`
+- `sys_platform`：`general` / `react-admin` / `vue-admin`
+
+**RBAC**（`utils/mock/menu-api.ts` / `user-role.ts`）：
+
+- `sys_api`：对齐 `API_SYNC_MANIFEST`（schema 对 `permission_code` 唯一，冲突项用 path 消歧后缀）
+- `sys_menu`：对齐 `buildSysMenuSeeds`（固定 id + `tree_path`）
+- `sys_role`：`super_admin` / `admin` / `user`
+- `sys_user`：仅 `root`（密码明文 `123456`，BCrypt）
+- 关联：`sys_user_role` / `sys_role_menu` / `sys_role_api` / `sys_menu_api`
 
 ---
 
@@ -490,7 +505,7 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 - 迁移工具集成（仅交付独立 .sql；`schema.sql` + `schema_data.sql` 可独立执行）
 - TTL 归档作业实现
 - Casbin policy 文件（`model.conf` / `policy.csv`）
-- 全量业务 Seed（仅交付字典相关 `schema_data.sql`）
+- 全量业务 Seed 之外的数据（日志 / i18n 翻译文案 / Temporal 任务配置等；`schema_data.sql` 已含字典 + RBAC 最小可登录种子）
 - 数据库 Docker 编排
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

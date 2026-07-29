@@ -279,7 +279,7 @@
 >
 > v10: 软删感知唯一键纳入 `platform` → `UNIQUE(type_id, value, platform, deleted_at)`，允许同类型同 value 在不同平台各有一条活跃行（与 `schema_data.sql` 中 `sys_switch_status` 一致）。
 >
-> 初始 seed 见 `backend/db/schema_data.sql`（`sys_platform` / `sys_switch_status`）。
+> 初始 seed 见 `backend/db/schema_data.sql`：字典 7 类 + RBAC（api/menu/role/root 用户与关联，对齐 mock）。
 
 ---
 
