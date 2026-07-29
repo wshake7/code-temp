@@ -8,6 +8,7 @@
     "antd",
     "antdv",
     "antdv-next",
+    "casbin",
     "commitlint",
     "commitlintrc",
     "DictData",

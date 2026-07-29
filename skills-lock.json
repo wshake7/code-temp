@@ -31,6 +31,12 @@
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "e6359b331464587c59ce6e7f38bae8cea119eab21c46895f901d8ca632252b35"
     },
+    "easy-query-orm": {
+      "source": "wzszsw/easy-query-orm",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "22e78e614b465e29e1286b3f9d933114132b8baf98b4bd8985f79ec20c365413"
+    },
     "git-guardrails-claude-code": {
       "source": "vinvcn/mattpocock-skills-zh-CN",
       "sourceType": "github",
