@@ -341,9 +341,7 @@ export function getMenuApiIds(menuId: number): number[] {
 export function getApiIdsByMenuIds(menuIds: number[]): number[] {
   if (!menuIds.length) return [];
   const menuIdSet = new Set(menuIds);
-  const validApiIds = new Set(
-    mockSysApiList.filter((a) => a.deleted_at === 0).map((a) => a.id),
-  );
+  const validApiIds = new Set(mockSysApiList.filter((a) => a.deleted_at === 0).map((a) => a.id));
   const out: number[] = [];
   const seen = new Set<number>();
   for (const row of mockSysMenuApiList) {
