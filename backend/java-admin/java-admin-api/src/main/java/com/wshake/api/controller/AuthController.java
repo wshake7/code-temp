@@ -112,7 +112,8 @@ public class AuthController {
         if (user == null) {
             throw new BizException(ResultCode.INTERNAL_ERROR, "用户不存在");
         }
-        return Result.ok(new UserInfoVO(
-                user.getId(), user.getUsername(), user.getNickname(), user.getStatus(), user.getCreateTime()));
+        Integer status = user.getIsEnabled() != null && user.getIsEnabled() == 1 ? 1 : 0;
+        return Result.ok(
+                new UserInfoVO(user.getId(), user.getUsername(), user.getNickname(), status, user.getCreatedAt()));
     }
 }

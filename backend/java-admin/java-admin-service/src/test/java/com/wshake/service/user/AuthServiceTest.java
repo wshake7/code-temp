@@ -36,31 +36,22 @@ class AuthServiceTest {
 
     @Test
     void login_withCorrectCredentials_returnsUser() {
-        SysUser user = fixture("admin", "$2a$10$valid", "Admin", 1);
-        when(sysUserRepository.findByUsername("admin")).thenReturn(user);
+        SysUser userWithValidHash = fixture("root", cn.dev33.satoken.secure.BCrypt.hashpw("123456"), "Root", 1);
+        when(sysUserRepository.findByUsername("root")).thenReturn(userWithValidHash);
 
-        // BCrypt checkpw of "admin123" against this hash returns true
-        // (using a real BCrypt hash to avoid mock complexity)
-        // We'll just verify the lookup was performed and other paths below.
-
-        // For a deterministic test, use a hash generated for "admin123"
-        // Hash generated at test time using sa-token BCrypt
-        SysUser userWithValidHash = fixture("admin", cn.dev33.satoken.secure.BCrypt.hashpw("admin123"), "Admin", 1);
-        when(sysUserRepository.findByUsername("admin")).thenReturn(userWithValidHash);
-
-        SysUser result = authService.login("admin", "admin123");
+        SysUser result = authService.login("root", "123456");
 
         assertThat(result).isNotNull();
-        assertThat(result.getUsername()).isEqualTo("admin");
-        verify(sysUserRepository).findByUsername("admin");
+        assertThat(result.getUsername()).isEqualTo("root");
+        verify(sysUserRepository).findByUsername("root");
     }
 
     @Test
     void login_withWrongPassword_throwsAuthInvalidCredentials() {
-        SysUser user = fixture("admin", cn.dev33.satoken.secure.BCrypt.hashpw("admin123"), "Admin", 1);
-        when(sysUserRepository.findByUsername("admin")).thenReturn(user);
+        SysUser user = fixture("root", cn.dev33.satoken.secure.BCrypt.hashpw("123456"), "Root", 1);
+        when(sysUserRepository.findByUsername("root")).thenReturn(user);
 
-        assertThatThrownBy(() -> authService.login("admin", "wrong"))
+        assertThatThrownBy(() -> authService.login("root", "wrong"))
                 .isInstanceOf(AuthException.class)
                 .extracting("code")
                 .isEqualTo(2002);
@@ -80,10 +71,10 @@ class AuthServiceTest {
 
     @Test
     void login_userDisabled_throwsAuthForbidden() {
-        SysUser disabled = fixture("admin", cn.dev33.satoken.secure.BCrypt.hashpw("admin123"), "Admin", 0);
-        when(sysUserRepository.findByUsername("admin")).thenReturn(disabled);
+        SysUser disabled = fixture("root", cn.dev33.satoken.secure.BCrypt.hashpw("123456"), "Root", 0);
+        when(sysUserRepository.findByUsername("root")).thenReturn(disabled);
 
-        assertThatThrownBy(() -> authService.login("admin", "admin123"))
+        assertThatThrownBy(() -> authService.login("root", "123456"))
                 .isInstanceOf(AuthException.class)
                 .extracting("code")
                 .isEqualTo(2004);
@@ -101,7 +92,7 @@ class AuthServiceTest {
 
     @Test
     void login_blankPassword_throwsAuthInvalidCredentialsWithoutRepoCall() {
-        assertThatThrownBy(() -> authService.login("admin", ""))
+        assertThatThrownBy(() -> authService.login("root", ""))
                 .isInstanceOf(AuthException.class)
                 .extracting("code")
                 .isEqualTo(2002);
@@ -109,15 +100,18 @@ class AuthServiceTest {
         verify(sysUserRepository, never()).findByUsername(any());
     }
 
-    private static SysUser fixture(String username, String password, String nickname, int status) {
+    private static SysUser fixture(String username, String passwordHash, String nickname, int isEnabled) {
         SysUser user = new SysUser();
         user.setId(1L);
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPasswordHash(passwordHash);
         user.setNickname(nickname);
-        user.setStatus(status);
-        user.setCreateTime(LocalDateTime.now(ZoneOffset.UTC));
-        user.setUpdateTime(LocalDateTime.now(ZoneOffset.UTC));
+        user.setIsEnabled(isEnabled);
+        user.setDeletedAt(0L);
+        user.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        user.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        user.setCreatedBy(0L);
+        user.setUpdatedBy(0L);
         return user;
     }
 }

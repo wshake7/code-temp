@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
  * 系统用户 Repository。
  *
  * <p>基于 Easy-Query 的 {@link EasyEntityQuery} 实现；不引入 Spring Data 接口。
+ * 软删过滤由 {@code BaseEntity#deletedAt} 上的 {@code @LogicDelete} 自动附加，
+ * 无需在 where 中手写 {@code deleted_at = 0}。
  *
  * @author wshake
  */
@@ -19,7 +21,7 @@ public class SysUserRepository {
     private final EasyEntityQuery easyEntityQuery;
 
     /**
-     * 根据用户名查询用户。
+     * 根据用户名查询未软删用户。
      *
      * @param username 用户名
      * @return 用户实体，未找到返回 {@code null}
@@ -32,7 +34,7 @@ public class SysUserRepository {
     }
 
     /**
-     * 根据 ID 查询用户。
+     * 根据 ID 查询未软删用户。
      *
      * @param id 主键
      * @return 用户实体，未找到返回 {@code null}

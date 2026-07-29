@@ -18,18 +18,18 @@ public class UserInfoVO {
     @Schema(description = "用户 ID", example = "1")
     private Long id;
 
-    @Schema(description = "用户名", example = "admin")
+    @Schema(description = "用户名", example = "root")
     private String username;
 
-    @Schema(description = "昵称", example = "管理员")
+    @Schema(description = "昵称", example = "Root")
     private String nickname;
 
     @Schema(
-            description = "状态:1=启用,0=禁用",
+            description = "状态:1=启用,0=禁用（映射自 is_enabled）",
             example = "1",
             allowableValues = {"0", "1"})
     private Integer status;
 
-    @Schema(description = "创建时间", example = "2026-06-14 12:00:00")
+    @Schema(description = "创建时间（映射自 created_at）", example = "2026-06-14 12:00:00")
     private LocalDateTime createTime;
 }

@@ -41,12 +41,12 @@ public class AuthService {
             throw AuthException.invalidCredentials();
         }
 
-        if (user.getStatus() == null || user.getStatus() != 1) {
+        if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
             log.warn("[AUTH] login failed username={} reason=USER_DISABLED", username);
             throw AuthException.forbidden();
         }
 
-        if (!BCrypt.checkpw(password, user.getPassword())) {
+        if (!BCrypt.checkpw(password, user.getPasswordHash())) {
             log.warn("[AUTH] login failed username={} reason=BAD_PASSWORD", username);
             throw AuthException.invalidCredentials();
         }

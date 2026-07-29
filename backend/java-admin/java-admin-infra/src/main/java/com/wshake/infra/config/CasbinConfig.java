@@ -4,26 +4,32 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.casbin.adapter.JDBCAdapter;
 import org.casbin.jcasbin.main.Enforcer;
 import org.casbin.jcasbin.model.Model;
+import org.flywaydb.core.Flyway;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.io.ClassPathResource;
 
 /**
  * jcasbin Enforcer 配置。
  *
  * <p>使用 JDBC Adapter 连接 MySQL {@code casbin_rule} 表，model 从 classpath 加载。
- * 表结构由 Flyway V1 迁移创建，adapter 不自动建表（{@code autoCreateTable=false}）。
+ * 表结构由 Flyway V1（schema v10）创建，adapter 不自动建表（{@code autoCreateTable=false}）。
+ * dev seed（V2）写入 Root 通配 policy：{@code p, 1, /*, *}。
+ *
+ * <p>{@link Enforcer} 依赖 {@code flyway} Bean，确保 migrate/seed 完成后再 loadPolicy。
  *
  * <p>配置项见 {@link CasbinProperties}（{@code casbin.*} 前缀）。
  *
- * <p>Model 采用 ACL 模型（{@code r = sub, obj, act}），无角色继承。后续如需 RBAC，
- * 可在 model.conf 中加 {@code [role_definition]} 和 {@code g} policy。
+ * <p>Model 采用 ACL（{@code r = sub, obj, act}）+ keyMatch2 路径匹配 + act='*' 方法通配；
+ * 无角色继承 g（本波按用户展开 p 策略）。
  *
  * @author wshake
  */
@@ -37,10 +43,14 @@ public class CasbinConfig {
      * 创建 jcasbin Enforcer Bean。
      *
      * @param dataSource Spring 管理的 DataSource（HikariCP）
+     * @param flyway 已 migrate 的 Flyway（保证 casbin_rule 存在）
      * @return 已加载 policy 的 Enforcer
      */
     @Bean
-    public Enforcer enforcer(DataSource dataSource) {
+    @DependsOn("flyway")
+    public Enforcer enforcer(DataSource dataSource, Flyway flyway) {
+        // flyway 参数 + @DependsOn：保证 migrate/seed 先于 loadPolicy
+        Objects.requireNonNull(flyway, "Flyway bean 未就绪，无法初始化 jcasbin");
         try {
             String modelText = loadClasspathResource(casbinProperties.getModel());
             Model model = new Model();

@@ -14,8 +14,9 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * <p>注册在 {@link com.wshake.infra.config.WebConfig} 中，位于 Sa-Token {@code SaInterceptor} 之后。
  * 每次请求从 Sa-Token 取当前用户 ID，调 {@code enforcer.enforce(userId, path, method)} 判断是否放行。
  *
- * <p>标准 casbin 语义：无匹配 policy 时拒绝（deny-by-default）。首次接入时 {@code casbin_rule} 表为空，
- * 所有受保护接口将返回 403；需手动通过 {@link CasbinService#addPolicy} 添加 policy 后才能访问。
+ * <p>标准 casbin 语义：无匹配 policy 时拒绝（deny-by-default）。
+ * dev seed（Flyway V2）为 Root（userId=1）写入 {@code p, 1, /*, *} 通配策略；
+ * 其他用户须通过角色 API 绑定展开后的 p 策略访问。
  *
  * <p>排除路径：登录接口由 WebConfig 配置排除，不经过本拦截器。
  *

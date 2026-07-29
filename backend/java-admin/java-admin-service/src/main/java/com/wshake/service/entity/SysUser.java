@@ -7,44 +7,54 @@ import com.easy.query.core.proxy.ProxyEntityAvailable;
 import com.wshake.service.entity.proxy.SysUserProxy;
 import java.time.LocalDateTime;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 系统用户实体。
  *
- * <p>对齐 v5 部分约定（{@code backend/db/docs/db-conventions.md}）：
+ * <p>对齐 {@code backend/db} schema v10（{@code backend/db/docs/db-conventions.md}）：
  * <ul>
- *     <li>表名：{@code sys_user}（实际 Flyway 脚本中）</li>
- *     <li>主键：{@code BIGINT UNSIGNED}（DB），{@code Long}（Java）</li>
- *     <li>列名：snake_case</li>
- *     <li>字符集：{@code utf8mb4} / 排序规则：{@code utf8mb4_0900_ai_ci}</li>
- *     <li>引擎：{@code InnoDB}</li>
+ *     <li>表名：{@code sys_user}</li>
+ *     <li>主键：{@code BIGINT UNSIGNED} → {@code Long}</li>
+ *     <li>密码列：{@code password_hash}（禁止回显到 API）</li>
+ *     <li>启停：{@code is_enabled}；软删/审计见 {@link BaseEntity}</li>
  * </ul>
  *
- * <p>本版本<strong>不</strong>加软删 {@code deleted_at}、{@code is_enabled}、7 字段审计（见 PRD Q5 决策）。
- *
- * <p>Easy-Query 3.2.x：{@link ProxyEntityAvailable} 简化为 marker 接口，{@code SysUserProxy}
- * 由 {@code @EntityProxy} + APT（{@code sql-processor}）自动生成。
+ * <p>Easy-Query {@code name-conversion: underlined} 将 camelCase 字段映射为 snake_case 列。
  *
  * @author wshake
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Table("sys_user")
 @EntityProxy
-public class SysUser implements ProxyEntityAvailable<SysUser, SysUserProxy> {
+public class SysUser extends BaseEntity implements ProxyEntityAvailable<SysUser, SysUserProxy> {
 
     @Column(primaryKey = true)
     private Long id;
 
     private String username;
 
-    private String password;
+    /** 密码哈希（bcrypt）；禁止序列化到对外 VO。 */
+    private String passwordHash;
 
     private String nickname;
 
-    /** 0=禁用 1=启用 */
-    private Integer status;
+    private String email;
 
-    private LocalDateTime createTime;
+    private String phone;
 
-    private LocalDateTime updateTime;
+    private String avatar;
+
+    /** 用户默认语言码（软外键 → i18n_locale.code；可为 null）。 */
+    private String languageCode;
+
+    private LocalDateTime lastLoginAt;
+
+    private String lastLoginIp;
+
+    private String remark;
+
+    /** 1=启用 0=禁用（与 deleted_at 构成三态）。 */
+    private Integer isEnabled;
 }
