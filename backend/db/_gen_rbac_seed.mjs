@@ -10,15 +10,10 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "../..");
-const menuApiPath = path.join(
-  root,
-  "apps/backend-mock-template/utils/mock/menu-api.ts",
-);
+const menuApiPath = path.join(root, "apps/backend-mock-template/utils/mock/menu-api.ts");
 const src = fs.readFileSync(menuApiPath, "utf8");
 
-const manifestMatch = src.match(
-  /export const API_SYNC_MANIFEST = \[([\s\S]*?)\] as const;/,
-);
+const manifestMatch = src.match(/export const API_SYNC_MANIFEST = \[([\s\S]*?)\] as const;/);
 if (!manifestMatch) throw new Error("API_SYNC_MANIFEST not found");
 const body = manifestMatch[1];
 const re =
@@ -418,9 +413,7 @@ lines.push(`ALTER TABLE sys_api AUTO_INCREMENT = ${apis.length + 1};`);
 lines.push("");
 
 lines.push("-- ============================================================");
-lines.push(
-  "-- Section 4: sys_menu（对齐 mock buildSysMenuSeeds，固定 id 便于 tree_path / 授权）",
-);
+lines.push("-- Section 4: sys_menu（对齐 mock buildSysMenuSeeds，固定 id 便于 tree_path / 授权）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push(
@@ -455,35 +448,24 @@ lines.push("ALTER TABLE sys_menu AUTO_INCREMENT = 1000;");
 lines.push("");
 
 lines.push("-- ============================================================");
-lines.push(
-  "-- Section 5: sys_role（对齐 mock：super_admin / admin / user）",
-);
+lines.push("-- Section 5: sys_role（对齐 mock：super_admin / admin / user）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push(
   "INSERT INTO sys_role (id, code, name, parent_id, sort, remark, is_enabled, deleted_at, created_by, updated_by)",
 );
 lines.push("VALUES");
-lines.push(
-  "    (1, 'super_admin', '超级管理员', NULL, 1, '系统内置,不可删除', 1, 0, 0, 0),",
-);
-lines.push(
-  "    (2, 'admin', '系统管理员', 1, 10, '可管理用户/角色/字典/国际化', 1, 0, 0, 0),",
-);
-lines.push(
-  "    (3, 'user', '普通用户', 1, 99, '仅看仪表盘', 1, 0, 0, 0);",
-);
+lines.push("    (1, 'super_admin', '超级管理员', NULL, 1, '系统内置,不可删除', 1, 0, 0, 0),");
+lines.push("    (2, 'admin', '系统管理员', 1, 10, '可管理用户/角色/字典/国际化', 1, 0, 0, 0),");
+lines.push("    (3, 'user', '普通用户', 1, 99, '仅看仪表盘', 1, 0, 0, 0);");
 lines.push("");
 lines.push("ALTER TABLE sys_role AUTO_INCREMENT = 100;");
 lines.push("");
 
 // bcrypt of 123456 (bcryptjs cost 10)
-const ROOT_HASH =
-  "$2a$10$mzKVO0J.OxnOhHBO8AgBset0LzVRTLv285BJzaTfxpps1Jx7hrXom";
+const ROOT_HASH = "$2a$10$mzKVO0J.OxnOhHBO8AgBset0LzVRTLv285BJzaTfxpps1Jx7hrXom";
 lines.push("-- ============================================================");
-lines.push(
-  "-- Section 6: sys_user（仅 root；密码明文 123456，BCrypt）",
-);
+lines.push("-- Section 6: sys_user（仅 root；密码明文 123456，BCrypt）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push(
@@ -508,18 +490,11 @@ const dashboard = [100, 101, 102];
 const logBranch = [300, 301, 302];
 const taskBranch = [400, 401, 402];
 const systemFull = [
-  200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206,
-  2061,
+  200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206, 2061,
 ];
-const systemPartial = [
-  200, 201, 2011, 2012, 2013, 202, 2021, 203, 204,
-];
-const superMenus = [
-  ...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemFull]),
-];
-const adminMenus = [
-  ...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemPartial]),
-];
+const systemPartial = [200, 201, 2011, 2012, 2013, 202, 2021, 203, 204];
+const superMenus = [...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemFull])];
+const adminMenus = [...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemPartial])];
 const userMenus = [...dashboard];
 
 lines.push("-- ============================================================");
@@ -543,8 +518,7 @@ const ra = [];
 for (const a of apis) ra.push(`    (1, ${a.id})`);
 for (const a of apis) {
   const p = a.path;
-  const isUser =
-    p === "/api/system/user" || p.startsWith("/api/system/user/");
+  const isUser = p === "/api/system/user" || p.startsWith("/api/system/user/");
   const isLoginLog = p === "/api/system/login-log/list";
   const isApiLog = p === "/api/system/api-log/list";
   const isTask =
@@ -572,9 +546,7 @@ const binds = [
   [401, "GET", "/api/system/task-config/list"],
   [402, "GET", "/api/system/task-execution/list"],
 ];
-const byKey = new Map(
-  apis.map((a) => [`${a.method.toUpperCase()} ${a.path}`, a.id]),
-);
+const byKey = new Map(apis.map((a) => [`${a.method.toUpperCase()} ${a.path}`, a.id]));
 lines.push("-- ============================================================");
 lines.push("-- Section 10: sys_menu_api（菜单-接口快捷绑定）");
 lines.push("-- ============================================================");
@@ -614,9 +586,7 @@ console.log(
       role_menu: rm.length,
       role_api: ra.length,
       menu_api: ma.length,
-      disambiguated: apis.filter(
-        (a) => a.seedPermissionCode !== a.permissionCode,
-      ).length,
+      disambiguated: apis.filter((a) => a.seedPermissionCode !== a.permissionCode).length,
       out: schemaDataPath,
     },
     null,
