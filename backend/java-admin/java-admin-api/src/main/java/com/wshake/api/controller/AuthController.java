@@ -8,6 +8,8 @@ import com.wshake.common.exception.AuthException;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
+import com.wshake.service.auth.LoginClientMeta;
+import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.user.AuthService;
 import com.wshake.service.user.SysUserService;
@@ -19,7 +21,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,14 +33,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 鉴权 Controller。
+ * 鉴权 Controller（路径前缀 {@code /api/auth}，无 v1）。
  *
  * @author wshake
  */
 @Slf4j
-@Tag(name = "鉴权", description = "登录、登出、当前用户信息")
+@Tag(name = "鉴权", description = "登录、登出、当前用户信息与权限码")
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -48,8 +52,8 @@ public class AuthController {
      */
     @PostMapping("/login")
     @Operation(
-            summary = "账号密码登录",
-            description = "Sa-Token 签发;前端把 token 写入后续请求 satoken header 或 Authorization: Bearer <token>")
+            summary = "账号密码 + ALTCHA 登录",
+            description = "校验 ALTCHA 与凭证后签发 Sa-Token；data.accessToken 供后续 Authorization: Bearer")
     @ApiResponses(
             value = {
                 @ApiResponse(responseCode = "200", description = "登录成功"),
@@ -60,14 +64,22 @@ public class AuthController {
                 @ApiResponse(
                         responseCode = "401",
                         description = "凭证错误(code=2002)",
+                        content = @Content(schema = @Schema(implementation = Result.class))),
+                @ApiResponse(
+                        responseCode = "403",
+                        description = "ALTCHA 失败或账号禁用(code=2004)",
                         content = @Content(schema = @Schema(implementation = Result.class)))
             })
     public Result<LoginResponse> login(
-            @Parameter(description = "登录请求体", required = true) @Valid @RequestBody LoginRequest req) {
-        SysUser user = authService.login(req.getUsername(), req.getPassword());
+            @Parameter(description = "登录请求体", required = true) @Valid @RequestBody LoginRequest req,
+            HttpServletRequest request) {
+        LoginClientMeta meta = new LoginClientMeta(clientIp(request), userAgent(request));
+        LoginResult result = authService.login(req.getUsername(), req.getPassword(), req.getAltcha(), meta);
+        SysUser user = result.user();
         StpUtil.login(user.getId());
         String token = StpUtil.getTokenValue();
-        return Result.ok(new LoginResponse(token, user.getId(), user.getUsername(), user.getNickname()));
+        return Result.ok(new LoginResponse(
+                token, user.getId(), user.getUsername(), user.getNickname(), result.roles(), result.homePath()));
     }
 
     /**
@@ -85,7 +97,9 @@ public class AuthController {
                         content = @Content(schema = @Schema(implementation = Result.class)))
             })
     public Result<Void> logout() {
-        StpUtil.logout();
+        if (StpUtil.isLogin()) {
+            StpUtil.logout();
+        }
         return Result.ok();
     }
 
@@ -112,8 +126,44 @@ public class AuthController {
         if (user == null) {
             throw new BizException(ResultCode.INTERNAL_ERROR, "用户不存在");
         }
-        Integer status = user.getIsEnabled() != null && user.getIsEnabled() == 1 ? 1 : 0;
-        return Result.ok(
-                new UserInfoVO(user.getId(), user.getUsername(), user.getNickname(), status, user.getCreatedAt()));
+        LoginResult summary = authService.toUserSummary(user);
+        return Result.ok(new UserInfoVO(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                summary.roles(),
+                summary.homePath(),
+                user.getAvatar()));
+    }
+
+    /**
+     * 当前用户按钮权限码。
+     */
+    @GetMapping("/codes")
+    @Operation(summary = "当前用户权限码", description = "BUTTON.permission_code 列表，供前端按钮鉴权")
+    @SecurityRequirement(name = "bearerAuth")
+    public Result<List<String>> codes() {
+        if (!StpUtil.isLogin()) {
+            throw AuthException.notLogin();
+        }
+        Long userId = StpUtil.getLoginIdAsLong();
+        return Result.ok(authService.listAccessCodes(userId));
+    }
+
+    private static String clientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
+    }
+
+    private static String userAgent(HttpServletRequest request) {
+        String ua = request.getHeader("User-Agent");
+        return ua == null ? "" : ua;
     }
 }

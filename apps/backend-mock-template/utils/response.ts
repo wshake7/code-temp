@@ -2,12 +2,14 @@ import type { EventHandlerRequest, H3Event } from "h3";
 
 import { setResponseStatus } from "h3";
 
+/**
+ * 统一成功响应：与 java-admin {@code Result} 对齐 — {@code code/msg/data}。
+ */
 export function useResponseSuccess<T = any>(data: T) {
   return {
     code: 0,
+    msg: "ok",
     data,
-    error: null,
-    message: "ok",
   };
 }
 
@@ -20,20 +22,43 @@ export function usePageResponseSuccess<T = any>(
   const pageData = pagination(Number.parseInt(`${page}`), Number.parseInt(`${pageSize}`), list);
 
   return {
-    ...useResponseSuccess({
+    code: 0,
+    msg: message,
+    data: {
       items: pageData,
       total: list.length,
-    }),
-    message,
+    },
   };
 }
 
-export function useResponseError(message: string, error: any = null) {
+/**
+ * 统一错误响应：{@code { code, msg, data: null }}。
+ *
+ * <p>兼容两种调用：
+ * <ul>
+ *   <li>{@code useResponseError("详情")} 或 {@code useResponseError("详情", 2002)}</li>
+ *   <li>旧式 {@code useResponseError("BadRequest", "详情")} — 取第二参字符串为 msg</li>
+ * </ul>
+ */
+export function useResponseError(msgOrType: string, detailOrCode: string | number | null = null) {
+  if (typeof detailOrCode === "number") {
+    return {
+      code: detailOrCode,
+      msg: msgOrType,
+      data: null,
+    };
+  }
+  if (typeof detailOrCode === "string" && detailOrCode) {
+    return {
+      code: -1,
+      msg: detailOrCode,
+      data: null,
+    };
+  }
   return {
     code: -1,
+    msg: msgOrType,
     data: null,
-    error,
-    message,
   };
 }
 
@@ -42,12 +67,12 @@ export function forbiddenResponse(
   message = "Forbidden Exception",
 ) {
   setResponseStatus(event, 403);
-  return useResponseError(message, message);
+  return useResponseError(message, 2004);
 }
 
 export function unAuthorizedResponse(event: H3Event<EventHandlerRequest>) {
   setResponseStatus(event, 401);
-  return useResponseError("Unauthorized Exception", "Unauthorized Exception");
+  return useResponseError("Unauthorized Exception", 2001);
 }
 
 export function sleep(ms: number) {

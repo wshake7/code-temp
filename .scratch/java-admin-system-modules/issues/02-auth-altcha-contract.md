@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 — Schema v10 + Root seed + Casbin 通配
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `/api/auth/login|logout|info|codes` 与 ALTCHA challenge 可用；登录 data 含 accessToken 与用户摘要
-- [ ] 使用 altcha-lib-java 校验；失败拒绝登录
-- [ ] 登录成功/失败写 sys_login_log
-- [ ] Sa-Token + Casbin 对受保护路径生效；Root 通配不被 403
-- [ ] 三端 request/auth 适配 code/msg/data 与 accessToken；mock 路径/形状对齐
-- [ ] HTTP 与 AuthService 级测试覆盖主成功/失败路径
+- [x] `/api/auth/login|logout|info|codes` 与 ALTCHA challenge 可用；登录 data 含 accessToken 与用户摘要
+- [x] 使用 altcha-lib-java 校验；失败拒绝登录
+- [x] 登录成功/失败写 sys_login_log
+- [x] Sa-Token + Casbin 对受保护路径生效；Root 通配不被 403
+- [x] 三端 request/auth 适配 code/msg/data 与 accessToken；mock 路径/形状对齐
+- [x] HTTP 与 AuthService 级测试覆盖主成功/失败路径

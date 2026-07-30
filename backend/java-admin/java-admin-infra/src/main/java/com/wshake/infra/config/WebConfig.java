@@ -1,6 +1,7 @@
 package com.wshake.infra.config;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
+import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.infra.security.CasbinInterceptor;
 import org.casbin.jcasbin.main.Enforcer;
 import org.springframework.context.annotation.Configuration;
@@ -27,23 +28,17 @@ public final class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 1. Sa-Token 认证拦截器（注解式鉴权 + 登录校验）
-        registry.addInterceptor(new SaInterceptor())
-                .addPathPatterns("/**")
-                .excludePathPatterns(
-                        "/api/v1/auth/login",
-                        "/doc.html",
-                        "/doc.html/**",
-                        "/swagger-ui/**",
-                        "/v3/api-docs/**",
-                        "/favicon.ico",
-                        "/error");
+        // 1. Sa-Token 认证拦截器：非排除路径强制登录
+        registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/auth/login", "/api/altcha/challenge");
 
         // 2. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
         registry.addInterceptor(new CasbinInterceptor(casbinEnforcer))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/v1/auth/login",
+                        "/api/auth/login",
+                        "/api/altcha/challenge",
                         "/doc.html",
                         "/doc.html/**",
                         "/swagger-ui/**",

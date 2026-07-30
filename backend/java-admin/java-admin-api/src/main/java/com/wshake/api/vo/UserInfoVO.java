@@ -1,16 +1,18 @@
 package com.wshake.api.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * 用户信息 VO（{@code /api/v1/auth/info} 响应）。
+ * 当前用户信息 VO（与前端 UserInfo 对齐）。
  *
  * @author wshake
  */
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "当前登录用户信息")
 public class UserInfoVO {
@@ -21,15 +23,15 @@ public class UserInfoVO {
     @Schema(description = "用户名", example = "root")
     private String username;
 
-    @Schema(description = "昵称", example = "Root")
-    private String nickname;
+    @Schema(description = "展示名（昵称）", example = "Root")
+    private String realName;
 
-    @Schema(
-            description = "状态:1=启用,0=禁用（映射自 is_enabled）",
-            example = "1",
-            allowableValues = {"0", "1"})
-    private Integer status;
+    @Schema(description = "角色编码列表")
+    private List<String> roles;
 
-    @Schema(description = "创建时间（映射自 created_at）", example = "2026-06-14 12:00:00")
-    private LocalDateTime createTime;
+    @Schema(description = "默认首页路径", example = "/analytics")
+    private String homePath;
+
+    @Schema(description = "头像 URL")
+    private String avatar;
 }

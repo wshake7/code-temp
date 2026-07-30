@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
       userAgent,
     });
     setResponseStatus(event, 400);
-    return useResponseError("BadRequestException", "Username and password are required");
+    return useResponseError("Username and password are required", 1001);
   }
 
   // ALTCHA PoW 人机校验：未通过直接拒绝，不计入账号密码失败日志。
@@ -59,11 +59,13 @@ export default defineEventHandler(async (event) => {
       username,
       success: 0,
       reason: "Username or password is incorrect.",
-      statusCode: 403,
+      statusCode: 401,
       loginIp,
       userAgent,
     });
-    return forbiddenResponse(event, "Username or password is incorrect.");
+    setResponseStatus(event, 401);
+    // 与 java-admin AUTH_INVALID_CREDENTIALS(2002) 对齐
+    return useResponseError("Username or password is incorrect.", 2002);
   }
 
   appendLoginLog({

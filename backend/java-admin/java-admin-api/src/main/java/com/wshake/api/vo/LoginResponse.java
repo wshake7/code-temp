@@ -1,31 +1,37 @@
 package com.wshake.api.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * 登录响应 VO。
+ * 登录响应 VO（字段名与前端契约对齐：accessToken + 用户摘要）。
  *
  * @author wshake
  */
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "登录成功响应")
 public class LoginResponse {
 
-    /** Sa-Token token 值（前端写入 satoken 请求头）。 */
-    @Schema(
-            description = "Sa-Token token 值;前端写入请求头 satoken 或 Authorization: Bearer <token>",
-            example = "9c8a7b6e-1234-5678-90ab-cdef12345678")
-    private String token;
+    @Schema(description = "访问令牌（Sa-Token）；前端写入 Authorization: Bearer <token>")
+    private String accessToken;
 
     @Schema(description = "用户 ID", example = "1")
-    private Long userId;
+    private Long id;
 
-    @Schema(description = "用户名", example = "admin")
+    @Schema(description = "用户名", example = "root")
     private String username;
 
-    @Schema(description = "昵称", example = "管理员")
-    private String nickname;
+    @Schema(description = "展示名（昵称）", example = "Root")
+    private String realName;
+
+    @Schema(description = "角色编码列表")
+    private List<String> roles;
+
+    @Schema(description = "默认首页路径", example = "/analytics")
+    private String homePath;
 }

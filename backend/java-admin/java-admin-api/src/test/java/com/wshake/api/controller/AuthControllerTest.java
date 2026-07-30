@@ -1,0 +1,150 @@
+package com.wshake.api.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
+import cn.dev33.satoken.stp.StpUtil;
+import com.wshake.api.dto.LoginRequest;
+import com.wshake.api.vo.LoginResponse;
+import com.wshake.api.vo.UserInfoVO;
+import com.wshake.common.exception.AuthException;
+import com.wshake.common.result.Result;
+import com.wshake.service.auth.LoginClientMeta;
+import com.wshake.service.auth.LoginResult;
+import com.wshake.service.entity.SysUser;
+import com.wshake.service.user.AuthService;
+import com.wshake.service.user.SysUserService;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+/**
+ * {@link AuthController} 行为测试（standalone，不启 Spring 容器）。
+ *
+ * <p>验证登录成功响应含 accessToken、失败透传 AuthException。
+ *
+ * @author wshake
+ */
+class AuthControllerTest {
+
+    private final AuthService authService = mock(AuthService.class);
+    private final SysUserService sysUserService = mock(SysUserService.class);
+    private final AuthController controller = new AuthController(authService, sysUserService);
+    private final HttpServletRequest request = mock(HttpServletRequest.class);
+
+    @Test
+    void login_success_returnsAccessTokenAndUserSummary() {
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setUsername("root");
+        user.setNickname("Root");
+        when(authService.login(eq("root"), eq("123456"), eq("altcha-ok"), any(LoginClientMeta.class)))
+                .thenReturn(new LoginResult(user, List.of("super_admin"), "/analytics"));
+        when(request.getRemoteAddr()).thenReturn("10.0.0.1");
+        when(request.getHeader("User-Agent")).thenReturn("JUnit");
+
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(() -> StpUtil.login(1L)).thenAnswer(inv -> null);
+            stp.when(StpUtil::getTokenValue).thenReturn("token-abc");
+
+            Result<LoginResponse> result = controller.login(loginReq("root", "123456", "altcha-ok"), request);
+
+            assertThat(result.getCode()).isEqualTo(0);
+            assertThat(result.getData().getAccessToken()).isEqualTo("token-abc");
+            assertThat(result.getData().getId()).isEqualTo(1L);
+            assertThat(result.getData().getUsername()).isEqualTo("root");
+            assertThat(result.getData().getRealName()).isEqualTo("Root");
+            assertThat(result.getData().getRoles()).containsExactly("super_admin");
+            assertThat(result.getData().getHomePath()).isEqualTo("/analytics");
+            stp.verify(() -> StpUtil.login(1L));
+        }
+    }
+
+    @Test
+    void login_invalidCredentials_propagatesAuthException() {
+        when(authService.login(eq("root"), eq("bad"), eq("altcha-ok"), any(LoginClientMeta.class)))
+                .thenThrow(AuthException.invalidCredentials());
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+
+        try {
+            controller.login(loginReq("root", "bad", "altcha-ok"), request);
+            throw new AssertionError("expected AuthException");
+        } catch (AuthException ex) {
+            assertThat(ex.getCode()).isEqualTo(2002);
+        }
+    }
+
+    @Test
+    void codes_whenLogin_returnsCodesFromService() {
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(StpUtil::isLogin).thenReturn(true);
+            stp.when(StpUtil::getLoginIdAsLong).thenReturn(1L);
+            when(authService.listAccessCodes(1L)).thenReturn(List.of("system:user:list", "system:role:list"));
+
+            Result<List<String>> result = controller.codes();
+
+            assertThat(result.getCode()).isEqualTo(0);
+            assertThat(result.getData()).containsExactly("system:user:list", "system:role:list");
+        }
+    }
+
+    @Test
+    void info_whenLogin_returnsUserInfo() {
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setUsername("root");
+        user.setNickname("Root");
+        user.setAvatar("");
+        when(sysUserService.findById(1L)).thenReturn(user);
+        when(authService.toUserSummary(user)).thenReturn(new LoginResult(user, List.of("super_admin"), "/analytics"));
+
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(StpUtil::isLogin).thenReturn(true);
+            stp.when(StpUtil::getLoginIdAsLong).thenReturn(1L);
+
+            Result<UserInfoVO> result = controller.info();
+
+            assertThat(result.getData().getUsername()).isEqualTo("root");
+            assertThat(result.getData().getRealName()).isEqualTo("Root");
+            assertThat(result.getData().getRoles()).containsExactly("super_admin");
+        }
+    }
+
+    @Test
+    void logout_whenLogin_callsStpLogout() {
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(StpUtil::isLogin).thenReturn(true);
+            stp.when(StpUtil::logout).thenAnswer(inv -> null);
+
+            Result<Void> result = controller.logout();
+
+            assertThat(result.getCode()).isEqualTo(0);
+            stp.verify(StpUtil::logout);
+        }
+    }
+
+    @Test
+    void logout_whenNotLogin_stillOk() {
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(StpUtil::isLogin).thenReturn(false);
+
+            Result<Void> result = controller.logout();
+
+            assertThat(result.getCode()).isEqualTo(0);
+            stp.verify(StpUtil::logout, org.mockito.Mockito.never());
+        }
+    }
+
+    private static LoginRequest loginReq(String username, String password, String altcha) {
+        LoginRequest req = new LoginRequest();
+        req.setUsername(username);
+        req.setPassword(password);
+        req.setAltcha(altcha);
+        return req;
+    }
+}

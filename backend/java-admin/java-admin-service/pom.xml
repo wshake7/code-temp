@@ -44,6 +44,12 @@
             <version>${sa-token.version}</version>
         </dependency>
 
+        <!-- ALTCHA 人机校验 -->
+        <dependency>
+            <groupId>org.altcha</groupId>
+            <artifactId>altcha</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

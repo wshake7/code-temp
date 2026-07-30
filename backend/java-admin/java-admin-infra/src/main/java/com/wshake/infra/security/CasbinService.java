@@ -14,14 +14,14 @@ import org.springframework.stereotype.Service;
  *
  * <p>典型用法：
  * <pre>{@code
- * // 添加策略：用户 1 可 GET /api/v1/users/*
- * casbinService.addPolicy("1", "/api/v1/users/*", "GET");
+ * // 添加策略：用户 1 可 GET /api/system/user/*
+ * casbinService.addPolicy("1", "/api/system/user/*", "GET");
  *
  * // 鉴权判断
- * boolean ok = casbinService.enforce("1", "/api/v1/users/1", "GET");
+ * boolean ok = casbinService.enforce("1", "/api/system/user/1", "GET");
  *
  * // 移除策略
- * casbinService.removePolicy("1", "/api/v1/users/*", "GET");
+ * casbinService.removePolicy("1", "/api/system/user/*", "GET");
  * }</pre>
  *
  * @author wshake

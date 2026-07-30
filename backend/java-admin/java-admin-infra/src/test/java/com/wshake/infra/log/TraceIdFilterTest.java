@@ -25,7 +25,7 @@ class TraceIdFilterTest {
 
     @Test
     void doFilter_generatesTraceIdWhenHeaderMissing() throws ServletException, IOException {
-        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/auth/info");
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/auth/info");
         MockHttpServletResponse resp = new MockHttpServletResponse();
         AtomicReference<String> mdcDuringChain = new AtomicReference<>();
 
@@ -41,7 +41,7 @@ class TraceIdFilterTest {
 
     @Test
     void doFilter_preservesIncomingTraceId() throws ServletException, IOException {
-        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/auth/info");
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/auth/info");
         req.addHeader(TraceIdUtil.HEADER, "test-trace-123");
         MockHttpServletResponse resp = new MockHttpServletResponse();
         AtomicReference<String> mdcDuringChain = new AtomicReference<>();

@@ -78,7 +78,7 @@ export function getErrorMsg(error: unknown) {
     return i18n.t(i18nPrefix + 'error.unknownError');
   }
 
-  const { reason, message, code } = resData;
+  const { reason, msg, message, code } = resData;
 
   // =========================================
   // 1. 优先：reason → request.reason.xxx
@@ -92,14 +92,21 @@ export function getErrorMsg(error: unknown) {
   }
 
   // =========================================
-  // 2. reason 无翻译 → 使用后端 message
+  // 2. java-admin / 新 mock：msg
   // =========================================
-  if (message?.trim()) {
+  if (typeof msg === 'string' && msg.trim()) {
+    return msg.trim();
+  }
+
+  // =========================================
+  // 3. 兼容旧 message
+  // =========================================
+  if (typeof message === 'string' && message.trim()) {
     return message.trim();
   }
 
   // =========================================
-  // 3. 都没有 → 使用 code 查 status
+  // 4. 使用 code 查 status
   // =========================================
   if (code) {
     const statusKey = i18nPrefix + `status.${code}`;
@@ -109,7 +116,7 @@ export function getErrorMsg(error: unknown) {
   }
 
   // =========================================
-  // 4. 全部失败 → 兜底
+  // 5. 全部失败 → 兜底
   // =========================================
   return i18n.t(i18nPrefix + 'error.unknownError', { ns: 'common' });
 }

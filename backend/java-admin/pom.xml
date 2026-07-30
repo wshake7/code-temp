@@ -49,6 +49,9 @@
         <!-- Temporal Java SDK / Spring Boot Starter（2026-07-28 集成；供后续 Workflow 使用） -->
         <temporal.version>1.37.0</temporal.version>
 
+        <!-- ALTCHA 人机校验（官方 Java 库 v2） -->
+        <altcha.version>2.0.3</altcha.version>
+
         <!-- Java 工具链（2026-06-14 集成） -->
         <spotless.version>3.6.0</spotless.version>
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
@@ -210,6 +213,13 @@
                 <groupId>io.temporal</groupId>
                 <artifactId>temporal-spring-boot-starter</artifactId>
                 <version>${temporal.version}</version>
+            </dependency>
+
+            <!-- ALTCHA 官方 Java 库（createChallenge / verifySolution） -->
+            <dependency>
+                <groupId>org.altcha</groupId>
+                <artifactId>altcha</artifactId>
+                <version>${altcha.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

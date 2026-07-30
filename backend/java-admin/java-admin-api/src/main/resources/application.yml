@@ -58,8 +58,10 @@ nacos:
 
 # Sa-Token（Redis 模式：sa-token-redis-template 走 Spring Data Redis + Lettuce）
 # timeout=2592000s=30天；is-share=false 同一账号多端登录各持独立 token
+# token-name=Authorization + token-prefix=Bearer → 与前端/mock 的 Authorization: Bearer <accessToken> 对齐
 sa-token:
-  token-name: satoken
+  token-name: Authorization
+  token-prefix: Bearer
   timeout: 2592000
   active-timeout: -1
   is-concurrent: true
@@ -75,6 +77,12 @@ casbin:
   table-name: casbin_rule
   auto-create-table: false
   remove-policy-failed: false
+
+# ALTCHA 人机校验（与 mock 默认 secret 对齐，便于本地联调）
+altcha:
+  hmac-secret: ${ALTCHA_HMAC_KEY:trellis-demo-altcha-dev-secret}
+  cost: ${ALTCHA_COST:1000}
+  expires-seconds: ${ALTCHA_EXPIRES_SECONDS:600}
 
 # Easy-Query 3.x（SQL-springboot4-starter 适配 SB 4）
 # name-conversion: underlined → entity 字段 userId 自动映射列 user_id

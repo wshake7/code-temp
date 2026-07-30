@@ -156,8 +156,8 @@ class RequestClient {
   /**
    * 响应拦截器：解构响应数据
    * 兼容两种返回形态：
-   *   1) vben 风格包装：`{ code, data, error, message }` → 返回 `data` 字段
-   *   2) 裸数据：直接返回
+   *   1) 统一契约包装：`{ code, msg, data }` → 返回 `data` 字段
+   *   2) 裸数据：直接返回（如 ALTCHA challenge）
    * 非 2xx 响应抛错，包含原始响应体供上层处理
    */
   private useResponseDataInterceptor() {
@@ -172,13 +172,25 @@ class RequestClient {
             'code' in responseData &&
             'data' in responseData
           ) {
-            // vben mock 返回的包装结构
-            const wrapped = responseData as { code: unknown; data: unknown };
+            // java-admin / mock 统一 Result 包装
+            const wrapped = responseData as {
+              code: unknown;
+              data: unknown;
+              msg?: string;
+              message?: string;
+            };
             if (wrapped.code === 0 || wrapped.code === '0') {
               return wrapped.data;
             }
             // code 非 0 视为业务错误
-            throw Object.assign(new Error(String(wrapped.code)), {
+            const errMsg =
+              (typeof wrapped.msg === 'string' && wrapped.msg) ||
+              (typeof wrapped.message === 'string' && wrapped.message) ||
+              String(wrapped.code);
+            throw Object.assign(new Error(errMsg), {
+              code: wrapped.code,
+              msg: wrapped.msg,
+              message: errMsg,
               response: { data: responseData, status },
               __handledByResponseInterceptor: true,
             });

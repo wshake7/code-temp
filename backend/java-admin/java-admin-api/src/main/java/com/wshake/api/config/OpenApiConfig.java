@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * <p>说明:
  * <ul>
  *   <li>title / version / contact 通过 Java bean 注入,yml 不重复(避免 knife4j 4.x yml vs bean 谁覆盖谁的歧义)</li>
- *   <li>{@code bearerAuth} securityScheme 与 Sa-Token 默认 header {@code satoken} 对齐,Knife4j 调试页面输入框自动落到此 header</li>
+ *   <li>{@code bearerAuth} securityScheme 与 Sa-Token {@code Authorization: Bearer} 对齐</li>
  *   <li>{@code @RestControllerAdvice} 的方法要显式加 {@code @Operation} + {@code @ApiResponse},否则不会收录到 OpenAPI</li>
  * </ul>
  *
@@ -41,7 +41,7 @@ public class OpenApiConfig {
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
                                         .in(SecurityScheme.In.HEADER)
-                                        .name("satoken")))
+                                        .name("Authorization")))
                 .externalDocs(
                         new ExternalDocumentation().description("Knife4j 文档页").url("/doc.html"));
     }

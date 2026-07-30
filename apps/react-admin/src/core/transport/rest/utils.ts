@@ -28,7 +28,7 @@ export function defaultIdGenerator(): string {
 
 /**
  * 默认的错误消息提取（不依赖 i18n，纯逻辑 fallback）
- * 按优先级：reason → message → status code → 兜底
+ * 按优先级：msg → message → reason → status code → 兜底
  * 如需 i18n 翻译，通过 RequestClientCallbacks.getErrorMsg 注入
  */
 export function getDefaultErrorMsg(error: unknown): string {
@@ -48,39 +48,48 @@ export function getDefaultErrorMsg(error: unknown): string {
     return 'Request Timeout';
   }
 
-  // 获取后端返回数据
-  const resData =
-    error &&
-    typeof error === 'object' &&
-    'response' in error &&
-    error.response &&
-    typeof error.response === 'object' &&
-    'data' in error.response
-      ? (error.response.data as HttpResponse)
-      : undefined;
+  // 获取后端返回数据（兼容 AxiosError.response.data 与拦截器直接抛出的 body）
+  let resData: HttpResponse | undefined;
+  if (error && typeof error === 'object') {
+    if (
+      'response' in error &&
+      error.response &&
+      typeof error.response === 'object' &&
+      'data' in error.response
+    ) {
+      resData = error.response.data as HttpResponse;
+    } else if ('code' in error || 'msg' in error || 'message' in error) {
+      resData = error as HttpResponse;
+    }
+  }
 
   if (!resData) {
     return 'Unknown Error';
   }
 
-  const { reason, message, code } = resData;
+  const { reason, msg, message, code } = resData;
 
-  // 1. 优先使用 reason
-  if (reason) {
-    return reason;
+  // 1. java-admin / 新 mock：msg
+  if (typeof msg === 'string' && msg.trim()) {
+    return msg.trim();
   }
 
-  // 2. 使用后端 message
-  if (message?.trim()) {
+  // 2. 兼容旧 message
+  if (typeof message === 'string' && message.trim()) {
     return message.trim();
   }
 
-  // 3. 使用 code
-  if (code) {
+  // 3. reason
+  if (reason) {
+    return String(reason);
+  }
+
+  // 4. 使用 code
+  if (code !== undefined && code !== null && code !== 0) {
     return `Error ${code}`;
   }
 
-  // 4. 兜底
+  // 5. 兜底
   return 'Unknown Error';
 }
 

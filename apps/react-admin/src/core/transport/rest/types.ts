@@ -31,9 +31,13 @@ type MakeErrorMessageFn = (message: string, error: AxiosError) => void;
 
 interface HttpResponse {
   code: number;
-  reason: string;
-  message: string;
-  metadata: object;
+  /** 与 java-admin Result.msg 对齐 */
+  msg?: string;
+  /** 兼容旧 mock / 部分错误体 */
+  message?: string;
+  reason?: string;
+  data?: unknown;
+  metadata?: object;
 }
 
 /**
