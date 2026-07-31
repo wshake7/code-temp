@@ -38,7 +38,7 @@ import org.springframework.core.env.Environment;
  * @author wshake
  */
 @Slf4j
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class FlywayMigrator {
 
     /** 创建并立即执行 migrate 的 Flyway Bean。 */

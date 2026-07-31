@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration;
  *
  * @author wshake
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class OpenApiConfig {
 
     /** 构造 OpenAPI 文档元数据（title / version / contact / securityScheme）。 */

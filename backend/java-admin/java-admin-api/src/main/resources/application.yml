@@ -52,6 +52,8 @@ spring:
   # Nacos 启用开关（被 NacosConfigToggleProperties @ConfigurationProperties 绑定）
   # 默认 false：dev profile 不连 Nacos，prod 用 env 变量打开
   # 与 spring.cloud.nacos.config.enabled 同义
+  main:
+    banner-mode: off
 nacos:
   config:
     enabled: ${NACOS_CONFIG_ENABLED:false}
@@ -68,6 +70,7 @@ sa-token:
   is-share: false
   token-style: uuid
   is-log: false
+  is-print: false # 关闭启动 ASCII banner
   is-read-cookie: false
   is-read-header: true
 

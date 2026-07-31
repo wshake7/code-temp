@@ -24,7 +24,8 @@
 --   5. 软删感知唯一: UNIQUE(col, deleted_at) — 0 与非0 视作不同值,天然支持"软删后重建"
 --   6. 关联表（4 张）保留复合 PK + 无软删（解绑 = DELETE 物理删除）
 -- NULL 策略（v5+）:
---   - NOT NULL + DEFAULT '' : VARCHAR/CHAR/TEXT/MEDIUMTEXT 业务字段
+--   - NOT NULL + DEFAULT '' : VARCHAR/CHAR 业务字段
+--   - TEXT/MEDIUMTEXT：MySQL 8.x 禁止 DEFAULT，用 NULL 可空（应用层写空串）
 --   - NULL                  : TIMESTAMP（最后登录/关闭时间等真实未发生）
 --   - NULL                  : JSON（metadata / input_summary / 条件快照等按需填）
 --   - NOT NULL + DEFAULT 0  : BIGINT UNSIGNED 主外键占位（created_by / updated_by;0=系统操作/无用户上下文）
@@ -204,7 +205,8 @@ CREATE TABLE sys_menu (
     updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
     PRIMARY KEY (id),
     INDEX idx_sys_menu_parent_id (parent_id),
-    INDEX idx_sys_menu_tree_path (tree_path),
+    -- utf8mb4 下 InnoDB 索引最长 3072 字节；VARCHAR(1024) 全列=4096，须前缀索引（768*4=3072）
+    INDEX idx_sys_menu_tree_path (tree_path(768)),
     INDEX idx_sys_menu_permission_code (permission_code),
     INDEX idx_sys_menu_type (type),
     INDEX idx_sys_menu_is_enabled (is_enabled),
@@ -493,23 +495,23 @@ CREATE TABLE api_log (
     username        VARCHAR(64)     NOT NULL DEFAULT ''  COMMENT '冗余:请求时刻的用户名(避免 JOIN;未登录请求为空串)',
 
     -- 请求侧
-    request_uri     TEXT            NOT NULL DEFAULT ''  COMMENT '完整 URI(含 query;便于回放)',
-    request_query   TEXT            NOT NULL DEFAULT ('')  COMMENT 'query string',
-    request_body    MEDIUMTEXT      NOT NULL DEFAULT ('')  COMMENT '请求 body(应用层截断 64KB)',
-    request_header  MEDIUMTEXT      NOT NULL DEFAULT ('')  COMMENT '请求头(应用层序列化,敏感字段脱敏后存储)',
+    request_uri     TEXT            NULL  COMMENT '完整 URI(含 query;便于回放)',
+    request_query   TEXT            NULL  COMMENT 'query string',
+    request_body    MEDIUMTEXT      NULL  COMMENT '请求 body(应用层截断 64KB)',
+    request_header  MEDIUMTEXT      NULL  COMMENT '请求头(应用层序列化,敏感字段脱敏后存储)',
     referer         VARCHAR(2048)   NOT NULL DEFAULT ''  COMMENT '来源页',
 
     -- 响应侧 / 变更
-    response        MEDIUMTEXT      NOT NULL DEFAULT ('')  COMMENT '响应 body(应用层截断 64KB)',
-    before_change   MEDIUMTEXT      NOT NULL DEFAULT ('')  COMMENT '操作前数据快照(写操作场景;与应用层 before/after 钩子配合)',
-    after_change    MEDIUMTEXT      NOT NULL DEFAULT ('')  COMMENT '操作后数据快照',
-    format_change   TEXT            NOT NULL DEFAULT ''  COMMENT '格式化变更摘要(人读;如 "name: A→B;status: 0→1")',
+    response        MEDIUMTEXT      NULL  COMMENT '响应 body(应用层截断 64KB)',
+    before_change   MEDIUMTEXT      NULL  COMMENT '操作前数据快照(写操作场景;与应用层 before/after 钩子配合)',
+    after_change    MEDIUMTEXT      NULL  COMMENT '操作后数据快照',
+    format_change   TEXT            NULL  COMMENT '格式化变更摘要(人读;如 "name: A→B;status: 0→1")',
 
     -- 客户端
     client_id       VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '客户端 ID(如 web-admin-vue3 / mobile-app-ios)',
     client_name     VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '客户端名(展示用)',
     client_ip       VARCHAR(64)     NOT NULL DEFAULT ''  COMMENT '客户端 IP(IPv6 兼容;PG 用 64 字符)',
-    user_agent      TEXT            NOT NULL DEFAULT ''  COMMENT 'User Agent(完整;可能很长)',
+    user_agent      TEXT            NULL  COMMENT 'User Agent(完整;可能很长)',
     browser_name    VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '浏览器名(由 UA 解析)',
     browser_version VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '浏览器版本',
     os_name         VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '操作系统名(由 UA 解析)',
@@ -548,21 +550,21 @@ CREATE TABLE api_log_archive (
     sys_user_id     BIGINT UNSIGNED DEFAULT NULL,
     username        VARCHAR(64)     NOT NULL DEFAULT '',
 
-    request_uri     TEXT            NOT NULL DEFAULT '',
-    request_query   TEXT            NOT NULL DEFAULT (''),
-    request_body    MEDIUMTEXT      NOT NULL DEFAULT (''),
-    request_header  MEDIUMTEXT      NOT NULL DEFAULT (''),
+    request_uri     TEXT            NULL,
+    request_query   TEXT            NULL,
+    request_body    MEDIUMTEXT      NULL,
+    request_header  MEDIUMTEXT      NULL,
     referer         VARCHAR(2048)   NOT NULL DEFAULT '',
 
-    response        MEDIUMTEXT      NOT NULL DEFAULT (''),
-    before_change   MEDIUMTEXT      NOT NULL DEFAULT (''),
-    after_change    MEDIUMTEXT      NOT NULL DEFAULT (''),
-    format_change   TEXT            NOT NULL DEFAULT '',
+    response        MEDIUMTEXT      NULL,
+    before_change   MEDIUMTEXT      NULL,
+    after_change    MEDIUMTEXT      NULL,
+    format_change   TEXT            NULL,
 
     client_id       VARCHAR(128)    NOT NULL DEFAULT '',
     client_name     VARCHAR(128)    NOT NULL DEFAULT '',
     client_ip       VARCHAR(64)     NOT NULL DEFAULT '',
-    user_agent      TEXT            NOT NULL DEFAULT '',
+    user_agent      TEXT            NULL,
     browser_name    VARCHAR(128)    NOT NULL DEFAULT '',
     browser_version VARCHAR(128)    NOT NULL DEFAULT '',
     os_name         VARCHAR(128)    NOT NULL DEFAULT '',
@@ -610,7 +612,7 @@ CREATE TABLE sys_login_log (
     login_mac       VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '登录 MAC(若有;CS 场景下多为空)',
     client_id       VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '客户端 ID',
     client_name     VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '客户端名',
-    user_agent      TEXT            NOT NULL DEFAULT ''  COMMENT 'User Agent(完整)',
+    user_agent      TEXT            NULL  COMMENT 'User Agent(完整)',
     browser_name    VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '浏览器名(由 UA 解析)',
     browser_version VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '浏览器版本',
     os_name         VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '操作系统名',
@@ -648,7 +650,7 @@ CREATE TABLE sys_login_log_archive (
     login_mac       VARCHAR(128)    NOT NULL DEFAULT '',
     client_id       VARCHAR(128)    NOT NULL DEFAULT '',
     client_name     VARCHAR(128)    NOT NULL DEFAULT '',
-    user_agent      TEXT            NOT NULL DEFAULT '',
+    user_agent      TEXT            NULL,
     browser_name    VARCHAR(128)    NOT NULL DEFAULT '',
     browser_version VARCHAR(128)    NOT NULL DEFAULT '',
     os_name         VARCHAR(128)    NOT NULL DEFAULT '',

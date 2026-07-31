@@ -17,7 +17,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * @author wshake
  */
-@Configuration
+// final + 无 @Bean 互调：必须用 lite 模式，否则 CGLIB 无法增强 final 类
+@Configuration(proxyBeanMethods = false)
 public final class WebConfig implements WebMvcConfigurer {
 
     private final Enforcer casbinEnforcer;

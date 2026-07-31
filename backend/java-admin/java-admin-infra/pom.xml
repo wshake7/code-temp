@@ -61,6 +61,20 @@
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
         </dependency>
+        <!-- Redisson/Netty 在 macOS 上用本地 DNS 解析；缺省会 WARN 并 fallback 到系统 DNS。
+             版本由 Spring Boot BOM 的 netty.version 管理；双 classifier 覆盖 Apple Silicon + Intel。 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+            <classifier>osx-aarch_64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+            <classifier>osx-x86_64</classifier>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Knife4j -->
         <dependency>

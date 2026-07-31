@@ -33,7 +33,7 @@ import org.springframework.core.io.ClassPathResource;
  *
  * @author wshake
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @RequiredArgsConstructor
 public class CasbinConfig {
 

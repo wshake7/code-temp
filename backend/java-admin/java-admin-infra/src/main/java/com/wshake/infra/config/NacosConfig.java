@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  *
  * @author wshake
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(NacosConfigToggleProperties.class)
 @ConditionalOnProperty(prefix = "nacos.config", name = "enabled", havingValue = "true")
 public class NacosConfig {

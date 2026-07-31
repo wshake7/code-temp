@@ -38,8 +38,8 @@
         <knife4j.version>4.5.0</knife4j.version>
         <mysql.version>9.2.0</mysql.version>
         <lombok.version>1.18.38</lombok.version>
-        <flyway.version>10.20.0</flyway.version>
-        <spring.flayway.verison>4.0.7</spring.flayway.verison>
+        <!-- 10.x/11.x ensureSupported 仅到 MySQL 8.1，连 8.4 会 WARN；12.x 起声明支持到 9.4 -->
+        <flyway.version>12.11.0</flyway.version>
         <spring-cloud-alibaba.version>2025.1.0.0</spring-cloud-alibaba.version>
 
         <!-- jcasbin（授权引擎；2026-07-28 集成） -->
@@ -148,11 +148,11 @@
                 <version>2.2.19</version>
             </dependency>
 
-            <!-- Flyway -->
+            <!-- Flyway（覆盖 SB BOM 的 flyway.version；core/mysql 必须同版本，否则 MySQL 支持矩阵不一致） -->
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-flyway</artifactId>
-                <version>${spring.flayway.verison}</version>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.flywaydb</groupId>

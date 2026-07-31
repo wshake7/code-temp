@@ -10,13 +10,12 @@ import org.springframework.context.annotation.Configuration;
  * {@code javax.servlet.Filter}，与 Spring Boot 4 (Jakarta EE 11) 不兼容。
  * <p>本框架<strong>不</strong>用 {@code SaServletFilter}，仅用 {@code SaInterceptor}
  * （在 {@code WebConfig} 注册）；本类仅保留当前登录用户的工具方法。
+ * <p>使用 {@code proxyBeanMethods = false}，避免 CGLIB 增强失败（见 {@link com.wshake.infra.config.SaTokenConfig}）。
  *
  * @author wshake
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class SaTokenConfigure {
-
-    private SaTokenConfigure() {}
 
     /**
      * 当前登录用户 id；未登录返回 {@code null}。
