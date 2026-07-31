@@ -1,7 +1,7 @@
 # ============================================================
 # java-admin dev 依赖编排
 # 位置：backend/java-admin/deploy/docker-compose.yml
-# 用途：dev 期起 mysql + redis + nacos（java-admin 自身不在 compose）
+# 用途：dev 期起 mysql + redis + nacos + temporal(+ui)（java-admin 自身不在 compose）
 # ============================================================
 services:
   # ----------------------------
@@ -84,7 +84,9 @@ services:
       start_period: 30s
 
   # ----------------------------
-  # Temporal Server（auto-setup，dev 自管存储）
+  # Temporal Server（auto-setup + MySQL 持久化，dev）
+  # 默认 auto-setup 的 DB=cassandra，未设 CASSANDRA_SEEDS 会直接退出；
+  # 此处改为 mysql8，复用本 compose 的 mysql（schema: temporal / temporal_visibility 由 auto-setup 创建）
   # 宿主机端口 4000 段：4723 → 容器 gRPC 7233
   # 启用应用侧连接：TEMPORAL_TARGET=127.0.0.1:4723
   # ----------------------------
@@ -94,15 +96,30 @@ services:
     restart: unless-stopped
     ports:
       - "${TEMPORAL_PORT:-4723}:7233"
+    environment:
+      # 必须显式指定，否则默认 cassandra 并要求 CASSANDRA_SEEDS
+      DB: mysql8
+      DB_PORT: 3306
+      MYSQL_SEEDS: mysql
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:-root}
+      # 监听所有接口；勿把 TEMPORAL_ADDRESS 设为 hostname（会只绑到解析出的单 IP，healthcheck 127.0.0.1 失败）
+      BIND_ON_IP: "0.0.0.0"
+      # 允许 auto-setup 创建/升级 schema
+      SKIP_DB_CREATE: "false"
+      SKIP_DEFAULT_NAMESPACE_CREATION: "false"
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
       - java-admin-net
     healthcheck:
-      # auto-setup 镜像内 tctl/temporal CLI 可用时探测前端；失败则仅依赖 restart 策略
+      # auto-setup 镜像内 temporal CLI 探测 frontend
       test: ["CMD-SHELL", "temporal operator cluster health --address 127.0.0.1:7233 || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 12
-      start_period: 60s
+      start_period: 90s
 
   # ----------------------------
   # Temporal Web UI（默认与 Server 一起起）
