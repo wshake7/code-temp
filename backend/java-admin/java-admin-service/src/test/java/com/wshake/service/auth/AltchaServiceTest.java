@@ -22,7 +22,7 @@ class AltchaServiceTest {
     @BeforeEach
     void setUp() throws Exception {
         altchaService = new AltchaService();
-        setField(altchaService, "hmacSecret", "trellis-demo-altcha-dev-secret");
+        setField(altchaService, "hmacSecret", "altcha-dev-hmac-secret");
         setField(altchaService, "cost", 100);
         setField(altchaService, "expiresSeconds", 600L);
     }

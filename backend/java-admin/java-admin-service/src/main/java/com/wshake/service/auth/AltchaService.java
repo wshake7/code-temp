@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 public class AltchaService {
 
     /** 与 mock 默认一致，便于本地联调；生产通过配置注入。 */
-    @Value("${altcha.hmac-secret:trellis-demo-altcha-dev-secret}")
+    @Value("${altcha.hmac-secret:altcha-dev-hmac-secret}")
     private String hmacSecret;
 
     /** PoW 成本；dev 取 1000，浏览器端秒级可解。 */

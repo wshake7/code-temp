@@ -80,7 +80,7 @@ casbin:
 
 # ALTCHA 人机校验（与 mock 默认 secret 对齐，便于本地联调）
 altcha:
-  hmac-secret: ${ALTCHA_HMAC_KEY:trellis-demo-altcha-dev-secret}
+  hmac-secret: ${ALTCHA_HMAC_KEY:altcha-dev-hmac-secret}
   cost: ${ALTCHA_COST:1000}
   expires-seconds: ${ALTCHA_EXPIRES_SECONDS:600}
 

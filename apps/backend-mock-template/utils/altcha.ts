@@ -15,7 +15,7 @@ import type { Challenge } from "altcha-lib";
  * 开发环境固定一个常量；生产应通过 env 注入且定期轮换。
  * 进程内存会话随进程重启清空，故 challenge 一次性消费也随进程一起重置。
  */
-const ALTCHA_HMAC_SECRET = process.env.ALTCHA_HMAC_KEY ?? "trellis-demo-altcha-dev-secret";
+const ALTCHA_HMAC_SECRET = process.env.ALTCHA_HMAC_KEY ?? "altcha-dev-hmac-secret";
 
 /** PoW 算法与成本（PBKDF2/SHA-256，cost=1000，dev 浏览器端 <0.5s 可解）。
  *  不传 counter → 用默认 keyPrefix="00"（1 字节），客户端暴力匹配 2^8~2^12 量级秒级完成；
