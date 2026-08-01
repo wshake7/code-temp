@@ -264,11 +264,21 @@ export function buildRuntimeMenuTree(
   return strip(roots);
 }
 
+/**
+ * 解析 mock RBAC 用的用户 id。
+ * hybrid 时 java 的 loginId 可能与 mock 种子不一致，故：
+ * 1) 优先按 username 命中 mock 用户；
+ * 2) 仅当传入 userId 在 mock 中真实存在时才采用（避免 java id 误绑）。
+ */
 function resolveUserId(username: string, userId?: number): number | null {
   ensureUserSeeds();
-  if (typeof userId === "number" && Number.isFinite(userId)) return userId;
-  const row = getMockSysUserList().find((u) => u.username === username && u.deleted_at === 0);
-  return row?.id ?? null;
+  const byName = getMockSysUserList().find((u) => u.username === username && u.deleted_at === 0);
+  if (byName) return byName.id;
+  if (typeof userId === "number" && Number.isFinite(userId)) {
+    const byId = getMockSysUserList().find((u) => u.id === userId && u.deleted_at === 0);
+    if (byId) return byId.id;
+  }
+  return null;
 }
 
 /** Collect menu ids granted via user → roles → role_menu. */
