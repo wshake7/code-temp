@@ -4,6 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.common.constant.MdcKeys;
 import com.wshake.infra.security.SaTokenConfigure;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,11 +21,17 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.Errors;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Controller 请求日志切面。
  *
- * <p>记录：method / uri / params / userId / 耗时 / 返回值摘要 / 异常。
+ * <p>记录：method / params / userId / 耗时 / 返回值摘要 / 异常。
+ *
+ * <p>args 序列化时会跳过 Servlet/文件/流等不可 JSON 化参数，并对密码类字段脱敏，
+ * 避免出现 {@code [Ljava.lang.Object;@hash} 或明文口令。
  *
  * @author wshake
  */
@@ -26,7 +41,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RequestLogAspect {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final int MAX_LOG_LENGTH = 500;
+
+    /** 匹配 JSON 中常见敏感字段的字符串值，替换为 "***"。 */
+    private static final Pattern SENSITIVE_JSON_FIELD = Pattern.compile(
+            "(\"(?:password|passwordHash|oldPassword|newPassword|accessToken|refreshToken|token|secret|authorization)\""
+                    + "\\s*:\\s*)\"(?:\\\\.|[^\"\\\\])*\"",
+            Pattern.CASE_INSENSITIVE);
+
+    /** 由 {@link com.wshake.infra.config.JacksonConfig} 注册的全局 Bean 注入。 */
+    private final ObjectMapper objectMapper;
 
     @Pointcut("execution(* com.wshake.api.controller..*(..))")
     public void controllerPointcut() {}
@@ -61,18 +85,83 @@ public class RequestLogAspect {
         }
     }
 
-    private String safeToJson(Object obj) {
+    /**
+     * 将对象安全格式化为日志用 JSON 摘要（包内可见，便于单测）。
+     *
+     * @param obj 可为 null、POJO 或 Controller 方法参数数组
+     * @return 截断且脱敏后的字符串
+     */
+    String safeToJson(Object obj) {
         if (obj == null) {
             return "null";
         }
-        try {
-            String json = objectMapper.writeValueAsString(obj);
-            if (json.length() > 500) {
-                return json.substring(0, 500) + "...(truncated)";
-            }
-            return json;
-        } catch (JsonProcessingException e) {
-            return String.valueOf(obj);
+        if (obj instanceof Object[] arr) {
+            return formatArgs(arr);
         }
+        return truncate(maskSensitive(writeOrFallback(obj)));
+    }
+
+    private String formatArgs(Object[] args) {
+        List<Object> loggable = new ArrayList<>(args.length);
+        for (Object arg : args) {
+            if (arg == null) {
+                loggable.add(null);
+                continue;
+            }
+            if (isSkippableArg(arg)) {
+                continue;
+            }
+            loggable.add(arg);
+        }
+
+        try {
+            return truncate(maskSensitive(objectMapper.writeValueAsString(loggable)));
+        } catch (JsonProcessingException ignored) {
+            StringBuilder sb = new StringBuilder(64).append('[');
+            for (int i = 0; i < loggable.size(); i++) {
+                if (i > 0) {
+                    sb.append(',');
+                }
+                sb.append(writeOrFallback(loggable.get(i)));
+            }
+            sb.append(']');
+            return truncate(maskSensitive(sb.toString()));
+        }
+    }
+
+    /**
+     * Web/IO 等无法（或不该）完整 JSON 序列化的参数，跳过以免拖垮整段 args 日志。
+     */
+    private static boolean isSkippableArg(Object arg) {
+        return arg instanceof ServletRequest
+                || arg instanceof ServletResponse
+                || arg instanceof MultipartFile
+                || arg instanceof BindingResult
+                || arg instanceof Errors
+                || arg instanceof InputStream
+                || arg instanceof OutputStream
+                || arg instanceof Reader
+                || arg instanceof Writer
+                || arg instanceof byte[];
+    }
+
+    private String writeOrFallback(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            // 禁止对数组用 String.valueOf（会得到 [L...;@hash）
+            return "\"<" + obj.getClass().getSimpleName() + ">\"";
+        }
+    }
+
+    private static String maskSensitive(String json) {
+        return SENSITIVE_JSON_FIELD.matcher(json).replaceAll("$1\"***\"");
+    }
+
+    private static String truncate(String json) {
+        if (json.length() > MAX_LOG_LENGTH) {
+            return json.substring(0, MAX_LOG_LENGTH) + "...(truncated)";
+        }
+        return json;
     }
 }
