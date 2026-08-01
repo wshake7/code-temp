@@ -104,3 +104,4 @@ logging:
   level:
     root: INFO
     com.wshake: INFO
+    com.easy.query: WARN
