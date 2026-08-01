@@ -43,7 +43,7 @@ public final class CasbinInterceptor implements HandlerInterceptor {
 
         boolean allowed = enforcer.enforce(sub, obj, act);
         if (!allowed) {
-            log.warn("[CASBIN] denied sub={} obj={} act={} traceId={}", sub, obj, act, org.slf4j.MDC.get("traceId"));
+            log.warn("[CASBIN] denied sub={} obj={} act={}", sub, obj, act);
             throw AuthException.forbidden();
         }
 

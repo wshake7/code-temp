@@ -10,8 +10,5 @@ public final class RedisKeys {
     /** Sa-Token 业务 key 前缀（sa-token-redisson 内部使用） */
     public static final String SA_TOKEN_PREFIX = "satoken:";
 
-    /** traceId MDC key */
-    public static final String MDC_TRACE_ID = "traceId";
-
     private RedisKeys() {}
 }

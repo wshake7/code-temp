@@ -2,7 +2,7 @@ package com.wshake.infra.log;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wshake.common.constant.SecurityConstants;
+import com.wshake.common.constant.MdcKeys;
 import com.wshake.infra.security.SaTokenConfigure;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ public class RequestLogAspect {
 
         Long userId = SaTokenConfigure.currentUserIdOrNull();
         if (userId != null) {
-            MDC.put(SecurityConstants.MDC_USER_ID, String.valueOf(userId));
+            MDC.put(MdcKeys.USER_ID, String.valueOf(userId));
         }
 
         log.info("[REQ] method={} args={}", method, safeToJson(args));
@@ -57,7 +57,7 @@ public class RequestLogAspect {
             log.error("[ERR] method={} cost={}ms", method, cost, t);
             throw t;
         } finally {
-            MDC.remove(SecurityConstants.MDC_USER_ID);
+            MDC.remove(MdcKeys.USER_ID);
         }
     }
 

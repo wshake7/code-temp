@@ -2,7 +2,7 @@ package com.wshake.infra.log;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.wshake.common.constant.RedisKeys;
+import com.wshake.common.constant.MdcKeys;
 import com.wshake.common.util.TraceIdUtil;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
@@ -30,13 +30,13 @@ class TraceIdFilterTest {
         AtomicReference<String> mdcDuringChain = new AtomicReference<>();
 
         filter.doFilter(req, resp, (r, s) -> {
-            mdcDuringChain.set(MDC.get(RedisKeys.MDC_TRACE_ID));
+            mdcDuringChain.set(MDC.get(MdcKeys.TRACE_ID));
         });
 
         assertThat(mdcDuringChain.get()).isNotBlank();
         assertThat(resp.getHeader(TraceIdUtil.HEADER)).isNotBlank();
         // 请求结束后 MDC 被清空
-        assertThat(MDC.get(RedisKeys.MDC_TRACE_ID)).isNull();
+        assertThat(MDC.get(MdcKeys.TRACE_ID)).isNull();
     }
 
     @Test
@@ -47,7 +47,7 @@ class TraceIdFilterTest {
         AtomicReference<String> mdcDuringChain = new AtomicReference<>();
 
         filter.doFilter(req, resp, (r, s) -> {
-            mdcDuringChain.set(MDC.get(RedisKeys.MDC_TRACE_ID));
+            mdcDuringChain.set(MDC.get(MdcKeys.TRACE_ID));
         });
 
         assertThat(mdcDuringChain.get()).isEqualTo("test-trace-123");

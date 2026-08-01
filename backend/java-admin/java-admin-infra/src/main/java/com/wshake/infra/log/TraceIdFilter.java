@@ -1,6 +1,6 @@
 package com.wshake.infra.log;
 
-import com.wshake.common.constant.RedisKeys;
+import com.wshake.common.constant.MdcKeys;
 import com.wshake.common.util.TraceIdUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,12 +35,12 @@ public class TraceIdFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String traceId = TraceIdUtil.resolveOrGenerate(request.getHeader(TraceIdUtil.HEADER));
-        MDC.put(RedisKeys.MDC_TRACE_ID, traceId);
+        MDC.put(MdcKeys.TRACE_ID, traceId);
         response.setHeader(TraceIdUtil.HEADER, traceId);
         try {
             filterChain.doFilter(request, response);
         } finally {
-            MDC.remove(RedisKeys.MDC_TRACE_ID);
+            MDC.remove(MdcKeys.TRACE_ID);
         }
     }
 }

@@ -14,17 +14,18 @@
         用 %highlight() 也能上色（logback 内置），但 %clr() 更细（可指定颜色名）。
     -->
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId}] [%thread] %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId}] [%X{userId}] [%thread] %logger{36} - %msg%n"/>
 
     <!--
         dev 彩色 pattern（用 %clr() + 显式颜色名）：
         - 级别：%clr(%-5level) — 按 level 自动配色（ERROR=红, WARN=黄, INFO=绿, DEBUG=蓝）
         - traceId：%clr([%X{traceId}]){magenta}
+        - userId：%clr([%X{userId}]){yellow}（未登录为空 []）
         - 线程：%clr([%thread]){blue}
         - logger：%clr(%-40.40logger{39}){cyan}
     -->
     <property name="LOG_PATTERN_COLOR"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level) %clr([%X{traceId}]){magenta} %clr([%thread]){blue} %clr(%-40.40logger{39}){cyan} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level) %clr([%X{traceId}]){magenta} %clr([%X{userId}]){yellow} %clr([%thread]){blue} %clr(%-40.40logger{39}){cyan} - %msg%n"/>
 
     <!-- ──────────────────────────────────────────────
          DEV profile：彩色控制台
