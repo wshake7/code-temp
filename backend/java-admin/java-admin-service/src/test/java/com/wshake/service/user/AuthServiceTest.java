@@ -111,7 +111,8 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysLoginLogRepository).insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 401));
+        verify(sysLoginLogRepository)
+                .insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 401));
     }
 
     @Test
@@ -136,7 +137,8 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2004);
 
-        verify(sysLoginLogRepository).insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 403));
+        verify(sysLoginLogRepository)
+                .insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 403));
     }
 
     @Test

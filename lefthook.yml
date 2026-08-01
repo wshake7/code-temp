@@ -27,8 +27,9 @@ pre-commit:
       # exec 短路确保 gitleaks 失败退出码不被 echo 覆盖成 0;未装则 skip。
       run: sh -c 'command -v gitleaks >/dev/null 2>&1 && exec gitleaks protect --staged --redact --no-banner; echo skip:gitleaks-not-installed'
     format:java:
+      # 先语义改写（lambda→方法引用），再 Spotless 格式化；Checkstyle 无法覆盖前者。
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -q -f backend/java-admin/pom.xml spotless:apply
+      run: mvn -B -q -f backend/java-admin/pom.xml rewrite:run spotless:apply
       stage_fixed: true
 
 post-merge:
@@ -51,6 +52,10 @@ pre-push:
     check:java-style:
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
       run: mvn -B -f backend/java-admin/pom.xml checkstyle:check
+    check:java-method-ref:
+      # 对齐 IDEA “Lambda can be replaced with method reference”；failOnDryRunResults=true
+      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
+      run: mvn -B -f backend/java-admin/pom.xml rewrite:dryRun
     check:java-types:
       # WARN 不阻断,ERROR 阻断;`mvn verify` 也跑 compile 做安全网。
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"

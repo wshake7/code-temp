@@ -56,6 +56,10 @@
         <spotless.version>3.6.0</spotless.version>
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
 
+        <!-- OpenRewrite：语义风格重构（lambda → 方法引用）；与 Spotless/Checkstyle 互补 -->
+        <rewrite-maven-plugin.version>6.45.0</rewrite-maven-plugin.version>
+        <rewrite-static-analysis.version>2.40.0</rewrite-static-analysis.version>
+
         <!-- Error Prone 2.x（2026-06-15 集成；2.50.0 = 2.x 最新稳定，2026-06-10 发布，需 JDK 21+） -->
         <errorprone.version>2.50.0</errorprone.version>
     </properties>
@@ -404,7 +408,8 @@
             <!-- Spotless: palantir-java-format 自动格式化
                  通过 `mvn spotless:apply` 全量格式化；
                  `mvn spotless:check` 仅检查（exit ≠ 0 表示未格式化）。
-                 lefthook pre-commit 也会调 apply 并 re-add。 -->
+                 lefthook pre-commit 也会调 apply 并 re-add。
+                 注意：Spotless 只做格式，不会把 lambda 改成方法引用。 -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -416,6 +421,37 @@
                         </palantirJavaFormat>
                     </java>
                 </configuration>
+            </plugin>
+
+            <!-- OpenRewrite: 语义风格（对齐 IDEA “Lambda can be replaced with method reference”）
+                 Checkstyle/Spotless 均无法做类型感知的方法引用建议；本插件补这一层。
+                 检查：mvn -B -f backend/java-admin/pom.xml rewrite:dryRun
+                 修复：mvn -B -f backend/java-admin/pom.xml rewrite:run
+                 不绑 verify phase，避免拖慢常规 package；由 lefthook / 手工命令触发。
+                 仅激活 ReplaceLambdaWithMethodReference，避免静态分析大礼包噪声。 -->
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>${rewrite-maven-plugin.version}</version>
+                <configuration>
+                    <activeRecipes>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceLambdaWithMethodReference</recipe>
+                    </activeRecipes>
+                    <!-- dryRun 发现可改写处时以非 0 退出，便于 pre-push / CI 门禁 -->
+                    <failOnDryRunResults>true</failOnDryRunResults>
+                    <!-- 跳过 APT 生成源（Easy-Query Proxy 等） -->
+                    <exclusions>
+                        <exclusion>**/target/generated-sources/**</exclusion>
+                        <exclusion>**/target/generated-test-sources/**</exclusion>
+                    </exclusions>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-static-analysis</artifactId>
+                        <version>${rewrite-static-analysis.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <!-- Checkstyle: Palantir 自家规则集（命名 / 复杂度 / 风格规约）

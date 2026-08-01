@@ -5,6 +5,10 @@ import com.wshake.service.entity.SysMenu;
 import com.wshake.service.entity.SysRole;
 import com.wshake.service.entity.SysRoleMenu;
 import com.wshake.service.entity.SysUserRole;
+import com.wshake.service.entity.proxy.SysMenuProxy;
+import com.wshake.service.entity.proxy.SysRoleMenuProxy;
+import com.wshake.service.entity.proxy.SysRoleProxy;
+import com.wshake.service.entity.proxy.SysUserRoleProxy;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,7 +31,7 @@ public class AuthQueryRepository {
         List<Long> roleIds = easyEntityQuery
                 .queryable(SysUserRole.class)
                 .where(ur -> ur.userId().eq(userId))
-                .select(ur -> ur.roleId())
+                .select(SysUserRoleProxy::roleId)
                 .toList();
         if (roleIds.isEmpty()) {
             return List.of();
@@ -38,7 +42,7 @@ public class AuthQueryRepository {
                     r.id().in(roleIds);
                     r.isEnabled().eq(1);
                 })
-                .select(r -> r.code())
+                .select(SysRoleProxy::code)
                 .toList();
     }
 
@@ -53,7 +57,7 @@ public class AuthQueryRepository {
         List<Long> roleIds = easyEntityQuery
                 .queryable(SysUserRole.class)
                 .where(ur -> ur.userId().eq(userId))
-                .select(ur -> ur.roleId())
+                .select(SysUserRoleProxy::roleId)
                 .toList();
         if (roleIds.isEmpty()) {
             return List.of();
@@ -61,7 +65,7 @@ public class AuthQueryRepository {
         List<Long> menuIds = easyEntityQuery
                 .queryable(SysRoleMenu.class)
                 .where(rm -> rm.roleId().in(roleIds))
-                .select(rm -> rm.menuId())
+                .select(SysRoleMenuProxy::menuId)
                 .toList();
         if (menuIds.isEmpty()) {
             return List.of();
@@ -75,7 +79,7 @@ public class AuthQueryRepository {
                     m.permissionCode().isNotNull();
                     m.permissionCode().ne("");
                 })
-                .select(m -> m.permissionCode())
+                .select(SysMenuProxy::permissionCode)
                 .distinct()
                 .toList();
     }

@@ -98,7 +98,7 @@ public class FlywayMigrator {
             return configuredTarget.trim();
         }
         List<String> profiles = Arrays.asList(environment.getActiveProfiles());
-        boolean prod = profiles.stream().anyMatch(p -> "prod".equalsIgnoreCase(p));
+        boolean prod = profiles.stream().anyMatch("prod"::equalsIgnoreCase);
         return prod ? "1" : null;
     }
 }
