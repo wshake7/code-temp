@@ -6,6 +6,7 @@ import com.wshake.common.constant.MdcKeys;
 import com.wshake.infra.security.SaTokenConfigure;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -23,15 +24,20 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Controller 请求日志切面。
  *
- * <p>记录：method / params / userId / 耗时 / 返回值摘要 / 异常。
+ * <p>成功路径合并为单行 {@code [HTTP]}：HTTP method / URI(+query) / 方法签名 /
+ * args 摘要 / 耗时 / 返回值摘要。失败路径同样用 {@code [HTTP]} 前缀 + ERROR 级别
+ * （级别本身已标识失败，不再单独加 {@code [ERR]} 标签），并附带堆栈。
  *
  * <p>args 序列化时会跳过 Servlet/文件/流等不可 JSON 化参数，并对密码类字段脱敏，
- * 避免出现 {@code [Ljava.lang.Object;@hash} 或明文口令。
+ * 避免出现 {@code [Ljava.lang.Object;@hash} 或明文口令。不缓存原始 HTTP body
+ * （对比 ContentCachingFilter：无全量缓冲、无 charset NPE、天然跳过二进制）。
  *
  * @author wshake
  */
@@ -55,34 +61,73 @@ public class RequestLogAspect {
     @Pointcut("execution(* com.wshake.api.controller..*(..))")
     public void controllerPointcut() {}
 
-    /** 环绕 Controller 方法，记录请求参数、耗时、返回值摘要及异常。 */
+    /** 环绕 Controller 方法，记录 HTTP 路径、参数、耗时、返回值摘要及异常。 */
     @Around("controllerPointcut()")
     // CHECKSTYLE.OFF: IllegalThrows
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
         // CHECKSTYLE.ON: IllegalThrows
         long start = System.currentTimeMillis();
-        String method = pjp.getSignature().toShortString();
+        String handler = pjp.getSignature().toShortString();
         Object[] args = pjp.getArgs();
+        String httpLine = currentHttpLine();
+        String argsJson = safeToJson(args);
 
         Long userId = SaTokenConfigure.currentUserIdOrNull();
         if (userId != null) {
             MDC.put(MdcKeys.USER_ID, String.valueOf(userId));
         }
 
-        log.info("[REQ] method={} args={}", method, safeToJson(args));
-
         try {
             Object result = pjp.proceed();
             long cost = System.currentTimeMillis() - start;
-            log.info("[RES] method={} cost={}ms result={}", method, cost, safeToJson(result));
+            log.info(
+                    "[HTTP] {} handler={} cost={}ms args={} result={}",
+                    httpLine,
+                    handler,
+                    cost,
+                    argsJson,
+                    safeToJson(result));
             return result;
         } catch (Throwable t) {
             long cost = System.currentTimeMillis() - start;
-            log.error("[ERR] method={} cost={}ms", method, cost, t);
+            // ERROR 级别已标识失败，消息与成功路径同结构，便于检索；最后参数为堆栈
+            log.error(
+                    "[HTTP] {} handler={} cost={}ms args={}",
+                    httpLine,
+                    handler,
+                    cost,
+                    argsJson,
+                    t);
             throw t;
         } finally {
             MDC.remove(MdcKeys.USER_ID);
         }
+    }
+
+    /**
+     * 从当前请求线程组装 {@code METHOD uri?query}；无 Web 请求时返回 {@code -}。
+     *
+     * <p>包内可见，便于单测。
+     */
+    static String formatHttpLine(HttpServletRequest request) {
+        if (request == null) {
+            return "-";
+        }
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        String query = request.getQueryString();
+        if (query == null || query.isEmpty()) {
+            return method + " " + uri;
+        }
+        return method + " " + uri + "?" + query;
+    }
+
+    private static String currentHttpLine() {
+        var attrs = RequestContextHolder.getRequestAttributes();
+        if (!(attrs instanceof ServletRequestAttributes servletAttrs)) {
+            return "-";
+        }
+        return formatHttpLine(servletAttrs.getRequest());
     }
 
     /**

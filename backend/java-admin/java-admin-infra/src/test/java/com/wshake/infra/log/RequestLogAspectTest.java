@@ -10,10 +10,10 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
- * {@link RequestLogAspect} 参数序列化单测。
+ * {@link RequestLogAspect} 参数序列化与 HTTP 行组装单测。
  *
  * <p>验证：含 HttpServletRequest 的 args 能打出业务 DTO；password 脱敏；
- * 不再回退为 {@code [Ljava.lang.Object;@hash}。
+ * 不再回退为 {@code [Ljava.lang.Object;@hash}；HTTP method/uri/query 格式正确。
  *
  * @author wshake
  */
@@ -24,6 +24,24 @@ class RequestLogAspectTest {
     @BeforeEach
     void setUp() {
         aspect = new RequestLogAspect(new ObjectMapper());
+    }
+
+    @Test
+    void formatHttpLine_null_returnsDash() {
+        assertThat(RequestLogAspect.formatHttpLine(null)).isEqualTo("-");
+    }
+
+    @Test
+    void formatHttpLine_withoutQuery_isMethodAndUri() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        assertThat(RequestLogAspect.formatHttpLine(request)).isEqualTo("POST /api/auth/login");
+    }
+
+    @Test
+    void formatHttpLine_withQuery_appendsQueryString() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
+        request.setQueryString("page=1&size=10");
+        assertThat(RequestLogAspect.formatHttpLine(request)).isEqualTo("GET /api/users?page=1&size=10");
     }
 
     @Test
