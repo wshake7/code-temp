@@ -23,7 +23,7 @@ class CasbinRootWildcardPolicyTest {
     private Enforcer enforcer;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void before() throws Exception {
         String modelText = loadClasspath("casbin/model.conf");
         Model model = new Model();
         model.loadModelFromText(modelText);

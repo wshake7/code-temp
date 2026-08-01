@@ -34,6 +34,9 @@ public class UserInfoController {
     private final AuthService authService;
     private final SysUserService sysUserService;
 
+    /**
+     * 当前登录用户信息（别名路径，与 {@code /api/auth/info} 等价）。
+     */
     @GetMapping("/info")
     @Operation(summary = "当前登录用户信息", description = "别名路径，与 /api/auth/info 等价")
     @SecurityRequirement(name = "bearerAuth")

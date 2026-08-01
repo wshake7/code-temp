@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * @author wshake
  */
 @Configuration(proxyBeanMethods = false)
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor") // Spring 需要可实例化的 lite @Configuration bean
 public class SaTokenConfigure {
 
     /**

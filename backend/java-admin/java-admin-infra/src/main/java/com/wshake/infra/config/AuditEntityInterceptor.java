@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
  * @author wshake
  */
 @Component
-public class AuditEntityInterceptor implements EntityInterceptor, UpdateSetInterceptor {
+public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSetInterceptor {
 
     public static final String NAME = "AUDIT_ENTITY_INTERCEPTOR";
 
@@ -44,33 +44,33 @@ public class AuditEntityInterceptor implements EntityInterceptor, UpdateSetInter
     @Override
     public void configureInsert(
             Class<?> entityClass, EntityInsertExpressionBuilder entityInsertExpressionBuilder, Object entity) {
-        BaseEntity e = (BaseEntity) entity;
+        BaseEntity baseEntity = (BaseEntity) entity;
         LocalDateTime now = LocalDateTime.now();
         Long operatorId = currentOperatorId();
 
-        if (e.getDeletedAt() == null) {
-            e.setDeletedAt(0L);
+        if (baseEntity.getDeletedAt() == null) {
+            baseEntity.setDeletedAt(0L);
         }
-        if (e.getCreatedAt() == null) {
-            e.setCreatedAt(now);
+        if (baseEntity.getCreatedAt() == null) {
+            baseEntity.setCreatedAt(now);
         }
-        if (e.getUpdatedAt() == null) {
-            e.setUpdatedAt(now);
+        if (baseEntity.getUpdatedAt() == null) {
+            baseEntity.setUpdatedAt(now);
         }
-        if (e.getCreatedBy() == null) {
-            e.setCreatedBy(operatorId);
+        if (baseEntity.getCreatedBy() == null) {
+            baseEntity.setCreatedBy(operatorId);
         }
-        if (e.getUpdatedBy() == null) {
-            e.setUpdatedBy(operatorId);
+        if (baseEntity.getUpdatedBy() == null) {
+            baseEntity.setUpdatedBy(operatorId);
         }
     }
 
     @Override
     public void configureUpdate(
             Class<?> entityClass, EntityUpdateExpressionBuilder entityUpdateExpressionBuilder, Object entity) {
-        BaseEntity e = (BaseEntity) entity;
-        e.setUpdatedAt(LocalDateTime.now());
-        e.setUpdatedBy(currentOperatorId());
+        BaseEntity baseEntity = (BaseEntity) entity;
+        baseEntity.setUpdatedAt(LocalDateTime.now());
+        baseEntity.setUpdatedBy(currentOperatorId());
     }
 
     @Override

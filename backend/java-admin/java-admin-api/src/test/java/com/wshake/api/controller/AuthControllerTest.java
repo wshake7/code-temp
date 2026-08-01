@@ -1,8 +1,6 @@
 package com.wshake.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -21,6 +19,7 @@ import com.wshake.service.user.SysUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 
 /**
@@ -43,7 +42,11 @@ class AuthControllerTest {
         user.setId(1L);
         user.setUsername("root");
         user.setNickname("Root");
-        when(authService.login(eq("root"), eq("123456"), eq("altcha-ok"), any(LoginClientMeta.class)))
+        when(authService.login(
+                        ArgumentMatchers.eq("root"),
+                        ArgumentMatchers.eq("123456"),
+                        ArgumentMatchers.eq("altcha-ok"),
+                        ArgumentMatchers.any(LoginClientMeta.class)))
                 .thenReturn(new LoginResult(user, List.of("super_admin"), "/analytics"));
         when(request.getRemoteAddr()).thenReturn("10.0.0.1");
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
@@ -67,7 +70,11 @@ class AuthControllerTest {
 
     @Test
     void login_invalidCredentials_propagatesAuthException() {
-        when(authService.login(eq("root"), eq("bad"), eq("altcha-ok"), any(LoginClientMeta.class)))
+        when(authService.login(
+                        ArgumentMatchers.eq("root"),
+                        ArgumentMatchers.eq("bad"),
+                        ArgumentMatchers.eq("altcha-ok"),
+                        ArgumentMatchers.any(LoginClientMeta.class)))
                 .thenThrow(AuthException.invalidCredentials());
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
 

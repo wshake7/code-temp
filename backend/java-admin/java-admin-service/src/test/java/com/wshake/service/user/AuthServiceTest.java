@@ -2,9 +2,6 @@ package com.wshake.service.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -61,7 +59,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void altchaPassByDefault() {
-        when(altchaService.verify(anyString())).thenReturn(true);
+        when(altchaService.verify(ArgumentMatchers.anyString())).thenReturn(true);
     }
 
     @Test
@@ -93,9 +91,9 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2004);
 
-        verify(sysUserRepository, never()).findByUsername(any());
+        verify(sysUserRepository, never()).findByUsername(ArgumentMatchers.any());
         verify(sysLoginLogRepository)
-                .insert(argThat(log -> log.getSuccess() == 0
+                .insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0
                         && log.getStatusCode() == 403
                         && log.getReason().contains("ALTCHA")));
     }
@@ -110,7 +108,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysLoginLogRepository).insert(argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 401));
+        verify(sysLoginLogRepository).insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 401));
     }
 
     @Test
@@ -122,7 +120,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysLoginLogRepository).insert(any(SysLoginLog.class));
+        verify(sysLoginLogRepository).insert(ArgumentMatchers.any(SysLoginLog.class));
     }
 
     @Test
@@ -135,7 +133,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2004);
 
-        verify(sysLoginLogRepository).insert(argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 403));
+        verify(sysLoginLogRepository).insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 403));
     }
 
     @Test
@@ -145,7 +143,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysUserRepository, never()).findByUsername(any());
+        verify(sysUserRepository, never()).findByUsername(ArgumentMatchers.any());
     }
 
     @Test
@@ -155,7 +153,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysUserRepository, never()).findByUsername(any());
+        verify(sysUserRepository, never()).findByUsername(ArgumentMatchers.any());
     }
 
     @Test

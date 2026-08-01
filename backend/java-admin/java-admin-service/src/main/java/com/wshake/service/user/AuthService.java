@@ -51,34 +51,10 @@ public class AuthService {
         LoginClientMeta meta = clientMeta == null ? LoginClientMeta.empty() : clientMeta;
         String safeUsername = username == null ? "" : username.trim();
 
-        if (!altchaService.verify(altcha)) {
-            writeLoginLog(safeUsername, false, "ALTCHA verification failed", 403, null, meta);
-            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "ALTCHA 校验失败");
-        }
-
-        if (safeUsername.isBlank() || password == null || password.isBlank()) {
-            writeLoginLog(safeUsername, false, "Username and password are required", 400, null, meta);
-            throw AuthException.invalidCredentials();
-        }
-
-        SysUser user = sysUserRepository.findByUsername(safeUsername);
-        if (user == null) {
-            log.warn("[AUTH] login failed username={} reason=USER_NOT_FOUND", safeUsername);
-            writeLoginLog(safeUsername, false, "Username or password is incorrect", 401, null, meta);
-            throw AuthException.invalidCredentials();
-        }
-
-        if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
-            log.warn("[AUTH] login failed username={} reason=USER_DISABLED", safeUsername);
-            writeLoginLog(safeUsername, false, "User disabled", 403, user.getId(), meta);
-            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
-        }
-
-        if (!BCrypt.checkpw(password, user.getPasswordHash())) {
-            log.warn("[AUTH] login failed username={} reason=BAD_PASSWORD", safeUsername);
-            writeLoginLog(safeUsername, false, "Username or password is incorrect", 401, user.getId(), meta);
-            throw AuthException.invalidCredentials();
-        }
+        verifyAltcha(altcha, safeUsername, meta);
+        requireCredentials(safeUsername, password, meta);
+        SysUser user = requireActiveUser(safeUsername, meta);
+        verifyPassword(password, user, safeUsername, meta);
 
         List<String> roles = authQueryRepository.findRoleCodesByUserId(user.getId());
         writeLoginLog(safeUsername, true, "", 200, user.getId(), meta);
@@ -114,7 +90,44 @@ public class AuthService {
         return new LoginResult(user, roles, resolveHomePath(roles));
     }
 
-    public String resolveHomePath(List<String> roles) {
+    private void verifyAltcha(String altcha, String username, LoginClientMeta meta) {
+        if (!altchaService.verify(altcha)) {
+            writeLoginLog(username, false, "ALTCHA verification failed", 403, null, meta);
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "ALTCHA 校验失败");
+        }
+    }
+
+    private void requireCredentials(String username, String password, LoginClientMeta meta) {
+        if (username.isBlank() || password == null || password.isBlank()) {
+            writeLoginLog(username, false, "Username and password are required", 400, null, meta);
+            throw AuthException.invalidCredentials();
+        }
+    }
+
+    private SysUser requireActiveUser(String username, LoginClientMeta meta) {
+        SysUser user = sysUserRepository.findByUsername(username);
+        if (user == null) {
+            log.warn("[AUTH] login failed username={} reason=USER_NOT_FOUND", username);
+            writeLoginLog(username, false, "Username or password is incorrect", 401, null, meta);
+            throw AuthException.invalidCredentials();
+        }
+        if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
+            log.warn("[AUTH] login failed username={} reason=USER_DISABLED", username);
+            writeLoginLog(username, false, "User disabled", 403, user.getId(), meta);
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
+        }
+        return user;
+    }
+
+    private void verifyPassword(String password, SysUser user, String username, LoginClientMeta meta) {
+        if (!BCrypt.checkpw(password, user.getPasswordHash())) {
+            log.warn("[AUTH] login failed username={} reason=BAD_PASSWORD", username);
+            writeLoginLog(username, false, "Username or password is incorrect", 401, user.getId(), meta);
+            throw AuthException.invalidCredentials();
+        }
+    }
+
+    private String resolveHomePath(List<String> roles) {
         if (roles != null && roles.contains("super_admin")) {
             return DEFAULT_HOME_PATH;
         }

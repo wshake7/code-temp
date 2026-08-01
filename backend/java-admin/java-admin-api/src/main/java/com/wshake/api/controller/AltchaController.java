@@ -27,6 +27,9 @@ public class AltchaController {
 
     private final AltchaService altchaService;
 
+    /**
+     * 签发 ALTCHA challenge（原始 JSON，非 Result 包装）。
+     */
     @GetMapping(value = "/challenge", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "签发 ALTCHA challenge", description = "返回原始 challenge 对象，非 Result 包装")
     public ResponseEntity<String> challenge() {

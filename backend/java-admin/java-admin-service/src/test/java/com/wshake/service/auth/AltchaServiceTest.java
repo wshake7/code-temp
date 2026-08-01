@@ -20,7 +20,7 @@ class AltchaServiceTest {
     private AltchaService altchaService;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void before() throws Exception {
         altchaService = new AltchaService();
         setField(altchaService, "hmacSecret", "altcha-dev-hmac-secret");
         setField(altchaService, "cost", 100);
