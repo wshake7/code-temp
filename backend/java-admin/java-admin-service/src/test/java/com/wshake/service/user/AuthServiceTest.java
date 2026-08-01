@@ -57,6 +57,9 @@ class AuthServiceTest {
 
     private final LoginClientMeta meta = new LoginClientMeta("127.0.0.1", "JUnit");
 
+    /** V2__schema_seed.sql 中 root 的 jBCrypt $2a$ 哈希（明文 123456）；复用线上格式验证跨实现兼容。 */
+    private static final String SEED_HASH_123456 = "$2a$10$mzKVO0J.OxnOhHBO8AgBset0LzVRTLv285BJzaTfxpps1Jx7hrXom";
+
     @BeforeEach
     void altchaPassByDefault() {
         when(altchaService.verify(ArgumentMatchers.anyString())).thenReturn(true);
@@ -64,7 +67,7 @@ class AuthServiceTest {
 
     @Test
     void login_withCorrectCredentials_returnsUserAndRoles() {
-        SysUser user = fixture("root", cn.dev33.satoken.secure.BCrypt.hashpw("123456"), "Root", 1);
+        SysUser user = fixture("root", SEED_HASH_123456, "Root", 1);
         when(sysUserRepository.findByUsername("root")).thenReturn(user);
         when(authQueryRepository.findRoleCodesByUserId(1L)).thenReturn(List.of("super_admin"));
 
@@ -100,7 +103,7 @@ class AuthServiceTest {
 
     @Test
     void login_withWrongPassword_throwsAuthInvalidCredentialsAndWritesLog() {
-        SysUser user = fixture("root", cn.dev33.satoken.secure.BCrypt.hashpw("123456"), "Root", 1);
+        SysUser user = fixture("root", SEED_HASH_123456, "Root", 1);
         when(sysUserRepository.findByUsername("root")).thenReturn(user);
 
         assertThatThrownBy(() -> authService.login("root", "wrong", "ok", meta))
@@ -125,7 +128,7 @@ class AuthServiceTest {
 
     @Test
     void login_userDisabled_throwsAuthForbidden() {
-        SysUser disabled = fixture("root", cn.dev33.satoken.secure.BCrypt.hashpw("123456"), "Root", 0);
+        SysUser disabled = fixture("root", SEED_HASH_123456, "Root", 0);
         when(sysUserRepository.findByUsername("root")).thenReturn(disabled);
 
         assertThatThrownBy(() -> authService.login("root", "123456", "ok", meta))

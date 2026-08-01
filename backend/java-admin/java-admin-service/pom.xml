@@ -37,11 +37,10 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Sa-Token BCrypt（仅 secure 子包，service 用 BCrypt.matches 做密码校验） -->
+        <!-- Spring Security Crypto（仅 BCryptPasswordEncoder 做密码哈希；独立模块，不引入 Security 过滤链） -->
         <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-core</artifactId>
-            <version>${sa-token.version}</version>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
         <!-- ALTCHA 人机校验 -->

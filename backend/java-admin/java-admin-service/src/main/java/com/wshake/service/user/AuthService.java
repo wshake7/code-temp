@@ -1,6 +1,5 @@
 package com.wshake.service.user;
 
-import cn.dev33.satoken.secure.BCrypt;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.ResultCode;
 import com.wshake.service.auth.AltchaService;
@@ -15,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,6 +31,9 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private static final String DEFAULT_HOME_PATH = "/analytics";
+
+    /** 默认 cost=10；兼容校验 jBCrypt 生成的 $2a$ 哈希（见 V2__schema_seed.sql）。 */
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     private final SysUserRepository sysUserRepository;
     private final SysLoginLogRepository sysLoginLogRepository;
@@ -120,7 +123,7 @@ public class AuthService {
     }
 
     private void verifyPassword(String password, SysUser user, String username, LoginClientMeta meta) {
-        if (!BCrypt.checkpw(password, user.getPasswordHash())) {
+        if (!PASSWORD_ENCODER.matches(password, user.getPasswordHash())) {
             log.warn("[AUTH] login failed username={} reason=BAD_PASSWORD", username);
             writeLoginLog(username, false, "Username or password is incorrect", 401, user.getId(), meta);
             throw AuthException.invalidCredentials();
