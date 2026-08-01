@@ -8,7 +8,7 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.Location;
 import org.flywaydb.core.api.MigrationVersion;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -31,7 +31,8 @@ import org.springframework.core.env.Environment;
  *     <li>dev：不设 target → 执行 V1 + V2</li>
  *     <li>prod：{@code spring.flyway.target=1} → 只执行 V1，零 seed</li>
  * </ul>
- * 可通过 {@code spring.flyway.locations} / {@code spring.flyway.target} 覆盖。
+ * 可通过 {@code spring.flyway.locations} / {@code spring.flyway.target} 覆盖
+ *（见 {@link FlywayMigratorProperties}）。
  *
  * <p>Bean 名 {@code flyway} 供 {@link CasbinConfig} 等通过 {@code @DependsOn} 保证顺序。
  *
@@ -39,15 +40,15 @@ import org.springframework.core.env.Environment;
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(FlywayMigratorProperties.class)
 public class FlywayMigrator {
 
     /** 创建并立即执行 migrate 的 Flyway Bean。 */
     @Bean(name = "flyway")
     public Flyway flyway(
-            DataSource dataSource,
-            Environment environment,
-            @Value("${spring.flyway.locations:}") String configuredLocations,
-            @Value("${spring.flyway.target:}") String configuredTarget) {
+            DataSource dataSource, Environment environment, FlywayMigratorProperties flywayProperties) {
+        String configuredLocations = joinLocations(flywayProperties.getLocations());
+        String configuredTarget = flywayProperties.getTarget();
         String[] locations = resolveLocations(environment, configuredLocations);
         String target = resolveTarget(environment, configuredTarget);
         log.info(
@@ -74,6 +75,16 @@ public class FlywayMigrator {
             log.error("[FLYWAY] migration FAILED: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * 将 Properties 中的 locations 列表拼为逗号串，供 {@link #resolveLocations} 解析。
+     */
+    static String joinLocations(List<String> locations) {
+        if (locations == null || locations.isEmpty()) {
+            return "";
+        }
+        return String.join(",", locations);
     }
 
     /**

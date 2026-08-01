@@ -2,7 +2,6 @@ package com.wshake.service.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.altcha.altcha.v2.Altcha;
@@ -20,11 +19,13 @@ class AltchaServiceTest {
     private AltchaService altchaService;
 
     @BeforeEach
-    void before() throws Exception {
-        altchaService = new AltchaService();
-        setField(altchaService, "hmacSecret", "altcha-dev-hmac-secret");
-        setField(altchaService, "cost", 100);
-        setField(altchaService, "expiresSeconds", 600L);
+    void before() {
+        AltchaProperties properties = new AltchaProperties();
+        properties.setHmacSecret("altcha-dev-hmac-secret");
+        // 单测压低 cost，加快 PoW 求解
+        properties.setCost(100);
+        properties.setExpiresSeconds(600L);
+        altchaService = new AltchaService(properties);
     }
 
     @Test
@@ -56,11 +57,5 @@ class AltchaServiceTest {
         assertThat(altchaService.verify(null)).isFalse();
         assertThat(altchaService.verify("")).isFalse();
         assertThat(altchaService.verify("not-base64-json")).isFalse();
-    }
-
-    private static void setField(Object target, String name, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }

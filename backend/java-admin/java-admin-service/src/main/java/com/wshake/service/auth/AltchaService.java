@@ -2,9 +2,9 @@ package com.wshake.service.auth;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.altcha.altcha.v2.Altcha;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -17,19 +17,10 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AltchaService {
 
-    /** 与 mock 默认一致，便于本地联调；生产通过配置注入。 */
-    @Value("${altcha.hmac-secret:altcha-dev-hmac-secret}")
-    private String hmacSecret;
-
-    /** PoW 成本；dev 取 1000，浏览器端秒级可解。 */
-    @Value("${altcha.cost:1000}")
-    private int cost;
-
-    /** 挑战有效期（秒）。 */
-    @Value("${altcha.expires-seconds:600}")
-    private long expiresSeconds;
+    private final AltchaProperties altchaProperties;
 
     private static final String ALGORITHM = "PBKDF2/SHA-256";
 
@@ -45,9 +36,9 @@ public class AltchaService {
         try {
             Altcha.CreateChallengeOptions options = new Altcha.CreateChallengeOptions()
                     .algorithm(ALGORITHM)
-                    .cost(cost)
-                    .hmacSignatureSecret(hmacSecret)
-                    .expiresInSeconds(expiresSeconds);
+                    .cost(altchaProperties.getCost())
+                    .hmacSignatureSecret(altchaProperties.getHmacSecret())
+                    .expiresInSeconds(altchaProperties.getExpiresSeconds());
             return Altcha.createChallenge(options);
         } catch (Exception e) {
             log.error("[ALTCHA] createChallenge failed", e);
@@ -77,8 +68,8 @@ public class AltchaService {
                 log.warn("[ALTCHA] replay detected signature={}", signature);
                 return false;
             }
-            Altcha.VerifySolutionResult result =
-                    Altcha.verifySolution(payloadBase64, hmacSecret, Altcha.kdf(ALGORITHM));
+            Altcha.VerifySolutionResult result = Altcha.verifySolution(
+                    payloadBase64, altchaProperties.getHmacSecret(), Altcha.kdf(ALGORITHM));
             if (result.verified()) {
                 consumedSignatures.add(signature);
                 return true;

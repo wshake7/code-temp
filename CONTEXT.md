@@ -39,3 +39,7 @@ _Avoid_: 未升级的 role 级 `g` 继承模型（本波不采用）
 **ALTCHA Challenge**：
 登录前人机校验挑战；服务端用官方 Java 库校验 payload。
 _Avoid_: 仅前端假校验、跳过服务端验证
+
+**Config Properties**：
+java-admin 配置统一用类型安全的 Properties 类（`@ConfigurationProperties` 按前缀聚合）注入，例如 `AltchaProperties`、`CasbinProperties`、`FlywayMigratorProperties`。
+_Avoid_: 业务或配置代码中直接使用 `@Value` 散落绑定配置键
