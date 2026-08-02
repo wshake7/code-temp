@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Form, Input, Button, Checkbox, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import AltchaWidget from './AltchaWidget';
+import AltchaWidget, { type AltchaWidgetHandle } from './AltchaWidget';
 import '../auth-form.style.less';
 
 const Login: React.FC = () => {
@@ -13,7 +13,21 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { message } = App.useApp();
-  const handleSubmit = async (values: { username: string; password: string; remember?: boolean; altcha?: string }) => {
+  const [form] = Form.useForm();
+  const altchaRef = useRef<AltchaWidgetHandle>(null);
+
+  /** 登录失败：payload 已被服务端一次性消费，必须重新勾选验证 */
+  const resetAltcha = () => {
+    form.setFieldValue('altcha', undefined);
+    altchaRef.current?.reset();
+  };
+
+  const handleSubmit = async (values: {
+    username: string;
+    password: string;
+    remember?: boolean;
+    altcha?: string;
+  }) => {
     try {
       await login(
         {
@@ -32,7 +46,8 @@ const Login: React.FC = () => {
         navigate(redirect);
       }, 300);
     } catch {
-      // 错误已在 store 中处理
+      // 错误 toast 由 request 错误拦截器统一弹出；失败后强制重新人机校验
+      resetAltcha();
     }
   };
 
@@ -48,6 +63,7 @@ const Login: React.FC = () => {
 
       {/* 登录表单 */}
       <Form
+        form={form}
         name="login"
         onFinish={handleSubmit}
         size="large"
@@ -97,7 +113,7 @@ const Login: React.FC = () => {
             },
           ]}
         >
-          <AltchaWidget language="zh" />
+          <AltchaWidget ref={altchaRef} language="zh" />
         </Form.Item>
         <Form.Item className="auth-remember-checkbox">
           <div className="flex items-center justify-between">

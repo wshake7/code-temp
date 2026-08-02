@@ -1,3 +1,4 @@
+import { message } from 'antd';
 import { initI18n } from '@/core/i18n';
 import { usePreferencesStore } from '@/core/preferences';
 import { type HttpResponse, RequestClient } from '@/core/transport/rest';
@@ -32,7 +33,12 @@ async function _initI18n() {
     onReAuthenticate: async () => {
       useAuthStore.getState().forceLogout();
     },
-    onError: (msg) => console.error('[RequestClient]', msg),
+    // 与 Vue 侧 message.error 对齐：接口失败统一 toast
+    onError: (msg) => {
+      if (msg) {
+        message.error(msg);
+      }
+    },
     getErrorMsg: getErrorMsg,
   });
 }

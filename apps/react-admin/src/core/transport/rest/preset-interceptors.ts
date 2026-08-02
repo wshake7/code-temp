@@ -3,6 +3,15 @@ import axios from 'axios';
 import type { MakeErrorMessageFn, ResponseInterceptorConfig } from './types';
 import { getDefaultErrorMsg } from './utils';
 
+/** 登录等未持 token 的鉴权接口：业务 401 不是会话过期，不应 forceLogout / 吞掉错误提示 */
+function isUnauthenticatedAuthRequest(error: {
+  config?: { url?: string };
+  response?: { config?: { url?: string } };
+}): boolean {
+  const url = error?.config?.url ?? error?.response?.config?.url ?? '';
+  return typeof url === 'string' && url.includes('/auth/login');
+}
+
 /**
  * 认证响应拦截器：处理 401 错误，直接重新认证（sa-token 单 token，无前端 refresh）
  * @param doReAuthenticate 重新认证函数，返回 Promise<void>
@@ -19,6 +28,11 @@ export const authenticateResponseInterceptor = ({
 
       // 不是 401 → 直接抛错，交给错误拦截器处理
       if (response?.status !== 401) {
+        throw error;
+      }
+
+      // 登录失败本身会返回 401：只交给错误消息拦截器提示，不触发登出
+      if (isUnauthenticatedAuthRequest(error)) {
         throw error;
       }
 
