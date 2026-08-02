@@ -49,6 +49,12 @@
             <artifactId>altcha</artifactId>
         </dependency>
 
+        <!-- IP 归属地（对齐 Go ip2region） -->
+        <dependency>
+            <groupId>org.lionsoul</groupId>
+            <artifactId>ip2region</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

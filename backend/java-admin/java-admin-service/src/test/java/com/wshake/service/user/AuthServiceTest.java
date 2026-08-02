@@ -9,11 +9,10 @@ import static org.mockito.Mockito.when;
 import com.wshake.common.exception.AuthException;
 import com.wshake.service.auth.AltchaService;
 import com.wshake.service.auth.LoginClientMeta;
+import com.wshake.service.auth.LoginLogger;
 import com.wshake.service.auth.LoginResult;
-import com.wshake.service.entity.SysLoginLog;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.AuthQueryRepository;
-import com.wshake.service.repository.SysLoginLogRepository;
 import com.wshake.service.repository.SysUserRepository;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -21,7 +20,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,7 +30,7 @@ import org.mockito.quality.Strictness;
 /**
  * {@link AuthService} 单元测试。
  *
- * <p>隔离 Repository / AltchaService，不连真实 DB。
+ * <p>隔离 Repository / AltchaService / LoginLogger，不连真实 DB。
  *
  * @author wshake
  */
@@ -44,18 +42,21 @@ class AuthServiceTest {
     private SysUserRepository sysUserRepository;
 
     @Mock
-    private SysLoginLogRepository sysLoginLogRepository;
-
-    @Mock
     private AuthQueryRepository authQueryRepository;
 
     @Mock
     private AltchaService altchaService;
 
+    @Mock
+    private LoginLogger loginLogger;
+
     @InjectMocks
     private AuthService authService;
 
-    private final LoginClientMeta meta = new LoginClientMeta("127.0.0.1", "JUnit");
+    private static final String CHROME_WINDOWS_UA =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+    private final LoginClientMeta meta = new LoginClientMeta("127.0.0.1", CHROME_WINDOWS_UA);
 
     /** V2__schema_seed.sql 中 root 的 jBCrypt $2a$ 哈希（明文 123456）；复用线上格式验证跨实现兼容。 */
     private static final String SEED_HASH_123456 = "$2a$10$mzKVO0J.OxnOhHBO8AgBset0LzVRTLv285BJzaTfxpps1Jx7hrXom";
@@ -77,12 +78,7 @@ class AuthServiceTest {
         assertThat(result.roles()).containsExactly("super_admin");
         assertThat(result.homePath()).isEqualTo("/analytics");
 
-        ArgumentCaptor<SysLoginLog> logCaptor = ArgumentCaptor.forClass(SysLoginLog.class);
-        verify(sysLoginLogRepository).insert(logCaptor.capture());
-        assertThat(logCaptor.getValue().getSuccess()).isEqualTo(1);
-        assertThat(logCaptor.getValue().getStatusCode()).isEqualTo(200);
-        assertThat(logCaptor.getValue().getSysUserId()).isEqualTo(1L);
-        assertThat(logCaptor.getValue().getLoginIp()).isEqualTo("127.0.0.1");
+        verify(loginLogger).recordPwdLogin("root", 1L, 200, true, "", meta);
     }
 
     @Test
@@ -95,10 +91,7 @@ class AuthServiceTest {
                 .isEqualTo(2004);
 
         verify(sysUserRepository, never()).findByUsername(ArgumentMatchers.any());
-        verify(sysLoginLogRepository)
-                .insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0
-                        && log.getStatusCode() == 403
-                        && log.getReason().contains("ALTCHA")));
+        verify(loginLogger).recordPwdLogin("root", null, 403, false, "ALTCHA verification failed", meta);
     }
 
     @Test
@@ -111,8 +104,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysLoginLogRepository)
-                .insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 401));
+        verify(loginLogger).recordPwdLogin("root", 1L, 401, false, "Username or password is incorrect", meta);
     }
 
     @Test
@@ -124,7 +116,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2002);
 
-        verify(sysLoginLogRepository).insert(ArgumentMatchers.any(SysLoginLog.class));
+        verify(loginLogger).recordPwdLogin("nobody", null, 401, false, "Username or password is incorrect", meta);
     }
 
     @Test
@@ -137,8 +129,7 @@ class AuthServiceTest {
                 .extracting("code")
                 .isEqualTo(2004);
 
-        verify(sysLoginLogRepository)
-                .insert(ArgumentMatchers.argThat(log -> log.getSuccess() == 0 && log.getStatusCode() == 403));
+        verify(loginLogger).recordPwdLogin("root", 1L, 403, false, "User disabled", meta);
     }
 
     @Test
@@ -149,6 +140,7 @@ class AuthServiceTest {
                 .isEqualTo(2002);
 
         verify(sysUserRepository, never()).findByUsername(ArgumentMatchers.any());
+        verify(loginLogger).recordPwdLogin("", null, 400, false, "Username and password are required", meta);
     }
 
     @Test

@@ -4,13 +4,11 @@ import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.ResultCode;
 import com.wshake.service.auth.AltchaService;
 import com.wshake.service.auth.LoginClientMeta;
+import com.wshake.service.auth.LoginLogger;
 import com.wshake.service.auth.LoginResult;
-import com.wshake.service.entity.SysLoginLog;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.AuthQueryRepository;
-import com.wshake.service.repository.SysLoginLogRepository;
 import com.wshake.service.repository.SysUserRepository;
-import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +19,7 @@ import org.springframework.stereotype.Service;
  * 鉴权 Service。
  *
  * <p>登录：ALTCHA → 用户名密码（BCrypt）→ 写登录日志 → 返回用户与角色摘要。
- * Sa-Token 登录态由 Controller 写入。
+ * Sa-Token 登录态由 Controller 写入。登录日志经 {@link LoginLogger} 异步落库。
  *
  * @author wshake
  */
@@ -36,9 +34,9 @@ public class AuthService {
     private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     private final SysUserRepository sysUserRepository;
-    private final SysLoginLogRepository sysLoginLogRepository;
     private final AuthQueryRepository authQueryRepository;
     private final AltchaService altchaService;
+    private final LoginLogger loginLogger;
 
     /**
      * 登录校验（含 ALTCHA 与登录日志）。
@@ -60,7 +58,7 @@ public class AuthService {
         verifyPassword(password, user, safeUsername, meta);
 
         List<String> roles = authQueryRepository.findRoleCodesByUserId(user.getId());
-        writeLoginLog(safeUsername, true, "", 200, user.getId(), meta);
+        loginLogger.recordPwdLogin(safeUsername, user.getId(), 200, true, "", meta);
         log.info("[AUTH] login success userId={} username={}", user.getId(), safeUsername);
         return new LoginResult(user, roles, resolveHomePath(roles));
     }
@@ -95,14 +93,14 @@ public class AuthService {
 
     private void verifyAltcha(String altcha, String username, LoginClientMeta meta) {
         if (!altchaService.verify(altcha)) {
-            writeLoginLog(username, false, "ALTCHA verification failed", 403, null, meta);
+            loginLogger.recordPwdLogin(username, null, 403, false, "ALTCHA verification failed", meta);
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "ALTCHA 校验失败");
         }
     }
 
     private void requireCredentials(String username, String password, LoginClientMeta meta) {
         if (username.isBlank() || password == null || password.isBlank()) {
-            writeLoginLog(username, false, "Username and password are required", 400, null, meta);
+            loginLogger.recordPwdLogin(username, null, 400, false, "Username and password are required", meta);
             throw AuthException.invalidCredentials();
         }
     }
@@ -111,12 +109,12 @@ public class AuthService {
         SysUser user = sysUserRepository.findByUsername(username);
         if (user == null) {
             log.warn("[AUTH] login failed username={} reason=USER_NOT_FOUND", username);
-            writeLoginLog(username, false, "Username or password is incorrect", 401, null, meta);
+            loginLogger.recordPwdLogin(username, null, 401, false, "Username or password is incorrect", meta);
             throw AuthException.invalidCredentials();
         }
         if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
             log.warn("[AUTH] login failed username={} reason=USER_DISABLED", username);
-            writeLoginLog(username, false, "User disabled", 403, user.getId(), meta);
+            loginLogger.recordPwdLogin(username, user.getId(), 403, false, "User disabled", meta);
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
         }
         return user;
@@ -125,7 +123,7 @@ public class AuthService {
     private void verifyPassword(String password, SysUser user, String username, LoginClientMeta meta) {
         if (!PASSWORD_ENCODER.matches(password, user.getPasswordHash())) {
             log.warn("[AUTH] login failed username={} reason=BAD_PASSWORD", username);
-            writeLoginLog(username, false, "Username or password is incorrect", 401, user.getId(), meta);
+            loginLogger.recordPwdLogin(username, user.getId(), 401, false, "Username or password is incorrect", meta);
             throw AuthException.invalidCredentials();
         }
     }
@@ -138,35 +136,5 @@ public class AuthService {
             return "/system/user";
         }
         return DEFAULT_HOME_PATH;
-    }
-
-    private void writeLoginLog(
-            String username, boolean success, String reason, int statusCode, Long sysUserId, LoginClientMeta meta) {
-        try {
-            LocalDateTime now = LocalDateTime.now();
-            SysLoginLog row = new SysLoginLog();
-            row.setUsername(username == null ? "" : username);
-            row.setSuccess(success ? 1 : 0);
-            row.setReason(reason == null ? "" : reason);
-            row.setStatusCode(statusCode);
-            row.setSysUserId(sysUserId);
-            row.setLoginMethod("PASSWORD");
-            row.setLoginTime(now);
-            row.setLoginIp(meta.loginIp());
-            row.setLoginMac("");
-            row.setClientId("web-admin");
-            row.setClientName("Web Admin");
-            row.setUserAgent(meta.userAgent());
-            row.setBrowserName("");
-            row.setBrowserVersion("");
-            row.setOsName("");
-            row.setOsVersion("");
-            row.setLocation("");
-            row.setCreatedAt(now);
-            sysLoginLogRepository.insert(row);
-        } catch (Exception e) {
-            // 登录日志失败不影响主流程
-            log.error("[AUTH] write login log failed username={}", username, e);
-        }
     }
 }
