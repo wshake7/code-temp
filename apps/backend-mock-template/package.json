@@ -8,7 +8,9 @@
   "type": "module",
   "scripts": {
     "build": "nitro build",
-    "start": "nitro dev --port 4000"
+    "start": "nitro dev --port 4000",
+    "test": "vp test",
+    "check": "vp check"
   },
   "dependencies": {
     "@faker-js/faker": "catalog:",
@@ -16,6 +18,9 @@
     "nitropack": "catalog:"
   },
   "devDependencies": {
-    "h3": "1.15.11"
+    "@types/node": "catalog:",
+    "h3": "1.15.11",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

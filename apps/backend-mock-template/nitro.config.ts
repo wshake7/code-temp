@@ -12,11 +12,11 @@ export default defineNitroConfig({
       headers: {
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Headers":
-          "Accept, Authorization, Content-Length, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, X-CSRF-TOKEN, X-Requested-With",
+          "Accept, Authorization, Content-Length, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, X-CSRF-TOKEN, X-Requested-With, X-Request-Timestamp, X-Timestamp, X-Request-ID, X-Request-Encrypted-Key, X-Request-Signature, X-Sign, X-Language",
         "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
         // Allow-Origin 由 middleware/1.api.ts 动态回显 Origin；
         // 不能同时给 "*" + Allow-Credentials，浏览器会拒绝带 cookie 的请求
-        "Access-Control-Expose-Headers": "*",
+        "Access-Control-Expose-Headers": "X-Response-Is-Encrypt, *",
       },
     },
   },

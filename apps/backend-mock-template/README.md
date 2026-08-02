@@ -24,6 +24,27 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 
 修改 `.env.development` 后需重启 mock。进程重启后会话清空（mock 可接受）。
 
+## 请求安全协议（与 Java 对齐）
+
+mock 实现与 java-admin 同一套头协议，便于 dev 全开时代理到 mock 联调：
+
+| 能力      | 环境变量                                                      | 默认                 |
+| --------- | ------------------------------------------------------------- | -------------------- |
+| Timestamp | `SECURITY_TIMESTAMP_ENABLED` / `SECURITY_TIMESTAMP_EXPIRE_MS` | 开 / 300000          |
+| Encrypt   | `SECURITY_ENCRYPT_ENABLED`                                    | 开                   |
+| Nonce     | `SECURITY_NONCE_ENABLED` / `SECURITY_NONCE_EXPIRE_MS`         | 开 / 0（= 2×时间窗） |
+| Sign      | `SECURITY_SIGN_ENABLED`（仅 Encrypt 关时生效）                | 开                   |
+| Language  | `SECURITY_LANGUAGE_ENABLED`                                   | 开                   |
+
+- 公钥：`GET /api/encrypt/public/key` → `{ code, msg, data: { publicKey } }`（SPKI base64）
+- 白名单（免强制加密）：`/api/encrypt/public/key`、`/api/altcha/**`、文档与健康检查；**不含** `/api/auth/login`
+- Nonce 为进程内内存实现；进程重启后清空
+- 可选固定密钥：`SECURITY_RSA_PUBLIC_KEY` / `SECURITY_RSA_PRIVATE_KEY`
+
+```bash
+pnpm -C apps/backend-mock-template test
+```
+
 ## Hybrid（mock + java 交叉）
 
 前端 Vite 代理常见分流：

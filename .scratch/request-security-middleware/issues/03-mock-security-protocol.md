@@ -4,13 +4,13 @@
 
 **Blocked by:** 01 — Java：配置开关 + ResultCode + 公钥 + Timestamp + Encrypt 强制链路
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 提供公钥接口，形状与 Java `Result` + `publicKey` 对齐
-- [ ] Encrypt 开：解密请求、加密响应、缺密钥拒绝；白名单与登录策略对齐 01
-- [ ] Timestamp / Nonce / Sign / Language 行为与开关语义对齐 spec（可内存实现 Nonce）
-- [ ] 环境变量或 mock 配置可单独开关各项，默认全开
-- [ ] 至少一条辅 seam 验证：加密请求成功路径 + 关 Encrypt 明文路径
+- [x] 提供公钥接口，形状与 Java `Result` + `publicKey` 对齐
+- [x] Encrypt 开：解密请求、加密响应、缺密钥拒绝；白名单与登录策略对齐 01
+- [x] Timestamp / Nonce / Sign / Language 行为与开关语义对齐 spec（可内存实现 Nonce）
+- [x] 环境变量或 mock 配置可单独开关各项，默认全开
+- [x] 至少一条辅 seam 验证：加密请求成功路径 + 关 Encrypt 明文路径
 
 ## Comments
 

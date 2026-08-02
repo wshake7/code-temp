@@ -1,0 +1,299 @@
+/**
+ * 辅 seam：Mock 安全协议对等
+ * — 公钥形状、加密请求成功路径、关 Encrypt 明文路径、Timestamp/Nonce 等开关语义。
+ */
+
+import { describe, expect, it, beforeEach } from "vite-plus/test";
+
+import { loadSecurityConfig, type SecurityConfig } from "../utils/security/config";
+import {
+  aesDecryptCombined,
+  aesEncrypt,
+  buildAad,
+  generateAesKey,
+  generateRsaKeyPair,
+  rsaEncrypt,
+} from "../utils/security/crypto";
+import { SECURITY_HEADERS, SIGN_DATA_AAD_KEY } from "../utils/security/headers";
+import { MemoryNonceStore } from "../utils/security/nonce-store";
+import { isSecurityWhitelisted } from "../utils/security/path-matcher";
+import {
+  encryptResponseBody,
+  processSecurityRequest,
+  type ProcessSecurityDeps,
+} from "../utils/security/process-request";
+import { SecurityResultCode } from "../utils/security/result-codes";
+
+function fullConfig(overrides: Partial<SecurityConfig> = {}): SecurityConfig {
+  return {
+    timestampEnabled: true,
+    timestampExpireMs: 5 * 60 * 1000,
+    encryptEnabled: true,
+    nonceEnabled: true,
+    nonceExpireMs: 0,
+    signEnabled: true,
+    languageEnabled: true,
+    ...overrides,
+  };
+}
+
+describe("mock security protocol seam", () => {
+  let keyPair: ReturnType<typeof generateRsaKeyPair>;
+  let nonceStore: MemoryNonceStore;
+  let deps: ProcessSecurityDeps;
+
+  beforeEach(() => {
+    keyPair = generateRsaKeyPair();
+    nonceStore = new MemoryNonceStore();
+    deps = {
+      config: fullConfig(),
+      privateKeyPem: keyPair.privateKeyPem,
+      nonceStore,
+    };
+  });
+
+  it("public key shape matches Result data.publicKey (SPKI base64)", () => {
+    // 与 GET /api/encrypt/public/key 返回形状对齐
+    const result = {
+      code: 0,
+      msg: "ok",
+      data: { publicKey: keyPair.publicKeyBase64 },
+    };
+    expect(result.code).toBe(0);
+    expect(result.data.publicKey).toMatch(/^[A-Za-z0-9+/=]+$/);
+    expect(result.data.publicKey.length).toBeGreaterThan(100);
+    // 可被 RSA 加密使用
+    const aes = generateAesKey();
+    const enc = rsaEncrypt(aes, keyPair.publicKeyBase64);
+    expect(enc.length).toBeGreaterThan(0);
+  });
+
+  it("encrypt on: encrypted request succeeds and response can be encrypted", () => {
+    const aesKey = generateAesKey();
+    const encryptedKey = rsaEncrypt(aesKey, keyPair.publicKeyBase64);
+    const now = Date.now();
+    const requestId = "mock-encrypt-ok-1";
+    const aad = buildAad({
+      [SECURITY_HEADERS.REQUEST_ID]: requestId,
+      [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+    });
+    const plainBody = JSON.stringify({ username: "root", password: "123456" });
+    const enc = aesEncrypt(plainBody, aesKey, aad);
+
+    const result = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_SIGNATURE]: enc.tagIv,
+          [SECURITY_HEADERS.REQUEST_ID]: requestId,
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: enc.ciphertext,
+        contentType: "application/json",
+        nowMs: now,
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.body).toBe(plainBody);
+    expect(result.responseAesKeyBase64).toBe(aesKey);
+
+    const plainResp = JSON.stringify({ code: 0, msg: "ok", data: { accessToken: "t" } });
+    const encryptedResp = encryptResponseBody(plainResp, result.responseAesKeyBase64!);
+    const decrypted = aesDecryptCombined(encryptedResp, aesKey, "").toString("utf8");
+    expect(JSON.parse(decrypted)).toEqual({ code: 0, msg: "ok", data: { accessToken: "t" } });
+  });
+
+  it("encrypt off: plaintext body passes without crypto headers", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: false });
+    const plainBody = JSON.stringify({ username: "root", password: "123456" });
+
+    const result = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        headers: {},
+        body: plainBody,
+        contentType: "application/json",
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.body).toBe(plainBody);
+    expect(result.responseAesKeyBase64).toBeUndefined();
+  });
+
+  it("sign when encrypt off: valid signature passes and body stays plain", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: true });
+    const aesKey = generateAesKey();
+    const encryptedKey = rsaEncrypt(aesKey, keyPair.publicKeyBase64);
+    const now = Date.now();
+    const plainBody = JSON.stringify({ username: "root", password: "123456" });
+    const aad = buildAad({
+      [SECURITY_HEADERS.REQUEST_ID]: "sign-ok",
+      [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+      [SIGN_DATA_AAD_KEY]: plainBody,
+    });
+    const sign = aesEncrypt("", aesKey, aad);
+
+    const result = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_SIGNATURE]: sign.tagIv,
+          [SECURITY_HEADERS.REQUEST_ID]: "sign-ok",
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: plainBody,
+        contentType: "application/json",
+        nowMs: now,
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.body).toBe(plainBody);
+  });
+
+  it("sign when encrypt off: missing signature rejected", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: true });
+    const result = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        headers: {},
+        body: '{"username":"root"}',
+        contentType: "application/json",
+      },
+      deps,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.body.code).toBe(SecurityResultCode.REQUEST_ERROR.code);
+  });
+
+  it("encrypt on: missing encrypted key on login is rejected", () => {
+    const result = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        headers: {},
+        body: '{"username":"root"}',
+        contentType: "application/json",
+      },
+      deps,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.body.code).toBe(SecurityResultCode.REQUEST_ERROR.code);
+    expect(result.body.msg).toBe(SecurityResultCode.REQUEST_ERROR.msg);
+  });
+
+  it("encrypt on: public key path allows plaintext", () => {
+    const result = processSecurityRequest(
+      {
+        method: "GET",
+        path: "/api/encrypt/public/key",
+        headers: {},
+        body: "",
+      },
+      deps,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("encrypt on: altcha path allows plaintext", () => {
+    const result = processSecurityRequest(
+      {
+        method: "GET",
+        path: "/api/altcha/challenge",
+        headers: {},
+        body: "",
+      },
+      deps,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("timestamp expired is rejected when enabled", () => {
+    const expired = Date.now() - 6 * 60 * 1000;
+    const result = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(expired),
+        },
+        body: "",
+        nowMs: Date.now(),
+      },
+      deps,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.body.code).toBe(SecurityResultCode.REQUEST_EXPIRED.code);
+  });
+
+  it("nonce conflict on second same request id", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: false });
+    const headers = { [SECURITY_HEADERS.REQUEST_ID]: "nonce-1" };
+    const first = processSecurityRequest(
+      { method: "POST", path: "/api/test", headers, body: "" },
+      deps,
+    );
+    const second = processSecurityRequest(
+      { method: "POST", path: "/api/test", headers, body: "" },
+      deps,
+    );
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.body.code).toBe(SecurityResultCode.REQUEST_NONCE_CONFLICT.code);
+  });
+
+  it("language header is resolved when enabled", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: false });
+    const result = processSecurityRequest(
+      {
+        method: "GET",
+        path: "/api/user/info",
+        headers: { [SECURITY_HEADERS.LANGUAGE]: "zh-CN" },
+        body: "",
+      },
+      deps,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.language).toBe("zh-CN");
+  });
+
+  it("env config defaults all enabled", () => {
+    const cfg = loadSecurityConfig({});
+    expect(cfg.timestampEnabled).toBe(true);
+    expect(cfg.encryptEnabled).toBe(true);
+    expect(cfg.nonceEnabled).toBe(true);
+    expect(cfg.signEnabled).toBe(true);
+    expect(cfg.languageEnabled).toBe(true);
+  });
+
+  it("env config can disable encrypt independently", () => {
+    const cfg = loadSecurityConfig({ SECURITY_ENCRYPT_ENABLED: "false" });
+    expect(cfg.encryptEnabled).toBe(false);
+    expect(cfg.timestampEnabled).toBe(true);
+  });
+
+  it("whitelist matcher covers public key and excludes login", () => {
+    expect(isSecurityWhitelisted("/api/encrypt/public/key")).toBe(true);
+    expect(isSecurityWhitelisted("/api/altcha/challenge")).toBe(true);
+    expect(isSecurityWhitelisted("/api/auth/login")).toBe(false);
+  });
+});
