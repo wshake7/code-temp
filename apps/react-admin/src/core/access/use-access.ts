@@ -44,7 +44,7 @@ function checkAccessByAuthority(
  *
  * // 按钮级权限
  * {hasAccessByCodes(['sys:user:create']) && <Button>新建</Button>}
- * {hasAccessByRoles(['admin']) && <Button>系统设置</Button>}
+ * {hasAccessByRoles(['root']) && <Button>系统设置</Button>}
  * ```
  */
 function useAccess() {

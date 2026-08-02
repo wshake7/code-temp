@@ -154,7 +154,7 @@ const RoleFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
               rules={[{ required: true, message: '请输入角色编码' }, { max: 64 }]}
               extra={isEdit ? '编码创建后不可修改' : undefined}
             >
-              <Input placeholder="如 super_admin" disabled={isEdit} />
+              <Input placeholder="如 operator" disabled={isEdit} />
             </Form.Item>
           </Col>
           <Col span={12}>

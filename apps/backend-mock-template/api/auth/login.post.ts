@@ -1,7 +1,12 @@
 import { defineEventHandler, getHeader, getRequestIP, readBody, setResponseStatus } from "h3";
 import { createSession } from "~/utils/session-utils";
 import { verifyAltchaPayload } from "~/utils/altcha";
-import { appendLoginLog, ensureUserSeeds, getMockSysUserList } from "~/utils/mock-data";
+import {
+  appendLoginLog,
+  ensureUserSeeds,
+  getMockSysUserList,
+  getUserRoleCodes,
+} from "~/utils/mock-data";
 import { forbiddenResponse, useResponseError, useResponseSuccess } from "~/utils/response";
 
 function clientMeta(event: Parameters<typeof getHeader>[0]) {
@@ -78,14 +83,7 @@ export default defineEventHandler(async (event) => {
     userAgent,
   });
 
-  const roles =
-    sysUser.username === "vben" ? ["super"] : sysUser.username === "admin" ? ["admin"] : ["user"];
-  const homePath =
-    sysUser.username === "vben"
-      ? "/analytics"
-      : sysUser.username === "admin"
-        ? "/system/user"
-        : "/analytics";
+  const roles = getUserRoleCodes(sysUser.id);
 
   const accessToken = createSession({
     id: sysUser.id,
@@ -97,7 +95,7 @@ export default defineEventHandler(async (event) => {
     username: sysUser.username,
     realName: sysUser.nickname,
     roles,
-    homePath,
+    homePath: "/analytics",
     accessToken,
   });
 });

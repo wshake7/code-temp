@@ -4,7 +4,7 @@
  * v2/v5: 字段对齐 backend/db/schema.sql；snake 内部存储，handler 出口转 camel
  * （见 utils/user-role-camel.ts）。
  *
- * 与 mock-auth.ts 的 MOCK_USERS（auth 登录用）分离：用户管理页走 mockSysUserList 种子。
+ * 登录与用户管理均走 mockSysUserList 种子（默认仅 root，对齐 java-admin）。
  *
  * 依赖：buildSysRoleApiSeeds 需要 sys_api 种子先就绪，故单向依赖 mock-menu-api
  * （调用其导出的 buildSysApiSeeds）。
@@ -16,7 +16,6 @@ import { buildSysApiSeeds, getMockSysApiList } from "./menu-api";
 // ============================================================
 // RBAC 业务 — sys_user / sys_role / sys_user_role / sys_role_menu / sys_role_api
 // v2/v5: 字段对齐 backend/db/schema.sql；snake 内部存储，handler 出口转 camel。
-// 与上面 MOCK_USERS（auth 登录用）分离：用户管理页走 mockSysUserList 种子。
 // ============================================================
 
 export interface SysUser {
@@ -228,6 +227,12 @@ export function toggleUserStatus(id: number, isEnabled: 0 | 1): SysUser | undefi
 /** 读取某用户的角色 ID 列表 */
 export function getUserRoleIds(userId: number): number[] {
   return mockSysUserRoleList.filter((r) => r.user_id === userId).map((r) => r.role_id);
+}
+
+/** 读取某用户的角色 code 列表（未软删角色）。 */
+export function getUserRoleCodes(userId: number): string[] {
+  const roleIds = new Set(getUserRoleIds(userId));
+  return mockSysRoleList.filter((r) => roleIds.has(r.id) && r.deleted_at === 0).map((r) => r.code);
 }
 
 /** 全量替换某用户的角色（内部用，不带时间戳语义）。 */
@@ -468,45 +473,17 @@ export function clearRoleApisByApiId(apiId: number): void {
 
 // ─── 种子 ───────────────────────────────────────────────────
 
-/** 种子：角色（3 个，对齐 MOCK_USERS 三用户）。 */
+/** 种子：角色（仅 root，对齐 java-admin）。 */
 function buildSysRoleSeeds(): SysRole[] {
   const now = "2025-01-10T08:00:00.000Z";
-  const defs: SysRole[] = [
+  return [
     {
       id: 1,
-      code: "super_admin",
+      code: "root",
       name: "超级管理员",
       parent_id: null,
       sort: 1,
-      remark: "系统内置,不可删除",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 2,
-      code: "admin",
-      name: "系统管理员",
-      parent_id: 1,
-      sort: 10,
-      remark: "可管理用户/角色/字典/国际化",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: now,
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 3,
-      code: "user",
-      name: "普通用户",
-      parent_id: 1,
-      sort: 99,
-      remark: "仅看仪表盘",
+      remark: "系统内置 Root 角色，不可删除",
       is_enabled: 1,
       deleted_at: 0,
       created_at: now,
@@ -515,125 +492,62 @@ function buildSysRoleSeeds(): SysRole[] {
       updated_by: 0,
     },
   ];
-  return defs;
 }
 
-/** 种子：用户（3 个，与 MOCK_USERS 对齐）。 */
+/** 种子：用户（仅 root，对齐 java-admin；密码明文 123456）。 */
 function buildSysUserSeeds(): SysUser[] {
   const now = "2025-01-10T08:00:00.000Z";
-  const defs: SysUser[] = [
+  return [
     {
       id: 1,
-      username: "vben",
+      username: "root",
       password_hash: placeholderHash("123456"),
-      nickname: "Vben",
-      email: "vben@trellis.cloud",
-      phone: "13800000001",
+      nickname: "Root",
+      email: "root@trellis.local",
+      phone: "",
       avatar: "",
       language_code: "zh-CN",
-      last_login_at: "2026-06-20T01:12:33.000Z",
-      last_login_ip: "10.0.0.12",
-      remark: "",
+      last_login_at: null,
+      last_login_ip: "",
+      remark: "系统内置超级管理员",
       is_enabled: 1,
       deleted_at: 0,
-      created_at: "2025-01-10T00:00:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 2,
-      username: "admin",
-      password_hash: placeholderHash("123456"),
-      nickname: "Admin",
-      email: "admin@trellis.cloud",
-      phone: "13800000002",
-      avatar: "",
-      language_code: "zh-CN",
-      last_login_at: "2026-06-20T00:55:14.000Z",
-      last_login_ip: "10.0.0.45",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: "2025-03-12T02:30:00.000Z",
-      updated_at: now,
-      created_by: 0,
-      updated_by: 0,
-    },
-    {
-      id: 3,
-      username: "jack",
-      password_hash: placeholderHash("123456"),
-      nickname: "Jack",
-      email: "jack@trellis.cloud",
-      phone: "13800000003",
-      avatar: "",
-      language_code: "en-US",
-      last_login_at: "2026-06-19T09:42:01.000Z",
-      last_login_ip: "10.0.1.108",
-      remark: "",
-      is_enabled: 1,
-      deleted_at: 0,
-      created_at: "2025-05-08T03:15:00.000Z",
+      created_at: now,
       updated_at: now,
       created_by: 0,
       updated_by: 0,
     },
   ];
-  return defs;
 }
 
-/** 种子：用户-角色关联（3 用户对齐 MOCK_USERS）。 */
+/** 种子：用户-角色关联（root 用户 → root 角色）。 */
 function buildSysUserRoleSeeds(): SysUserRole[] {
   const now = "2025-01-10T08:00:00.000Z";
-  const pairs: Array<[number, number[]]> = [
-    [1, [1]], // vben → super_admin
-    [2, [2]], // admin → admin
-    [3, [3]], // jack → user
-  ];
-  const rows: SysUserRole[] = [];
-  for (const [uid, rids] of pairs) {
-    for (const rid of rids) {
-      rows.push({ user_id: uid, role_id: rid, created_at: now, created_by: 0 });
-    }
-  }
-  return rows;
+  return [{ user_id: 1, role_id: 1, created_at: now, created_by: 0 }];
 }
 
-/** 种子：角色-菜单授权（对齐原 MOCK_MENUS：vben full / admin partial / jack dashboard）。 */
+/** 种子：角色-菜单授权（root 全量）。 */
 function buildSysRoleMenuSeeds(): SysRoleMenu[] {
   const now = "2025-01-10T08:00:00.000Z";
   const rows: SysRoleMenu[] = [];
 
-  // Dashboard branch + buttons included where useful.
   const dashboard = [100, 101, 102];
   // 日志审计（单 MENU 300；301/302 为 BUTTON，父级授权即可发码）
   const logBranch = [300];
   // 任务调度（一级 MENU 400；401/402 为页内 Tab 权限按钮）
   const taskBranch = [400];
-  // Full system menus + button children
   const systemFull = [
     200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206, 2061,
   ];
-  // Partial system: user/role/dict/i18n (+ user/role buttons)
-  const systemPartial = [200, 201, 2011, 2012, 2013, 202, 2021, 203, 204];
 
-  // super_admin(id=1) = vben full
+  // root(id=1) 全量菜单
   for (const mid of [...dashboard, ...logBranch, ...taskBranch, ...systemFull]) {
     rows.push({ role_id: 1, menu_id: mid, created_at: now, created_by: 0 });
-  }
-  // admin(id=2) = partial system + dashboard + 日志 + 任务调度
-  for (const mid of [...dashboard, ...logBranch, ...taskBranch, ...systemPartial]) {
-    rows.push({ role_id: 2, menu_id: mid, created_at: now, created_by: 0 });
-  }
-  // user(id=3) = jack dashboard only
-  for (const mid of dashboard) {
-    rows.push({ role_id: 3, menu_id: mid, created_at: now, created_by: 0 });
   }
   return rows;
 }
 
-/** 种子：角色-接口授权（按 path 解析 id，避免硬编码）。 */
+/** 种子：角色-接口授权（root 全量，按 path 解析 id）。 */
 function buildSysRoleApiSeeds(): SysRoleApi[] {
   // role_api 依赖 sys_api 种子；ensureUserSeeds 可能早于 ensureMenuApiSeeds
   if (getMockSysApiList().length === 0) {
@@ -643,24 +557,8 @@ function buildSysRoleApiSeeds(): SysRoleApi[] {
   const rows: SysRoleApi[] = [];
   const active = getMockSysApiList().filter((a) => a.deleted_at === 0);
 
-  // super_admin(id=1) 授权全部接口
   for (const api of active) {
     rows.push({ role_id: 1, api_id: api.id, created_at: now, created_by: 0 });
-  }
-
-  // admin(id=2) 授权用户管理 + 登录/API 日志 + 任务调度
-  for (const api of active) {
-    const isUser = api.path === "/api/system/user" || api.path.startsWith("/api/system/user/");
-    const isLoginLog = api.path === "/api/system/login-log/list";
-    const isApiLog = api.path === "/api/system/api-log/list";
-    const isTask =
-      api.path === "/api/system/task-config" ||
-      api.path.startsWith("/api/system/task-config/") ||
-      api.path === "/api/system/task-execution" ||
-      api.path.startsWith("/api/system/task-execution/");
-    if (isUser || isLoginLog || isApiLog || isTask) {
-      rows.push({ role_id: 2, api_id: api.id, created_at: now, created_by: 0 });
-    }
   }
   return rows;
 }

@@ -121,7 +121,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15";
   const seeds: Omit<SysLoginLog, "id">[] = [
     {
-      username: "vben",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -141,7 +141,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
       created_at: hoursAgo(1),
     },
     {
-      username: "admin",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -161,7 +161,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
       created_at: hoursAgo(3),
     },
     {
-      username: "admin",
+      username: "root",
       success: 0,
       reason: "Username or password is incorrect.",
       status_code: 403,
@@ -181,7 +181,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
       created_at: hoursAgo(5),
     },
     {
-      username: "jack",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -221,7 +221,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
       created_at: hoursAgo(12),
     },
     {
-      username: "vben",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -241,7 +241,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
       created_at: hoursAgo(24),
     },
     {
-      username: "jack",
+      username: "root",
       success: 0,
       reason: "Username and password are required",
       status_code: 400,
@@ -261,7 +261,7 @@ function buildLoginLogSeeds(): SysLoginLog[] {
       created_at: hoursAgo(30),
     },
     {
-      username: "admin",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -292,7 +292,7 @@ function buildLoginLogArchiveSeeds(): SysLoginLogArchive[] {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
   const seeds: Omit<SysLoginLogArchive, "id">[] = [
     {
-      username: "vben",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -313,7 +313,7 @@ function buildLoginLogArchiveSeeds(): SysLoginLogArchive[] {
       archived_at: daysAgo(15),
     },
     {
-      username: "admin",
+      username: "root",
       success: 0,
       reason: "Username or password is incorrect.",
       status_code: 403,
@@ -334,7 +334,7 @@ function buildLoginLogArchiveSeeds(): SysLoginLogArchive[] {
       archived_at: daysAgo(15),
     },
     {
-      username: "jack",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,
@@ -355,7 +355,7 @@ function buildLoginLogArchiveSeeds(): SysLoginLogArchive[] {
       archived_at: daysAgo(20),
     },
     {
-      username: "vben",
+      username: "root",
       success: 1,
       reason: "",
       status_code: 200,

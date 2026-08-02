@@ -15,7 +15,7 @@
  * </AccessControl>
  *
  * // 混合匹配（meta.authority 模式）
- * <AccessControl codes={['admin', 'sys:user:export']} type="authority">
+ * <AccessControl codes={['root', 'sys:user:export']} type="authority">
  *   <Button>导出</Button>
  * </AccessControl>
  *

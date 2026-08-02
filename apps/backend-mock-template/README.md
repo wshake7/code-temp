@@ -13,14 +13,14 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 
 环境变量（可选，开发默认见 `.env.development`，`pnpm start` / nitro dev 自动加载）：
 
-| 变量                              | 默认                                         | 说明                                                                 |
-| --------------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
-| `AUTH_TOKEN_TIMEOUT_SECONDS`      | `2592000`（30 天）                           | 会话超时；每次请求重置                                               |
-| `AUTH_IS_CONCURRENT`              | `true`                                       | 是否允许多端登录                                                     |
-| `AUTH_IS_SHARE`                   | `false`                                      | 同账号是否共享同一 token                                             |
-| `AUTH_JAVA_INTROSPECT_URL`        | `http://localhost:4080/api/user/info`        | hybrid：向 java 内省 Sa-Token；设为空字符串关闭                      |
-| `AUTH_JAVA_USER_FALLBACK`         | `vben`                                       | java 用户名在 mock 无同名用户时回落的 mock 用户（如 java `root`）    |
-| `AUTH_JAVA_INTROSPECT_TIMEOUT_MS` | `3000`                                       | 内省 HTTP 超时（毫秒）                                               |
+| 变量                              | 默认                                  | 说明                                            |
+| --------------------------------- | ------------------------------------- | ----------------------------------------------- |
+| `AUTH_TOKEN_TIMEOUT_SECONDS`      | `2592000`（30 天）                    | 会话超时；每次请求重置                          |
+| `AUTH_IS_CONCURRENT`              | `true`                                | 是否允许多端登录                                |
+| `AUTH_IS_SHARE`                   | `false`                               | 同账号是否共享同一 token                        |
+| `AUTH_JAVA_INTROSPECT_URL`        | `http://localhost:4080/api/user/info` | hybrid：向 java 内省 Sa-Token；设为空字符串关闭 |
+| `AUTH_JAVA_USER_FALLBACK`         | `root`                                | java 用户名在 mock 无同名用户时回落的 mock 用户 |
+| `AUTH_JAVA_INTROSPECT_TIMEOUT_MS` | `3000`                                | 内省 HTTP 超时（毫秒）                          |
 
 修改 `.env.development` 后需重启 mock。进程重启后会话清空（mock 可接受）。
 

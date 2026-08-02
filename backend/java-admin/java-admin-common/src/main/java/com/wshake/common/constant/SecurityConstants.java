@@ -10,8 +10,8 @@ public final class SecurityConstants {
     /** Sa-Token token 名称（请求头名；配合 token-prefix=Bearer） */
     public static final String TOKEN_NAME = "Authorization";
 
-    /** 默认角色：admin */
-    public static final String ROLE_ADMIN = "admin";
+    /** 系统内置 Root 角色 code */
+    public static final String ROLE_ROOT = "root";
 
     private SecurityConstants() {}
 }

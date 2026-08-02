@@ -6,7 +6,7 @@
 --   - 软删业务表数据均为未删状态（deleted_at = 0）
 --   - 字典: sys_user_sex / sys_yes_no / sys_menu_type / sys_notice_type
 --           sys_switch_status / sys_default_status / sys_platform
---   - RBAC: sys_api / sys_menu 全量；角色/用户仅 super_admin + root
+--   - RBAC: sys_api / sys_menu 全量；角色/用户仅 root
 --   - Root 密码明文 123456（BCrypt cost=10）
 --   - Casbin subject = 用户 id 字符串；Root 通配 p, 1, /*, * 保证首登不被 deny-by-default
 --     matcher: r.sub == p.sub && keyMatch2(r.obj, p.obj) && (p.act == "*" || r.act == p.act)
@@ -276,12 +276,12 @@ VALUES
 ALTER TABLE sys_menu AUTO_INCREMENT = 1000;
 
 -- ============================================================
--- Section 5: sys_role（仅 super_admin / Root 对应角色）
+-- Section 5: sys_role（仅 root）
 -- ============================================================
 
 INSERT INTO sys_role (id, code, name, parent_id, sort, remark, is_enabled, deleted_at, created_by, updated_by)
 VALUES
-    (1, 'super_admin', '超级管理员', NULL, 1, '系统内置 Root 角色，不可删除', 1, 0, 0, 0);
+    (1, 'root', '超级管理员', NULL, 1, '系统内置 Root 角色，不可删除', 1, 0, 0, 0);
 
 ALTER TABLE sys_role AUTO_INCREMENT = 100;
 
@@ -296,13 +296,13 @@ VALUES
 ALTER TABLE sys_user AUTO_INCREMENT = 100;
 
 -- ============================================================
--- Section 7: sys_user_role（root → super_admin）
+-- Section 7: sys_user_role（root 用户 → root 角色）
 -- ============================================================
 
 INSERT INTO sys_user_role (user_id, role_id) VALUES (1, 1);
 
 -- ============================================================
--- Section 8: sys_role_menu（super_admin 全量菜单，含日志/任务按钮）
+-- Section 8: sys_role_menu（root 全量菜单，含日志/任务按钮）
 -- ============================================================
 
 INSERT INTO sys_role_menu (role_id, menu_id) VALUES
@@ -332,7 +332,7 @@ INSERT INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 2061);
 
 -- ============================================================
--- Section 9: sys_role_api（super_admin 全量接口）
+-- Section 9: sys_role_api（root 全量接口）
 -- ============================================================
 
 INSERT INTO sys_role_api (role_id, api_id) VALUES

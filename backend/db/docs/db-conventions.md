@@ -493,7 +493,7 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 
 - `sys_api`：对齐 `API_SYNC_MANIFEST`（schema 对 `permission_code` 唯一，冲突项用 path 消歧后缀）
 - `sys_menu`：对齐 `buildSysMenuSeeds`（固定 id + `tree_path`）
-- `sys_role`：`super_admin` / `admin` / `user`
+- `sys_role`：仅 `root`
 - `sys_user`：仅 `root`（密码明文 `123456`，BCrypt）
 - 关联：`sys_user_role` / `sys_role_menu` / `sys_role_api` / `sys_menu_api`
 

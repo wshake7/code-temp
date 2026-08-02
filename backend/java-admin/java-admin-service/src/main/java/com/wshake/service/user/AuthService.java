@@ -60,7 +60,7 @@ public class AuthService {
         List<String> roles = authQueryRepository.findRoleCodesByUserId(user.getId());
         loginLogger.recordPwdLogin(safeUsername, user.getId(), 200, true, "", meta);
         log.info("[AUTH] login success userId={} username={}", user.getId(), safeUsername);
-        return new LoginResult(user, roles, resolveHomePath(roles));
+        return new LoginResult(user, roles, DEFAULT_HOME_PATH);
     }
 
     /**
@@ -88,7 +88,7 @@ public class AuthService {
      */
     public LoginResult toUserSummary(SysUser user) {
         List<String> roles = listRoleCodes(user.getId());
-        return new LoginResult(user, roles, resolveHomePath(roles));
+        return new LoginResult(user, roles, DEFAULT_HOME_PATH);
     }
 
     private void verifyAltcha(String altcha, String username, LoginClientMeta meta) {
@@ -126,15 +126,5 @@ public class AuthService {
             loginLogger.recordPwdLogin(username, user.getId(), 401, false, "Username or password is incorrect", meta);
             throw AuthException.invalidCredentials();
         }
-    }
-
-    private String resolveHomePath(List<String> roles) {
-        if (roles != null && roles.contains("super_admin")) {
-            return DEFAULT_HOME_PATH;
-        }
-        if (roles != null && roles.contains("admin")) {
-            return "/system/user";
-        }
-        return DEFAULT_HOME_PATH;
     }
 }

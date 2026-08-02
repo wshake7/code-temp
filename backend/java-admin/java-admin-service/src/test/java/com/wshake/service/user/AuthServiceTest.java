@@ -70,12 +70,12 @@ class AuthServiceTest {
     void login_withCorrectCredentials_returnsUserAndRoles() {
         SysUser user = fixture("root", SEED_HASH_123456, "Root", 1);
         when(sysUserRepository.findByUsername("root")).thenReturn(user);
-        when(authQueryRepository.findRoleCodesByUserId(1L)).thenReturn(List.of("super_admin"));
+        when(authQueryRepository.findRoleCodesByUserId(1L)).thenReturn(List.of("root"));
 
         LoginResult result = authService.login("root", "123456", "valid-altcha", meta);
 
         assertThat(result.user().getUsername()).isEqualTo("root");
-        assertThat(result.roles()).containsExactly("super_admin");
+        assertThat(result.roles()).containsExactly("root");
         assertThat(result.homePath()).isEqualTo("/analytics");
 
         verify(loginLogger).recordPwdLogin("root", 1L, 200, true, "", meta);

@@ -51,7 +51,7 @@ public class AuthQueryRepository {
      *
      * <p>规则对齐 mock：角色授权菜单中 type=BUTTON 且 permission_code 非空；
      * 或 BUTTON 的父 MENU 被授权。本实现直接取角色绑定的全部 BUTTON 权限码
-     * （seed 对 super_admin 已绑定完整按钮集）。
+     * （seed 对 root 角色已绑定完整按钮集）。
      */
     public List<String> findAccessCodesByUserId(Long userId) {
         List<Long> roleIds = easyEntityQuery

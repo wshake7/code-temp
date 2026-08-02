@@ -47,7 +47,7 @@ class AuthControllerTest {
                         ArgumentMatchers.eq("123456"),
                         ArgumentMatchers.eq("altcha-ok"),
                         ArgumentMatchers.any(LoginClientMeta.class)))
-                .thenReturn(new LoginResult(user, List.of("super_admin"), "/analytics"));
+                .thenReturn(new LoginResult(user, List.of("root"), "/analytics"));
         when(request.getRemoteAddr()).thenReturn("10.0.0.1");
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
 
@@ -62,7 +62,7 @@ class AuthControllerTest {
             assertThat(result.getData().getId()).isEqualTo(1L);
             assertThat(result.getData().getUsername()).isEqualTo("root");
             assertThat(result.getData().getRealName()).isEqualTo("Root");
-            assertThat(result.getData().getRoles()).containsExactly("super_admin");
+            assertThat(result.getData().getRoles()).containsExactly("root");
             assertThat(result.getData().getHomePath()).isEqualTo("/analytics");
             stp.verify(() -> StpUtil.login(1L));
         }
@@ -108,7 +108,7 @@ class AuthControllerTest {
         user.setNickname("Root");
         user.setAvatar("");
         when(sysUserService.findById(1L)).thenReturn(user);
-        when(authService.toUserSummary(user)).thenReturn(new LoginResult(user, List.of("super_admin"), "/analytics"));
+        when(authService.toUserSummary(user)).thenReturn(new LoginResult(user, List.of("root"), "/analytics"));
 
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::isLogin).thenReturn(true);
@@ -118,7 +118,7 @@ class AuthControllerTest {
 
             assertThat(result.getData().getUsername()).isEqualTo("root");
             assertThat(result.getData().getRealName()).isEqualTo("Root");
-            assertThat(result.getData().getRoles()).containsExactly("super_admin");
+            assertThat(result.getData().getRoles()).containsExactly("root");
         }
     }
 

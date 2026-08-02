@@ -5,7 +5,7 @@ import type { UserInfo } from "./mock-data";
 import { getHeader } from "h3";
 import { randomUUID } from "node:crypto";
 
-import { ensureUserSeeds, getMockSysUserList } from "./mock-data";
+import { ensureUserSeeds, getMockSysUserList, getUserRoleCodes } from "./mock-data";
 
 /** 默认 30 天（秒），对齐 java-admin sa-token.timeout */
 const DEFAULT_TIMEOUT_SECONDS = 2592000;
@@ -58,10 +58,10 @@ export function getJavaIntrospectUrl(): string {
   return raw.trim();
 }
 
-/** java 用户名在 mock 中不存在时回落到该 mock 用户（默认 vben，覆盖 java 种子 root） */
+/** java 用户名在 mock 中不存在时回落到该 mock 用户（默认 root） */
 export function getJavaUserFallback(): string {
   const raw = process.env.AUTH_JAVA_USER_FALLBACK;
-  if (raw === undefined || raw.trim() === "") return "vben";
+  if (raw === undefined || raw.trim() === "") return "root";
   return raw.trim();
 }
 
@@ -92,20 +92,14 @@ function buildUserInfo(sysUser: {
   username: string;
   nickname: string;
 }): Omit<UserInfo, "password"> {
-  const roles =
-    sysUser.username === "vben" ? ["super"] : sysUser.username === "admin" ? ["admin"] : ["user"];
-  const homePath =
-    sysUser.username === "vben"
-      ? "/analytics"
-      : sysUser.username === "admin"
-        ? "/system/user"
-        : "/analytics";
+  ensureUserSeeds();
+  const roles = getUserRoleCodes(sysUser.id);
   return {
     id: sysUser.id,
     username: sysUser.username,
     realName: sysUser.nickname,
     roles,
-    homePath,
+    homePath: "/analytics",
   };
 }
 
@@ -121,7 +115,7 @@ function findSysUserById(userId: number) {
 
 /**
  * 将 java 侧用户名映射到 mock RBAC 用户。
- * 优先同名；否则 AUTH_JAVA_USER_FALLBACK（默认 vben）。
+ * 优先同名；否则 AUTH_JAVA_USER_FALLBACK（默认 root）。
  */
 function resolveMockUserForJavaUsername(javaUsername: string) {
   const exact = findSysUserByUsername(javaUsername);

@@ -448,16 +448,14 @@ lines.push("ALTER TABLE sys_menu AUTO_INCREMENT = 1000;");
 lines.push("");
 
 lines.push("-- ============================================================");
-lines.push("-- Section 5: sys_role（对齐 mock：super_admin / admin / user）");
+lines.push("-- Section 5: sys_role（仅 root，对齐 java-admin / mock）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push(
   "INSERT INTO sys_role (id, code, name, parent_id, sort, remark, is_enabled, deleted_at, created_by, updated_by)",
 );
 lines.push("VALUES");
-lines.push("    (1, 'super_admin', '超级管理员', NULL, 1, '系统内置,不可删除', 1, 0, 0, 0),");
-lines.push("    (2, 'admin', '系统管理员', 1, 10, '可管理用户/角色/字典/国际化', 1, 0, 0, 0),");
-lines.push("    (3, 'user', '普通用户', 1, 99, '仅看仪表盘', 1, 0, 0, 0);");
+lines.push("    (1, 'root', '超级管理员', NULL, 1, '系统内置 Root 角色，不可删除', 1, 0, 0, 0);");
 lines.push("");
 lines.push("ALTER TABLE sys_role AUTO_INCREMENT = 100;");
 lines.push("");
@@ -480,7 +478,7 @@ lines.push("ALTER TABLE sys_user AUTO_INCREMENT = 100;");
 lines.push("");
 
 lines.push("-- ============================================================");
-lines.push("-- Section 7: sys_user_role（root → super_admin）");
+lines.push("-- Section 7: sys_user_role（root 用户 → root 角色）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push("INSERT INTO sys_user_role (user_id, role_id) VALUES (1, 1);");
@@ -492,44 +490,25 @@ const taskBranch = [400, 401, 402];
 const systemFull = [
   200, 201, 2011, 2012, 2013, 202, 2021, 203, 204, 205, 2051, 2052, 2053, 206, 2061,
 ];
-const systemPartial = [200, 201, 2011, 2012, 2013, 202, 2021, 203, 204];
-const superMenus = [...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemFull])];
-const adminMenus = [...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemPartial])];
-const userMenus = [...dashboard];
+const rootMenus = [...new Set([...dashboard, ...logBranch, ...taskBranch, ...systemFull])];
 
 lines.push("-- ============================================================");
-lines.push("-- Section 8: sys_role_menu（对齐 mock 授权矩阵；含日志/任务按钮）");
+lines.push("-- Section 8: sys_role_menu（root 全量菜单，含日志/任务按钮）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push("INSERT INTO sys_role_menu (role_id, menu_id) VALUES");
 const rm = [];
-for (const mid of superMenus) rm.push(`    (1, ${mid})`);
-for (const mid of adminMenus) rm.push(`    (2, ${mid})`);
-for (const mid of userMenus) rm.push(`    (3, ${mid})`);
+for (const mid of rootMenus) rm.push(`    (1, ${mid})`);
 lines.push(`${rm.join(",\n")};`);
 lines.push("");
 
 lines.push("-- ============================================================");
-lines.push("-- Section 9: sys_role_api");
+lines.push("-- Section 9: sys_role_api（root 全量接口）");
 lines.push("-- ============================================================");
 lines.push("");
 lines.push("INSERT INTO sys_role_api (role_id, api_id) VALUES");
 const ra = [];
 for (const a of apis) ra.push(`    (1, ${a.id})`);
-for (const a of apis) {
-  const p = a.path;
-  const isUser = p === "/api/system/user" || p.startsWith("/api/system/user/");
-  const isLoginLog = p === "/api/system/login-log/list";
-  const isApiLog = p === "/api/system/api-log/list";
-  const isTask =
-    p === "/api/system/task-config" ||
-    p.startsWith("/api/system/task-config/") ||
-    p === "/api/system/task-execution" ||
-    p.startsWith("/api/system/task-execution/");
-  if (isUser || isLoginLog || isApiLog || isTask) {
-    ra.push(`    (2, ${a.id})`);
-  }
-}
 lines.push(`${ra.join(",\n")};`);
 lines.push("");
 

@@ -189,18 +189,11 @@ const taskMenus = () => [
   },
 ];
 
+/** 历史按用户名投影的菜单（现已由 RBAC sys_role_menu 取代）；仅 root 全量对照。 */
 export const MOCK_MENUS = [
   {
     menus: [...dashboardMenus, ...taskMenus(), ...logMenus(), ...systemMenus("full")],
-    username: "vben",
-  },
-  {
-    menus: [...dashboardMenus, ...taskMenus(), ...logMenus(), ...systemMenus("partial")],
-    username: "admin",
-  },
-  {
-    menus: [...dashboardMenus],
-    username: "jack",
+    username: "root",
   },
 ];
 

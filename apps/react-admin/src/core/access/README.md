@@ -92,7 +92,7 @@ const UserPage = () => {
       {hasAccessByCodes(['sys:user:delete']) && <Button danger>删除</Button>}
 
       {/* 基于角色码 */}
-      {hasAccessByRoles(['admin']) && <Button>系统设置</Button>}
+      {hasAccessByRoles(['root']) && <Button>系统设置</Button>}
     </>
   );
 };
@@ -111,12 +111,12 @@ import { AccessControl } from '@/core/access';
 </AccessControl>
 
 // 基于角色码
-<AccessControl codes={['admin']} type="role">
+<AccessControl codes={['root']} type="role">
   <Button>管理员操作</Button>
 </AccessControl>
 
 // 混合匹配（meta.authority 模式）
-<AccessControl codes={['admin', 'sys:user:export']} type="authority">
+<AccessControl codes={['root', 'sys:user:export']} type="authority">
   <Button>导出</Button>
 </AccessControl>
 

@@ -14,7 +14,7 @@
 -- RBAC:
 --   - sys_api 对齐 API_SYNC_MANIFEST（permission_code 冲突时 path 消歧）
 --   - sys_menu 对齐 buildSysMenuSeeds（固定 id）
---   - sys_role: super_admin / admin / user
+--   - sys_role: 仅 root
 --   - sys_user: 仅 root（密码 123456，BCrypt）
 --   - 关联: user_role / role_menu / role_api / menu_api
 -- 再生 RBAC（Section 3–10）: node backend/db/_gen_rbac_seed.mjs
@@ -281,14 +281,12 @@ VALUES
 ALTER TABLE sys_menu AUTO_INCREMENT = 1000;
 
 -- ============================================================
--- Section 5: sys_role（对齐 mock：super_admin / admin / user）
+-- Section 5: sys_role（仅 root，对齐 java-admin / mock）
 -- ============================================================
 
 INSERT INTO sys_role (id, code, name, parent_id, sort, remark, is_enabled, deleted_at, created_by, updated_by)
 VALUES
-    (1, 'super_admin', '超级管理员', NULL, 1, '系统内置,不可删除', 1, 0, 0, 0),
-    (2, 'admin', '系统管理员', 1, 10, '可管理用户/角色/字典/国际化', 1, 0, 0, 0),
-    (3, 'user', '普通用户', 1, 99, '仅看仪表盘', 1, 0, 0, 0);
+    (1, 'root', '超级管理员', NULL, 1, '系统内置 Root 角色，不可删除', 1, 0, 0, 0);
 
 ALTER TABLE sys_role AUTO_INCREMENT = 100;
 
@@ -303,13 +301,13 @@ VALUES
 ALTER TABLE sys_user AUTO_INCREMENT = 100;
 
 -- ============================================================
--- Section 7: sys_user_role（root → super_admin）
+-- Section 7: sys_user_role（root 用户 → root 角色）
 -- ============================================================
 
 INSERT INTO sys_user_role (user_id, role_id) VALUES (1, 1);
 
 -- ============================================================
--- Section 8: sys_role_menu（对齐 mock 授权矩阵；含日志/任务按钮）
+-- Section 8: sys_role_menu（root 全量菜单，含日志/任务按钮）
 -- ============================================================
 
 INSERT INTO sys_role_menu (role_id, menu_id) VALUES
@@ -336,31 +334,10 @@ INSERT INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 2052),
     (1, 2053),
     (1, 206),
-    (1, 2061),
-    (2, 100),
-    (2, 101),
-    (2, 102),
-    (2, 300),
-    (2, 301),
-    (2, 302),
-    (2, 400),
-    (2, 401),
-    (2, 402),
-    (2, 200),
-    (2, 201),
-    (2, 2011),
-    (2, 2012),
-    (2, 2013),
-    (2, 202),
-    (2, 2021),
-    (2, 203),
-    (2, 204),
-    (3, 100),
-    (3, 101),
-    (3, 102);
+    (1, 2061);
 
 -- ============================================================
--- Section 9: sys_role_api
+-- Section 9: sys_role_api（root 全量接口）
 -- ============================================================
 
 INSERT INTO sys_role_api (role_id, api_id) VALUES
@@ -443,24 +420,7 @@ INSERT INTO sys_role_api (role_id, api_id) VALUES
     (1, 77),
     (1, 78),
     (1, 79),
-    (1, 80),
-    (2, 5),
-    (2, 6),
-    (2, 7),
-    (2, 8),
-    (2, 9),
-    (2, 10),
-    (2, 70),
-    (2, 71),
-    (2, 72),
-    (2, 73),
-    (2, 74),
-    (2, 75),
-    (2, 76),
-    (2, 77),
-    (2, 78),
-    (2, 79),
-    (2, 80);
+    (1, 80);
 
 -- ============================================================
 -- Section 10: sys_menu_api（菜单-接口快捷绑定）

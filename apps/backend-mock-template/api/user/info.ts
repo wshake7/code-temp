@@ -1,6 +1,6 @@
 import { eventHandler } from "h3";
 import { verifyAccessToken } from "~/utils/session-utils";
-import { ensureUserSeeds, getMockSysUserList } from "~/utils/mock-data";
+import { ensureUserSeeds, getMockSysUserList, getUserRoleCodes } from "~/utils/mock-data";
 import { unAuthorizedResponse, useResponseSuccess } from "~/utils/response";
 
 export default eventHandler((event) => {
@@ -17,21 +17,13 @@ export default eventHandler((event) => {
     return unAuthorizedResponse(event);
   }
 
-  // 返回与原 MOCK_USERS 格式兼容的用户信息
-  const roles =
-    sysUser.username === "vben" ? ["super"] : sysUser.username === "admin" ? ["admin"] : ["user"];
-  const homePath =
-    sysUser.username === "vben"
-      ? "/analytics"
-      : sysUser.username === "admin"
-        ? "/system/user"
-        : "/analytics";
+  const roles = getUserRoleCodes(sysUser.id);
 
   return useResponseSuccess({
     id: sysUser.id,
     username: sysUser.username,
     realName: sysUser.nickname,
     roles,
-    homePath,
+    homePath: "/analytics",
   });
 });
