@@ -31,11 +31,11 @@ function headerGet(headers: InternalAxiosRequestConfig['headers'], name: string)
   if (!headers) return undefined;
   if (typeof headers.get === 'function') {
     const v = headers.get(name);
-    return v == null ? undefined : String(v);
+    return v === null || v === undefined ? undefined : String(v);
   }
   const rec = headers as unknown as Record<string, unknown>;
   const v = rec[name] ?? rec[name.toLowerCase()];
-  return v == null ? undefined : String(v);
+  return v === null || v === undefined ? undefined : String(v);
 }
 
 function headerSet(headers: InternalAxiosRequestConfig['headers'], name: string, value: string): void {

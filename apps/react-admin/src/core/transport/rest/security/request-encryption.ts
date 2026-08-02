@@ -63,18 +63,16 @@ function resolveIdentity(
   flags: SecurityHeaderFlags,
   deps: Pick<SecurityEncryptionDeps, 'now' | 'nonce'>,
 ): { timestamp?: string; requestId?: string } {
+  const headerTs = headers[SECURITY_HEADERS.REQUEST_TIMESTAMP];
   const timestamp =
     flags.existingTimestamp ??
-    (headers[SECURITY_HEADERS.REQUEST_TIMESTAMP] != null
-      ? String(headers[SECURITY_HEADERS.REQUEST_TIMESTAMP])
-      : undefined) ??
+    (headerTs !== null && headerTs !== undefined ? String(headerTs) : undefined) ??
     (flags.timestampEnabled ? String(deps.now?.() ?? Date.now()) : undefined);
 
+  const headerId = headers[SECURITY_HEADERS.REQUEST_ID];
   const requestId =
     flags.existingRequestId ??
-    (headers[SECURITY_HEADERS.REQUEST_ID] != null
-      ? String(headers[SECURITY_HEADERS.REQUEST_ID])
-      : undefined) ??
+    (headerId !== null && headerId !== undefined ? String(headerId) : undefined) ??
     (flags.nonceEnabled
       ? (deps.nonce?.() ?? Math.random().toString(36).slice(2, 18))
       : undefined);
@@ -86,10 +84,10 @@ function applyIdentityHeaders(
   headers: Record<string, unknown>,
   identity: { timestamp?: string; requestId?: string },
 ): void {
-  if (identity.timestamp != null && identity.timestamp !== '') {
+  if (identity.timestamp !== undefined && identity.timestamp !== '') {
     headers[SECURITY_HEADERS.REQUEST_TIMESTAMP] = identity.timestamp;
   }
-  if (identity.requestId != null && identity.requestId !== '') {
+  if (identity.requestId !== undefined && identity.requestId !== '') {
     headers[SECURITY_HEADERS.REQUEST_ID] = identity.requestId;
   }
 }

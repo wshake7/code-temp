@@ -18,9 +18,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <p>顺序紧随 {@link com.wshake.infra.log.TraceIdFilter}（{@code HIGHEST_PRECEDENCE}），
  * 用户 id / language 由后续 Sa + Language 拦截器写入。
  *
+ * <p>Bean 名必须避开 Spring Boot WebMvc 自带的 {@code requestContextFilter}
+ * （{@code OrderedRequestContextFilter}），否则会触发
+ * {@code BeanDefinitionOverrideException}。
+ *
  * @author wshake
  */
-@Component
+@Component("appRequestContextFilter")
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class RequestContextFilter extends OncePerRequestFilter {
 
