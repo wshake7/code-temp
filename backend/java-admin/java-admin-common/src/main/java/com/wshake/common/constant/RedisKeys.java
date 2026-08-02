@@ -16,5 +16,11 @@ public final class RedisKeys {
      */
     public static final String GLOBAL_ENCRYPT_KEY_PAIR = "global:encrypt:public:key";
 
+    /**
+     * Nonce 防重放 key 前缀；完整 key = 前缀 + {@code X-Request-ID}。
+     * 对齐 Go {@code security:nonce:%s}。
+     */
+    public static final String SECURITY_NONCE_PREFIX = "security:nonce:";
+
     private RedisKeys() {}
 }

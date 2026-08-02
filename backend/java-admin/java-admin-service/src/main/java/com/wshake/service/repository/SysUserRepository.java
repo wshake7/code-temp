@@ -45,4 +45,19 @@ public class SysUserRepository {
                 .where(u -> u.id().eq(id))
                 .firstOrNull();
     }
+
+    /**
+     * 更新用户默认语言码。
+     *
+     * @param userId       用户主键
+     * @param languageCode 语言码（如 zh-CN）
+     * @return 影响行数
+     */
+    public long updateLanguageCode(Long userId, String languageCode) {
+        return easyEntityQuery
+                .updatable(SysUser.class)
+                .setColumns(u -> u.languageCode().set(languageCode))
+                .where(u -> u.id().eq(userId))
+                .executeRows();
+    }
 }

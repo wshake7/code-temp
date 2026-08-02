@@ -1,6 +1,7 @@
 package com.wshake.infra.security;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.wshake.common.request.RequestContext;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -12,6 +13,8 @@ import org.springframework.context.annotation.Configuration;
  * （在 {@code WebConfig} 注册）；本类仅保留当前登录用户的工具方法。
  * <p>使用 {@code proxyBeanMethods = false}，避免 CGLIB 增强失败（见 {@link com.wshake.infra.config.SaTokenConfig}）。
  *
+ * <p>业务侧优先使用 {@link RequestContext#userIdOrNull()}；本方法在上下文未填充时回退读 Sa-Token。
+ *
  * @author wshake
  */
 @Configuration(proxyBeanMethods = false)
@@ -20,8 +23,14 @@ public class SaTokenConfigure {
 
     /**
      * 当前登录用户 id；未登录返回 {@code null}。
+     *
+     * <p>优先 {@link RequestContext}（Language 拦截器已写入），否则读 Sa-Token。
      */
     public static Long currentUserIdOrNull() {
+        Long fromCtx = RequestContext.userIdOrNull();
+        if (fromCtx != null) {
+            return fromCtx;
+        }
         try {
             return StpUtil.isLogin() ? StpUtil.getLoginIdAsLong() : null;
         } catch (Exception e) {

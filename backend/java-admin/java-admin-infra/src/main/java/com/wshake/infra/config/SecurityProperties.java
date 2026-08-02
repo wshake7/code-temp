@@ -38,19 +38,33 @@ public class SecurityProperties {
 
     @Data
     public static class Nonce {
-        /** 是否拒绝重复 X-Request-ID（后续 ticket）。 */
+        /** 是否拒绝重复 X-Request-ID。 */
         private boolean enabled = true;
+        /**
+         * Nonce TTL（毫秒）。{@code <= 0} 时使用 {@code timestamp.expireMs * 2}（对齐 Go）。
+         */
+        private long expireMs = 0;
     }
 
     @Data
     public static class Sign {
-        /** 是否在 Encrypt 关闭时独立校验签名（后续 ticket）。 */
+        /** 是否在 Encrypt 关闭时独立校验签名。 */
         private boolean enabled = true;
     }
 
     @Data
     public static class Language {
-        /** 是否解析 X-Language（后续 ticket）。 */
+        /** 是否解析 X-Language / Accept-Language 并写入请求上下文。 */
         private boolean enabled = true;
+    }
+
+    /** Nonce 有效 TTL：显式配置优先，否则 2 倍时间窗。 */
+    public long resolveNonceExpireMs() {
+        long configured = nonce != null ? nonce.getExpireMs() : 0;
+        if (configured > 0) {
+            return configured;
+        }
+        long window = timestamp != null ? timestamp.getExpireMs() : 5 * 60 * 1000L;
+        return window * 2;
     }
 }

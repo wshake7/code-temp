@@ -28,9 +28,9 @@ public enum ResultCode {
     REQUEST_ERROR(1005, "请求错误"),
     /** RSA/AES 密钥或解密失败。 */
     REQUEST_KEY_FAILED(1006, "密钥错误"),
-    /** Nonce 重放（预留给 Nonce 中间件）。 */
+    /** Nonce 重放（同一 X-Request-ID 在有效期内重复）。 */
     REQUEST_NONCE_CONFLICT(1007, "请求重复"),
-    /** 签名校验失败（预留给 Sign 中间件）。 */
+    /** 签名校验失败（Encrypt 关闭时的独立 Sign 中间件）。 */
     REQUEST_SIGN_FAILED(1008, "签名错误"),
 
     AUTH_NOT_LOGIN(2001, "请登录"),

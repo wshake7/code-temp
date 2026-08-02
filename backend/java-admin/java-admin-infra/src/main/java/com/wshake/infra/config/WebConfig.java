@@ -3,6 +3,7 @@ package com.wshake.infra.config;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.infra.security.CasbinInterceptor;
+import com.wshake.infra.security.LanguageInterceptor;
 import org.casbin.jcasbin.main.Enforcer;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -10,9 +11,10 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Web MVC 配置：注册 Sa-Token 拦截器 + jcasbin 鉴权拦截器 + CORS。
+ * Web MVC 配置：注册 Sa-Token 拦截器 + Language + jcasbin 鉴权拦截器 + CORS。
  *
- * <p>拦截器顺序：SaInterceptor（认证）→ CasbinInterceptor（授权）。
+ * <p>拦截器顺序：SaInterceptor（认证）→ LanguageInterceptor（语言上下文/异步偏好）→
+ * CasbinInterceptor（授权）。
  * CasbinInterceptor 仅拦截 {@code /api/**}，排除登录接口和文档路径。
  *
  * @author wshake
@@ -22,9 +24,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public final class WebConfig implements WebMvcConfigurer {
 
     private final Enforcer casbinEnforcer;
+    private final LanguageInterceptor languageInterceptor;
 
-    public WebConfig(Enforcer casbinEnforcer) {
+    public WebConfig(Enforcer casbinEnforcer, LanguageInterceptor languageInterceptor) {
         this.casbinEnforcer = casbinEnforcer;
+        this.languageInterceptor = languageInterceptor;
     }
 
     @Override
@@ -34,7 +38,10 @@ public final class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/auth/login", "/api/altcha/challenge", "/api/encrypt/public/key");
 
-        // 2. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
+        // 2. Language：须在 Sa 之后，才能对已登录用户异步收敛 languageCode
+        registry.addInterceptor(languageInterceptor).addPathPatterns("/api/**");
+
+        // 3. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
         registry.addInterceptor(new CasbinInterceptor(casbinEnforcer))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(

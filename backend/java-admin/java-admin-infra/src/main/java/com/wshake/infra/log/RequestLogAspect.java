@@ -3,6 +3,7 @@ package com.wshake.infra.log;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.common.constant.MdcKeys;
+import com.wshake.common.request.RequestContext;
 import com.wshake.infra.security.SaTokenConfigure;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -72,7 +73,11 @@ public class RequestLogAspect {
         String httpLine = currentHttpLine();
         String argsJson = safeToJson(args);
 
-        Long userId = SaTokenConfigure.currentUserIdOrNull();
+        // 优先 RequestContext（拦截器已写入），回退 Sa-Token
+        Long userId = RequestContext.userIdOrNull();
+        if (userId == null) {
+            userId = SaTokenConfigure.currentUserIdOrNull();
+        }
         if (userId != null) {
             MDC.put(MdcKeys.USER_ID, String.valueOf(userId));
         }

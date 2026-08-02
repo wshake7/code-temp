@@ -20,13 +20,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
@@ -41,20 +39,6 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 public class EncryptFilter extends OncePerRequestFilter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
-
-    /** 免强制加密路径（公钥、ALTCHA、文档、健康检查）。登录不在白名单。 */
-    private static final List<String> ENCRYPT_WHITELIST = List.of(
-            "/api/encrypt/public/key",
-            "/api/altcha/**",
-            "/doc.html",
-            "/doc.html/**",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/favicon.ico",
-            "/error",
-            "/actuator/**",
-            "/api/health/**");
 
     private final CryptoService cryptoService;
     private final ServerKeyPairProvider serverKeyPairProvider;
@@ -165,20 +149,7 @@ public class EncryptFilter extends OncePerRequestFilter {
     }
 
     private boolean isWhitelisted(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        String contextPath = request.getContextPath();
-        if (contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath)) {
-            path = path.substring(contextPath.length());
-        }
-        if (path.isEmpty()) {
-            path = "/";
-        }
-        for (String pattern : ENCRYPT_WHITELIST) {
-            if (PATH_MATCHER.match(pattern, path)) {
-                return true;
-            }
-        }
-        return false;
+        return SecurityPathMatcher.isWhitelisted(request);
     }
 
     private String buildAadFromRequest(HttpServletRequest request) {
