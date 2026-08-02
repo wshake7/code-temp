@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { RouterProvider } from 'react-router-dom';
+import { message } from 'antd';
 
 import { createAccessibleRouter, type AccessibleRouterResult } from '@/core/router/factory';
 import { useAuthStore, useAccessRefreshStore, useUserStore } from '@/stores';
@@ -8,6 +9,12 @@ import { getAccessStatic } from '@/core/access';
 import { fetchAllDictEntries } from '@/hooks/useDictCache';
 import { usePreferencesStore } from '@/core/preferences/store';
 import { getAllMenusApi } from '@/api/rest/menu';
+import type { MenuItem } from '@/api/rest/types';
+import {
+  clearAccessMenusCache,
+  loadAccessMenusCache,
+  saveAccessMenusCache,
+} from '@/utils/menu-cache';
 
 import { Forbidden } from '@/pages/core/error';
 import type { AppRouteObject, ComponentRecordType } from '@/core/router';
@@ -34,7 +41,7 @@ const layoutMap: ComponentRecordType = {
   BasicLayout: AuthenticatedLayout,
 };
 
-// 静态 fallback：frontend 模式 / 初始化失败时使用
+// 静态 fallback：frontend 模式 / 未认证时使用
 const staticLayoutChildren =
   allRoutes.find((route) => route.path === '/' && route.children)?.children ?? [];
 
@@ -108,15 +115,29 @@ export const AppRouter = () => {
           forbiddenElement: <Forbidden />,
           fetchMenuListAsync: async () => {
             // 无 token 时不要打菜单接口（会 401 再 forceLogout）
-            if (!useAuthStore.getState().accessToken) {
+            const token = useAuthStore.getState().accessToken;
+            if (!token) {
               return [];
             }
             try {
               const items = await getAllMenusApi();
-              return filterMenusByPageMap(items ?? []);
+              const filtered = filterMenusByPageMap(items ?? []);
+              saveAccessMenusCache(token, filtered);
+              return filtered;
             } catch (menuErr) {
-              console.warn('fetchMenuListAsync failed, fallback to static routes:', menuErr);
-              return [];
+              // 已登录 + 本 token 有缓存：降级渲染；新登录无缓存：抛出由外层阻断
+              const cached = loadAccessMenusCache<MenuItem>(token);
+              // null = 从未成功写过（新登录）；数组（含空）= 本 token 曾成功拉过
+              if (cached) {
+                message.warning('菜单加载失败，已使用本地缓存');
+                console.warn(
+                  'fetchMenuListAsync failed, fallback to cached menus:',
+                  menuErr,
+                );
+                return filterMenusByPageMap(cached);
+              }
+              console.warn('fetchMenuListAsync failed, no cache:', menuErr);
+              throw menuErr;
             }
           },
           layoutMap,
@@ -127,14 +148,44 @@ export const AppRouter = () => {
 
         if (!cancelled) {
           setRouter(accessible.router);
-          setMenuRoutes(
-            accessible.menuRoutes.length > 0
-              ? accessible.menuRoutes
-              : staticLayoutChildren,
-          );
+          // backend：仅使用 API/缓存菜单，禁止用 static 全量 business 冒充
+          if (effectiveMode === 'backend') {
+            setMenuRoutes(accessible.menuRoutes);
+          } else {
+            setMenuRoutes(
+              accessible.menuRoutes.length > 0
+                ? accessible.menuRoutes
+                : staticLayoutChildren,
+            );
+          }
         }
       } catch (err) {
         console.error('Router init failed:', err);
+        // 菜单加载失败且无本 token 缓存：禁止进入，清会话并回登录态路由
+        if (useAuthStore.getState().accessToken) {
+          message.error('菜单加载失败，请重新登录');
+          clearAccessMenusCache();
+          useAuthStore.getState().forceLogout();
+          // forceLogout 会触发 effect 重跑（isAuthenticated=false）
+          return;
+        }
+        if (!cancelled) {
+          try {
+            const guest = await createAccessibleRouter('frontend', {
+              routes: allRoutes,
+              permissions: [],
+              forbiddenElement: <Forbidden />,
+              layoutMap,
+              pageMap,
+              autoInjectRedirect: true,
+              autoSort: true,
+            });
+            setRouter(guest.router);
+            setMenuRoutes(staticLayoutChildren);
+          } catch (guestErr) {
+            console.error('Guest router init failed:', guestErr);
+          }
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);

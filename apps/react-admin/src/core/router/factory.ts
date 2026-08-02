@@ -85,17 +85,9 @@ export const createAccessibleRouter = async (
           const splatChildren = staticChildren.filter((c) => c.path === '*');
           const nonSplatStatic = staticChildren.filter((c) => c.path !== '*');
 
-          // 后端菜单为空（鉴权失败/接口异常）时回退到静态 layout 子路由，避免只剩 redirect 无页面
-          const businessChildren =
-            backendRoutes.length > 0
-              ? backendRoutes
-              : (layout.children ?? []).filter(
-                  (child) =>
-                    !child.index &&
-                    child.path !== '/' &&
-                    child.path !== '*' &&
-                    !!child.path,
-                );
+          // backend 空树时不再回退静态 business 全量菜单（密钥错误会“假进入”）
+          // 合法空权限用户：sidebar 为空；接口失败应由上层用缓存或阻断
+          const businessChildren = backendRoutes;
 
           routes = [
             {
@@ -107,7 +99,7 @@ export const createAccessibleRouter = async (
             },
             ...otherRoutes,
           ];
-          menuRoutes = backendRoutes.length > 0 ? backendRoutes : businessChildren;
+          menuRoutes = businessChildren;
         } else {
           // No layout shell — fall back to previous behavior.
           routes = [...backendRoutes, ...otherRoutes];

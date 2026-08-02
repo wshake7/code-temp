@@ -4,6 +4,7 @@ import i18next from 'i18next';
 import { loginApi, getUserInfoApi, logoutApi } from '@/api/rest/auth';
 import type { UserInfo, LoginRequest } from '@/api/rest/types';
 import { queryClient } from '@/core/query-client';
+import { clearAccessMenusCache } from '@/utils/menu-cache';
 
 const STORAGE_KEY = 'auth-storage';
 const REMEMBER_KEY = 'auth-remember';
@@ -190,6 +191,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       // （如 getMe 因 401 返回 null 被 fetchQuery 缓存）导致重新登录时命中脏数据
       queryClient.clear();
       clearPersisted();
+      clearAccessMenusCache();
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem('user-storage');
       }
@@ -210,6 +212,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // 清除 queryClient 缓存，防止缓存污染导致重新登录失败
     queryClient.clear();
     clearPersisted();
+    clearAccessMenusCache();
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('user-storage');
     }

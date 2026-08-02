@@ -1,4 +1,5 @@
-import type { AppRouteObject, ComponentRecordType, MenuItem } from '@/core/router';
+import type { MenuItem } from '@/api/rest/types';
+import type { AppRouteObject, ComponentRecordType } from '@/core/router';
 import { errorRoutes } from './config/error-routes';
 import { authRoutes } from './config/auth';
 import { staticRoutes } from './config/static';

@@ -17,6 +17,7 @@ export async function generateRoutesByBackend(
 
     try {
         // 1. 从后端获取菜单路由（组件路径为字符串）
+        // 失败语义由 fetchMenuListAsync 决定：有缓存则降级返回，无缓存则抛出
         const menuRoutes = await fetchMenuListAsync?.();
         if (!menuRoutes?.length) {
             return [];
@@ -36,8 +37,9 @@ export async function generateRoutesByBackend(
         // 3. 递归转换路由树
         return convertRoutes(menuRoutes, layoutMap, normalizedPageMap);
     } catch (error) {
+        // 向上抛给 AppRouter：无缓存时阻断进入，禁止静默回退静态菜单
         console.error('Failed to generate routes from backend:', error);
-        return [];
+        throw error;
     }
 }
 
