@@ -87,6 +87,21 @@ altcha:
   cost: ${ALTCHA_COST:1000}
   expires-seconds: ${ALTCHA_EXPIRES_SECONDS:600}
 
+# 请求安全中间件：Timestamp / Encrypt / Nonce / Sign / Language 独立开关；dev 默认全开
+app:
+  security:
+    timestamp:
+      enabled: ${SECURITY_TIMESTAMP_ENABLED:true}
+      expire-ms: ${SECURITY_TIMESTAMP_EXPIRE_MS:300000}
+    encrypt:
+      enabled: ${SECURITY_ENCRYPT_ENABLED:true}
+    nonce:
+      enabled: ${SECURITY_NONCE_ENABLED:true}
+    sign:
+      enabled: ${SECURITY_SIGN_ENABLED:true}
+    language:
+      enabled: ${SECURITY_LANGUAGE_ENABLED:true}
+
 # Easy-Query 3.x（SQL-springboot4-starter 适配 SB 4）
 # name-conversion: underlined → entity 字段 userId 自动映射列 user_id
 easy-query:
@@ -104,4 +119,4 @@ logging:
   level:
     root: INFO
     com.wshake: INFO
-    com.easy.query: WARN
+#    com.easy.query: WARN

@@ -24,7 +24,9 @@ public class Result<T> {
     @Schema(
             description = "业务码;0=成功,非 0 见 ResultCode 枚举",
             example = "0",
-            allowableValues = {"0", "1001", "1002", "1003", "2001", "2002", "2003", "2004"})
+            allowableValues = {
+                "0", "1001", "1002", "1003", "1004", "1005", "1006", "1007", "1008", "2001", "2002", "2003", "2004"
+            })
     private int code;
 
     /** 人类可读消息（Q13 决策：原 message → msg） */

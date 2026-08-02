@@ -32,7 +32,7 @@ public final class WebConfig implements WebMvcConfigurer {
         // 1. Sa-Token 认证拦截器：非排除路径强制登录
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/auth/login", "/api/altcha/challenge");
+                .excludePathPatterns("/api/auth/login", "/api/altcha/challenge", "/api/encrypt/public/key");
 
         // 2. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
         registry.addInterceptor(new CasbinInterceptor(casbinEnforcer))
@@ -40,6 +40,7 @@ public final class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/login",
                         "/api/altcha/challenge",
+                        "/api/encrypt/public/key",
                         "/doc.html",
                         "/doc.html/**",
                         "/swagger-ui/**",

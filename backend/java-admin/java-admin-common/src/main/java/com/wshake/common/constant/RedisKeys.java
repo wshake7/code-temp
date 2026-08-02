@@ -10,5 +10,11 @@ public final class RedisKeys {
     /** Sa-Token 业务 key 前缀（sa-token-redisson 内部使用） */
     public static final String SA_TOKEN_PREFIX = "satoken:";
 
+    /**
+     * 全局 RSA 加解密密钥对（JSON：publicKey + privateKey）。
+     * key 名沿用 harness/Go 约定 {@code global:encrypt:public:key}，实际存完整密钥对。
+     */
+    public static final String GLOBAL_ENCRYPT_KEY_PAIR = "global:encrypt:public:key";
+
     private RedisKeys() {}
 }
