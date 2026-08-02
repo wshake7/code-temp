@@ -4,14 +4,14 @@
 
 **Blocked by:** 01 — Java：配置开关 + ResultCode + 公钥 + Timestamp + Encrypt 强制链路
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 存在分项 env 开关（Timestamp / Encrypt / Nonce 相关头 / Sign 模式 / Language），默认全开
-- [ ] Encrypt 开：拉取公钥、加密请求体、带齐加密头；响应 `X-Response-Is-Encrypt` 时解密后再解析 `code/msg/data`
-- [ ] 公钥与白名单路径不加密或按协议只带时间戳/ID
-- [ ] Language 开：请求头含 `X-Language`（locale）
-- [ ] Encrypt 关时业务请求明文仍可用
-- [ ] 前端 request 客户端单测或等价验证覆盖开/关主路径
+- [x] 存在分项 env 开关（Timestamp / Encrypt / Nonce 相关头 / Sign 模式 / Language），默认全开
+- [x] Encrypt 开：拉取公钥、加密请求体、带齐加密头；响应 `X-Response-Is-Encrypt` 时解密后再解析 `code/msg/data`
+- [x] 公钥与白名单路径不加密或按协议只带时间戳/ID
+- [x] Language 开：请求头含 `X-Language`（locale）
+- [x] Encrypt 关时业务请求明文仍可用
+- [x] 前端 request 客户端单测或等价验证覆盖开/关主路径
 
 ## Comments
 

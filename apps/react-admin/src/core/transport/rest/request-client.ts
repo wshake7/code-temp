@@ -11,6 +11,12 @@ import {
   authenticateResponseInterceptor,
   errorMessageResponseInterceptor,
 } from './preset-interceptors';
+import {
+  createSecurityRequestInterceptor,
+  createSecurityResponseInterceptor,
+  getSecurityClientConfig,
+  SECURITY_HEADERS,
+} from './security';
 import { defaultIdGenerator, getDefaultErrorMsg } from './utils';
 import type { RequestClientCallbacks, RequestClientOptions, RequestContentType } from './types';
 
@@ -99,8 +105,11 @@ class RequestClient {
     this.useTokenInterceptor(callbacks);
     this.useRequestIdInterceptor();
     this.useLocaleInterceptor(callbacks);
+    this.useSecurityRequestInterceptor(callbacks);
     // auth 拦截器必须在 responseData 之前，否则 401 错误会丢失 AxiosError 结构
     this.useAuthInterceptor(callbacks);
+    // 解密必须在 code/msg/data 解析之前
+    this.useSecurityResponseInterceptor();
     this.useResponseDataInterceptor();
     this.useErrorMessageInterceptor(callbacks);
   }
@@ -125,14 +134,23 @@ class RequestClient {
   }
 
   /**
-   * 请求拦截器：注入 X-Request-ID 和 XMLHttpRequest 标识
+   * 请求拦截器：注入 X-Request-ID 和 XMLHttpRequest 标识。
+   * Nonce 关且 Encrypt/Sign 均关时不强制 Request-ID；安全拦截器仍可能按协议补齐。
    */
   private useRequestIdInterceptor() {
     this.addRequestInterceptor({
       fulfilled: (config) => {
-        const requestId = config.headers['X-Request-ID'] ?? defaultIdGenerator();
-        (config as InternalAxiosRequestConfig & { _requestId?: string })._requestId = requestId;
-        config.headers['X-Request-ID'] = requestId;
+        const sec = getSecurityClientConfig();
+        const shouldInjectId =
+          sec.nonceEnabled || sec.encryptEnabled || sec.signEnabled;
+        if (shouldInjectId) {
+          const requestId =
+            (config.headers as Record<string, unknown>)[SECURITY_HEADERS.REQUEST_ID] ??
+            defaultIdGenerator();
+          (config as InternalAxiosRequestConfig & { _requestId?: string })._requestId =
+            String(requestId);
+          config.headers[SECURITY_HEADERS.REQUEST_ID] = requestId;
+        }
         config.headers['X-Requested-With'] = 'XMLHttpRequest';
         return config as never;
       },
@@ -140,7 +158,7 @@ class RequestClient {
   }
 
   /**
-   * 请求拦截器：注入 Accept-Language
+   * 请求拦截器：注入 Accept-Language（X-Language 由安全拦截器按开关写入）
    */
   private useLocaleInterceptor(callbacks: RequestClientCallbacks) {
     this.addRequestInterceptor({
@@ -150,6 +168,31 @@ class RequestClient {
         }
         return config as never;
       },
+    });
+  }
+
+  /**
+   * 请求拦截器：Timestamp / Encrypt / Sign / X-Language
+   */
+  private useSecurityRequestInterceptor(callbacks: RequestClientCallbacks) {
+    const baseURL = String(this.instance.defaults.baseURL ?? '');
+    const fulfilled = createSecurityRequestInterceptor({
+      baseURL,
+      getLocale: callbacks.getLocale,
+      nonce: defaultIdGenerator,
+    });
+    this.addRequestInterceptor({
+      fulfilled: async (config) => (await fulfilled(config)) as never,
+    });
+  }
+
+  /**
+   * 响应拦截器：加密响应解密
+   */
+  private useSecurityResponseInterceptor() {
+    const fulfilled = createSecurityResponseInterceptor();
+    this.addResponseInterceptor({
+      fulfilled: async (response) => (await fulfilled(response)) as never,
     });
   }
 

@@ -10,7 +10,9 @@
     "build:check": "tsc && vite build --mode production",
     "typecheck": "tsc",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",

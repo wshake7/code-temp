@@ -14,6 +14,17 @@ interface ImportMetaEnv {
 
     readonly VITE_MOCK: boolean
     readonly VITE_ANALYZE: boolean
+
+    /** 请求安全：时间戳头（默认 true） */
+    readonly VITE_SECURITY_TIMESTAMP_ENABLED?: string
+    /** 请求安全：传输加解密（默认 true） */
+    readonly VITE_SECURITY_ENCRYPT_ENABLED?: string
+    /** 请求安全：X-Request-ID / Nonce（默认 true） */
+    readonly VITE_SECURITY_NONCE_ENABLED?: string
+    /** 请求安全：Encrypt 关时独立签名（默认 true） */
+    readonly VITE_SECURITY_SIGN_ENABLED?: string
+    /** 请求安全：X-Language（默认 true） */
+    readonly VITE_SECURITY_LANGUAGE_ENABLED?: string
 }
 
 interface ImportMeta {
