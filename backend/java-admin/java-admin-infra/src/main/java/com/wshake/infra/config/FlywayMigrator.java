@@ -45,8 +45,7 @@ public class FlywayMigrator {
 
     /** 创建并立即执行 migrate 的 Flyway Bean。 */
     @Bean(name = "flyway")
-    public Flyway flyway(
-            DataSource dataSource, Environment environment, FlywayMigratorProperties flywayProperties) {
+    public Flyway flyway(DataSource dataSource, Environment environment, FlywayMigratorProperties flywayProperties) {
         String configuredLocations = joinLocations(flywayProperties.getLocations());
         String configuredTarget = flywayProperties.getTarget();
         String[] locations = resolveLocations(environment, configuredLocations);

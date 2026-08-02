@@ -91,13 +91,7 @@ public class RequestLogAspect {
         } catch (Throwable t) {
             long cost = System.currentTimeMillis() - start;
             // ERROR 级别已标识失败，消息与成功路径同结构，便于检索；最后参数为堆栈
-            log.error(
-                    "[HTTP] {} handler={} cost={}ms args={}",
-                    httpLine,
-                    handler,
-                    cost,
-                    argsJson,
-                    t);
+            log.error("[HTTP] {} handler={} cost={}ms args={}", httpLine, handler, cost, argsJson, t);
             throw t;
         } finally {
             MDC.remove(MdcKeys.USER_ID);

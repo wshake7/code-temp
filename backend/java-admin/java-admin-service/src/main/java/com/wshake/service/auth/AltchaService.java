@@ -68,8 +68,8 @@ public class AltchaService {
                 log.warn("[ALTCHA] replay detected signature={}", signature);
                 return false;
             }
-            Altcha.VerifySolutionResult result = Altcha.verifySolution(
-                    payloadBase64, altchaProperties.getHmacSecret(), Altcha.kdf(ALGORITHM));
+            Altcha.VerifySolutionResult result =
+                    Altcha.verifySolution(payloadBase64, altchaProperties.getHmacSecret(), Altcha.kdf(ALGORITHM));
             if (result.verified()) {
                 consumedSignatures.add(signature);
                 return true;
