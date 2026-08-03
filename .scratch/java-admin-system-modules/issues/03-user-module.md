@@ -4,11 +4,11 @@
 
 **Blocked by:** 02 — Auth + ALTCHA + 三端契约基线
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 用户列表分页 `{items,total}`，支持约定筛选字段
-- [ ] 创建/更新/软删；密码 BCrypt 存储且不回显
-- [ ] 启停与重置密码接口行为正确
-- [ ] 角色分配读写 sys_user_role，并触发该用户 Casbin 策略重算
-- [ ] react-admin / vue / mock 用户 API 对齐
-- [ ] HTTP 测试覆盖主路径与鉴权失败
+- [x] 用户列表分页 `{items,total}`，支持约定筛选字段
+- [x] 创建/更新/软删；密码 BCrypt 存储且不回显
+- [x] 启停与重置密码接口行为正确
+- [x] 角色分配读写 sys_user_role，并触发该用户 Casbin 策略重算
+- [x] react-admin / vue / mock 用户 API 对齐
+- [x] HTTP 测试覆盖主路径与鉴权失败

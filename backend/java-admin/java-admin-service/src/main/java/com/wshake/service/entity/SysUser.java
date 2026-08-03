@@ -30,7 +30,7 @@ import lombok.EqualsAndHashCode;
 @EntityProxy
 public class SysUser extends BaseEntity implements ProxyEntityAvailable<SysUser, SysUserProxy> {
 
-    @Column(primaryKey = true)
+    @Column(primaryKey = true, generatedKey = true)
     private Long id;
 
     private String username;

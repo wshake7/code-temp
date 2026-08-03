@@ -1,7 +1,11 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
+import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.service.entity.SysUser;
+import com.wshake.service.entity.SysUserRole;
+import com.wshake.service.user.UserManageModels.UserListQuery;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -44,6 +48,89 @@ public class SysUserRepository {
                 .queryable(SysUser.class)
                 .where(u -> u.id().eq(id))
                 .firstOrNull();
+    }
+
+    /**
+     * 用户名是否已被占用（未软删）。
+     */
+    public boolean existsByUsername(String username) {
+        return easyEntityQuery
+                .queryable(SysUser.class)
+                .where(u -> u.username().eq(username))
+                .any();
+    }
+
+    /**
+     * 分页查询用户；可选 username/nickname 模糊、status、roleId 过滤。
+     */
+    public EasyPageResult<SysUser> page(UserListQuery query) {
+        return easyEntityQuery
+                .queryable(SysUser.class)
+                .where(u -> {
+                    u.username().like(query.username() != null, query.username());
+                    u.nickname().like(query.nickname() != null, query.nickname());
+                    u.isEnabled().eq(query.status() != null, query.status());
+                    if (query.roleId() != null) {
+                        List<Long> userIds = easyEntityQuery
+                                .queryable(SysUserRole.class)
+                                .where(ur -> ur.roleId().eq(query.roleId()))
+                                .select(ur -> ur.userId())
+                                .toList();
+                        if (userIds.isEmpty()) {
+                            u.id().eq(-1L);
+                        } else {
+                            u.id().in(userIds);
+                        }
+                    }
+                })
+                .orderBy(u -> u.id().asc())
+                .toPageResult(query.page(), query.pageSize());
+    }
+
+    /**
+     * 插入用户；回填自增主键。
+     */
+    public void insert(SysUser user) {
+        easyEntityQuery.insertable(user).executeRows(true);
+    }
+
+    /**
+     * 按主键更新实体（审计字段由拦截器填充）。
+     */
+    public long update(SysUser user) {
+        return easyEntityQuery.updatable(user).executeRows();
+    }
+
+    /**
+     * 软删用户（LogicDelete 改写为 UPDATE deleted_at）。
+     */
+    public long softDeleteById(Long id) {
+        return easyEntityQuery
+                .deletable(SysUser.class)
+                .where(u -> u.id().eq(id))
+                .executeRows();
+    }
+
+    /**
+     * 更新密码哈希。
+     */
+    public long updatePasswordHash(Long id, String passwordHash) {
+        return easyEntityQuery
+                .updatable(SysUser.class)
+                .setColumns(u -> u.passwordHash().set(passwordHash))
+                .where(u -> u.id().eq(id))
+                .executeRows();
+    }
+
+    /**
+     * 更新启停状态。
+     */
+    public long updateIsEnabled(Long id, int isEnabled) {
+        return easyEntityQuery
+                .updatable(SysUser.class)
+                .setColumns(u -> u.isEnabled().set(isEnabled))
+                .where(u -> u.id().eq(id))
+                .executeRows();
     }
 
     /**

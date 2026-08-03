@@ -87,6 +87,31 @@ public class CasbinService {
     }
 
     /**
+     * 按字段过滤策略（fieldIndex=0 时按 sub 过滤）。
+     *
+     * @param fieldIndex  字段下标（0=sub, 1=obj, 2=act）
+     * @param fieldValues 过滤值
+     * @return 匹配的策略列表
+     */
+    public List<List<String>> getFilteredPolicy(int fieldIndex, String... fieldValues) {
+        return enforcer.getFilteredPolicy(fieldIndex, fieldValues);
+    }
+
+    /**
+     * 移除某主体下全部 p 策略（fieldIndex=0 按 sub）。
+     *
+     * @param subject 主体（用户 ID 字符串）
+     * @return 是否移除了至少一条
+     */
+    public boolean removePoliciesForSubject(String subject) {
+        boolean ok = enforcer.removeFilteredPolicy(0, subject);
+        if (ok) {
+            log.info("[CASBIN] policies removed for subject={}", subject);
+        }
+        return ok;
+    }
+
+    /**
      * 重新从数据库加载 policy。
      *
      * <p>当外部直接修改了 {@code casbin_rule} 表时调用，同步内存中的 policy。
