@@ -36,7 +36,12 @@ public final class WebConfig implements WebMvcConfigurer {
         // 1. Sa-Token 认证拦截器：非排除路径强制登录
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/auth/login", "/api/altcha/challenge", "/api/encrypt/public/key");
+                .excludePathPatterns(
+                        "/api/auth/login",
+                        "/api/altcha/challenge",
+                        "/api/encrypt/public/key",
+                        // dev-only：mock 拉密钥对；prod 无此 Controller
+                        "/api/encrypt/dev/key-pair");
 
         // 2. Language：须在 Sa 之后，才能对已登录用户异步收敛 languageCode
         registry.addInterceptor(languageInterceptor).addPathPatterns("/api/**");
@@ -48,6 +53,7 @@ public final class WebConfig implements WebMvcConfigurer {
                         "/api/auth/login",
                         "/api/altcha/challenge",
                         "/api/encrypt/public/key",
+                        "/api/encrypt/dev/key-pair",
                         "/doc.html",
                         "/doc.html/**",
                         "/swagger-ui/**",

@@ -13,16 +13,22 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 
 环境变量（可选，开发默认见 `.env.development`，`pnpm start` / nitro dev 自动加载）：
 
-| 变量                              | 默认                                  | 说明                                            |
-| --------------------------------- | ------------------------------------- | ----------------------------------------------- |
-| `AUTH_TOKEN_TIMEOUT_SECONDS`      | `2592000`（30 天）                    | 会话超时；每次请求重置                          |
-| `AUTH_IS_CONCURRENT`              | `true`                                | 是否允许多端登录                                |
-| `AUTH_IS_SHARE`                   | `false`                               | 同账号是否共享同一 token                        |
-| `AUTH_JAVA_INTROSPECT_URL`        | `http://localhost:4080/api/user/info` | hybrid：向 java 内省 Sa-Token；设为空字符串关闭 |
-| `AUTH_JAVA_USER_FALLBACK`         | `root`                                | java 用户名在 mock 无同名用户时回落的 mock 用户 |
-| `AUTH_JAVA_INTROSPECT_TIMEOUT_MS` | `3000`                                | 内省 HTTP 超时（毫秒）                          |
+| 变量                              | 默认               | 说明                                                                 |
+| --------------------------------- | ------------------ | -------------------------------------------------------------------- |
+| `AUTH_TOKEN_TIMEOUT_SECONDS`      | `2592000`（30 天） | 会话超时；每次请求重置                                               |
+| `AUTH_IS_CONCURRENT`              | `true`             | 是否允许多端登录                                                     |
+| `AUTH_IS_SHARE`                   | `false`            | 同账号是否共享同一 token                                             |
+| `AUTH_MODE`                       | `mock`             | `mock`：校验本地 token；`mixture`：不校验 token（交叉联调）          |
+| `AUTH_JAVA_USER_FALLBACK`         | `root`             | `mixture` 下 RBAC 使用的 mock 用户                                   |
+| `AUTH_JAVA_INTROSPECT_URL`        | （空，关闭）       | 仅 `mock` 且显式配置时才对未知 token 调 java 内省                    |
+| `AUTH_JAVA_INTROSPECT_TIMEOUT_MS` | `3000`             | 内省 HTTP 超时（毫秒）                                               |
+| `SECURITY_JAVA_KEY_PAIR_URL`      | （空，不访问）     | 填完整 URL 才从 java 拉密钥对；未填绝不请求                          |
+| `SECURITY_JAVA_KEY_PAIR_TIMEOUT_MS` | `3000`           | 拉密钥 HTTP 超时（毫秒）                                             |
 
-修改 `.env.development` 后需重启 mock。进程重启后会话清空（mock 可接受）。
+修改 `.env` / `.env.development` 后需**重启 mock**。进程重启后会话清空（mock 可接受）。
+
+> **注意**：Nitro 默认只自动加载 `.env`。本仓库在 `nitro.config.ts` 里额外加载了 `.env.development`；
+> 若启动日志没有 `[nitro] loaded env files: ...development` 或 `SECURITY_JAVA_KEY_PAIR_URL=` 仍为 `(empty)`，说明配置未注入，密钥同步不会发起请求。
 
 ## 请求安全协议（与 Java 对齐）
 
@@ -37,9 +43,9 @@ mock 实现与 java-admin 同一套头协议，便于 dev 全开时代理到 moc
 | Language  | `SECURITY_LANGUAGE_ENABLED`                                   | 开                   |
 
 - 公钥：`GET /api/encrypt/public/key` → `{ code, msg, data: { publicKey } }`（SPKI base64）
-- 白名单（免强制加密）：`/api/encrypt/public/key`、`/api/altcha/**`、文档与健康检查；**不含** `/api/auth/login`
+- 白名单（免强制加密）：`/api/encrypt/public/key`、`/api/encrypt/dev/key-pair`、`/api/altcha/**`、文档与健康检查；**不含** `/api/auth/login`
 - Nonce 为进程内内存实现；进程重启后清空
-- 可选固定密钥：`SECURITY_RSA_PUBLIC_KEY` / `SECURITY_RSA_PRIVATE_KEY`
+- 可选固定密钥：`SECURITY_RSA_PUBLIC_KEY` / `SECURITY_RSA_PRIVATE_KEY`（设置后**不再**从 java 拉钥）
 
 ```bash
 pnpm -C apps/backend-mock-template test
@@ -49,14 +55,30 @@ pnpm -C apps/backend-mock-template test
 
 前端 Vite 代理常见分流：
 
-- `/api/auth/*`、`/api/user/*`、`/api/altcha/*` → **java-admin:4080**
+- `/api/auth/*`、`/api/user/*`、`/api/altcha/*`、`/api/encrypt/*` → **java-admin:4080**
 - 其余 `/api/*`（含 `/api/menu/all`）→ **backend-mock:4000**
 
-此时登录 token 由 java Sa-Token 签发，mock 内存会话里没有该 token，会直接 401。
+### 鉴权：`AUTH_MODE`
 
-解决方式：middleware `2.java-auth-bridge` 在业务 handler 前调用 java `GET /api/user/info` 内省；成功后把 token 登记为 mock 本地会话，并按 **username → mock 用户**（无同名则 `AUTH_JAVA_USER_FALLBACK`）做 RBAC，供 `/menu/all`、`/auth/codes` 等使用。
+| 值        | 行为 |
+| --------- | ---- |
+| `mock`    | 纯 mock：`verifyAccessToken` 校验本地会话；**不**默认请求 java |
+| `mixture` | 交叉联调：**不校验** token；业务按 `AUTH_JAVA_USER_FALLBACK`（默认 root）做菜单/RBAC。**不会**请求 java `/api/user/info`（避免 Encrypt 缺 `X-Request-Encrypted-Key`） |
 
-要求本地 **java 与 mock 同时启动**。java 未起时内省失败，mock 鉴权接口仍 401。
+交叉联调推荐：
+
+```bash
+AUTH_MODE=mixture
+AUTH_JAVA_USER_FALLBACK=root
+SECURITY_JAVA_KEY_PAIR_URL=http://localhost:4080/api/encrypt/dev/key-pair
+```
+
+### 加密密钥：`SECURITY_JAVA_KEY_PAIR_URL`
+
+- **未配置**：不访问 java，本地自生成或 `SECURITY_RSA_*`
+- **已配置**：`0.security` 首次请求时 GET 该地址 adopt 密钥（java 仅 dev：`/api/encrypt/dev/key-pair`）
+
+前端公钥走 java 时，mixture 下务必配置该 URL，否则 mock 解密会 `1006 密钥错误`。
 
 ## Running the app
 

@@ -3,7 +3,7 @@
  * — 公钥形状、加密请求成功路径、关 Encrypt 明文路径、Timestamp/Nonce 等开关语义。
  */
 
-import { describe, expect, it, beforeEach } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { loadSecurityConfig, type SecurityConfig } from "../utils/security/config";
 import {
@@ -15,6 +15,11 @@ import {
   rsaEncrypt,
 } from "../utils/security/crypto";
 import { SECURITY_HEADERS, SIGN_DATA_AAD_KEY } from "../utils/security/headers";
+import {
+  ensureJavaKeyPairSynced,
+  resetJavaKeyPairSyncForTest,
+} from "../utils/security/java-key-sync";
+import { getEncryptKeyPair, setEncryptKeyPairForTest } from "../utils/security/keys";
 import { MemoryNonceStore } from "../utils/security/nonce-store";
 import { isSecurityWhitelisted } from "../utils/security/path-matcher";
 import {
@@ -293,7 +298,117 @@ describe("mock security protocol seam", () => {
 
   it("whitelist matcher covers public key and excludes login", () => {
     expect(isSecurityWhitelisted("/api/encrypt/public/key")).toBe(true);
+    expect(isSecurityWhitelisted("/api/encrypt/dev/key-pair")).toBe(true);
     expect(isSecurityWhitelisted("/api/altcha/challenge")).toBe(true);
     expect(isSecurityWhitelisted("/api/auth/login")).toBe(false);
+  });
+});
+
+describe("java key pair sync", () => {
+  const originalFetch = globalThis.fetch;
+  const envKeys = [
+    "SECURITY_JAVA_KEY_PAIR_URL",
+    "SECURITY_RSA_PUBLIC_KEY",
+    "SECURITY_RSA_PRIVATE_KEY",
+  ] as const;
+  const savedEnv: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const k of envKeys) {
+      savedEnv[k] = process.env[k];
+      delete process.env[k];
+    }
+    resetJavaKeyPairSyncForTest();
+    setEncryptKeyPairForTest(null);
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    for (const k of envKeys) {
+      if (savedEnv[k] === undefined) delete process.env[k];
+      else process.env[k] = savedEnv[k];
+    }
+    resetJavaKeyPairSyncForTest();
+    setEncryptKeyPairForTest(null);
+  });
+
+  it("adopts java key pair so encrypt decrypt works", async () => {
+    const pair = generateRsaKeyPair();
+    process.env.SECURITY_JAVA_KEY_PAIR_URL = "http://java.test/api/encrypt/dev/key-pair";
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          code: 0,
+          msg: "ok",
+          data: { publicKey: pair.publicKeyBase64, privateKey: pair.privateKeyPem },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )) as typeof fetch;
+
+    const ok = await ensureJavaKeyPairSynced();
+    expect(ok).toBe(true);
+
+    const adopted = getEncryptKeyPair();
+    expect(adopted.publicKeyBase64).toBe(pair.publicKeyBase64);
+    expect(adopted.privateKeyPem).toBe(pair.privateKeyPem);
+
+    const aesKey = generateAesKey();
+    const encryptedKey = rsaEncrypt(aesKey, pair.publicKeyBase64);
+    const now = Date.now();
+    const requestId = "java-key-sync-1";
+    const result = processSecurityRequest(
+      {
+        method: "GET",
+        path: "/api/menu/all",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_ID]: requestId,
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: "",
+        nowMs: now,
+      },
+      {
+        config: fullConfig(),
+        privateKeyPem: adopted.privateKeyPem,
+        nonceStore: new MemoryNonceStore(),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.responseAesKeyBase64).toBe(aesKey);
+  });
+
+  it("unset or empty SECURITY_JAVA_KEY_PAIR_URL skips fetch", async () => {
+    // 未配置
+    delete process.env.SECURITY_JAVA_KEY_PAIR_URL;
+    let called = 0;
+    globalThis.fetch = (async () => {
+      called += 1;
+      throw new Error("should not fetch");
+    }) as typeof fetch;
+
+    expect(await ensureJavaKeyPairSynced()).toBe(false);
+    expect(called).toBe(0);
+
+    resetJavaKeyPairSyncForTest();
+    process.env.SECURITY_JAVA_KEY_PAIR_URL = "";
+    expect(await ensureJavaKeyPairSynced()).toBe(false);
+    expect(called).toBe(0);
+  });
+
+  it("fixed SECURITY_RSA_* skips java fetch", async () => {
+    const pair = generateRsaKeyPair();
+    process.env.SECURITY_RSA_PUBLIC_KEY = pair.publicKeyBase64;
+    process.env.SECURITY_RSA_PRIVATE_KEY = pair.privateKeyPem;
+    let called = 0;
+    globalThis.fetch = (async () => {
+      called += 1;
+      throw new Error("should not fetch");
+    }) as typeof fetch;
+
+    const ok = await ensureJavaKeyPairSynced();
+    expect(ok).toBe(false);
+    expect(called).toBe(0);
   });
 });

@@ -1,6 +1,23 @@
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
 import errorHandler from "./error";
+import { loadEnvFiles } from "./utils/load-env-files";
+
+// Nitro 默认 dotenv 只加载 `.env`；本项目配置在 `.env.development`，须在此注入 process.env
+// 这样 dev worker 继承时才能读到 SECURITY_JAVA_KEY_PAIR_URL 等
+const mockRoot = dirname(fileURLToPath(import.meta.url));
+const loadedEnvFiles = loadEnvFiles(mockRoot);
+if (loadedEnvFiles.length > 0) {
+  console.info("[nitro] loaded env files:", loadedEnvFiles.join(", "));
+  console.info(
+    "[nitro] SECURITY_JAVA_KEY_PAIR_URL=",
+    process.env.SECURITY_JAVA_KEY_PAIR_URL || "(empty)",
+  );
+}
 
 process.env.COMPATIBILITY_DATE = new Date().toISOString();
+
 export default defineNitroConfig({
   devErrorHandler: errorHandler,
   errorHandler: "~/error",

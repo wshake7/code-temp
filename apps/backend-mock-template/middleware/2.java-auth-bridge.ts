@@ -1,21 +1,32 @@
 import { defineEventHandler } from "h3";
 
-import { ensureTokenAdopted, extractBearerToken } from "~/utils/session-utils";
+import {
+  ensureTokenAdopted,
+  extractBearerToken,
+  getJavaIntrospectUrl,
+  isMixtureMode,
+} from "~/utils/session-utils";
 
 /**
- * hybrid（mock + java）鉴权桥：
- * 登录走 java 时 token 不在 mock 内存会话中。
- * 在业务 handler 之前，用 java `/api/user/info` 内省并登记到本地 session，
- * 使 `/api/menu/all` 等 mock 接口的 `verifyAccessToken` 能通过。
+ * 鉴权桥（按 AUTH_MODE）：
  *
- * 关闭：环境变量 `AUTH_JAVA_INTROSPECT_URL=`（空字符串）。
+ * - `mock`（默认）：纯 mock，本中间件默认不做事；仅当显式配置
+ *   `AUTH_JAVA_INTROSPECT_URL` 时，才对本地未知 token 尝试 java 内省。
+ * - `mixture`：与 java 交叉联调，**不校验 token、不内省**
+ *   （避免请求 java `/api/user/info` 因缺少 Encrypt 头被拒）。
+ *   业务侧 `verifyAccessToken` 直接放行并使用 `AUTH_JAVA_USER_FALLBACK`。
  */
 export default defineEventHandler(async (event) => {
   if (event.method === "OPTIONS") return;
   const path = event.path ?? "";
   if (!path.startsWith("/api/")) return;
 
-  // 登录/挑战等公开接口通常无 Bearer；有 token 时才内省
+  // mixture：不验证 token、不调 java
+  if (isMixtureMode()) return;
+
+  // mock：未配置内省 URL 则跳过（纯本地会话）
+  if (!getJavaIntrospectUrl()) return;
+
   const token = extractBearerToken(event);
   if (!token) return;
 

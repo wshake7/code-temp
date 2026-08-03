@@ -49,16 +49,41 @@ function timeoutMs(): number {
 }
 
 /**
- * hybrid：向 java 内省 token 的完整 URL（如 http://localhost:4080/api/user/info）。
- * 空字符串 = 关闭内省回落（纯 mock）。
+ * 鉴权运行模式：
+ * - `mock`（默认）：纯 mock，校验本地会话 token
+ * - `mixture`：与 java 交叉联调，**不校验** token（避免再调 java `/user/info` 触发 Encrypt）
+ *
+ * 环境变量：`AUTH_MODE=mock|mixture`（兼容 `pure`/`hybrid` 别名）
+ */
+export type AuthMode = "mock" | "mixture";
+
+export function getAuthMode(): AuthMode {
+  const raw = process.env.AUTH_MODE?.trim().toLowerCase();
+  if (!raw) return "mock";
+  if (raw === "mixture" || raw === "hybrid" || raw === "mix") return "mixture";
+  if (raw === "mock" || raw === "pure" || raw === "local") return "mock";
+  return "mock";
+}
+
+export function isMixtureMode(): boolean {
+  return getAuthMode() === "mixture";
+}
+
+/**
+ * （可选）向 java 内省 token 的完整 URL。
+ * 默认关闭（空）；仅显式配置且 `AUTH_MODE=mock` 时由 bridge 使用。
+ * mixture 模式不内省、不校验 token。
  */
 export function getJavaIntrospectUrl(): string {
   const raw = process.env.AUTH_JAVA_INTROSPECT_URL;
-  if (raw === undefined) return "http://localhost:4080/api/user/info";
+  if (raw === undefined || raw === "") return "";
   return raw.trim();
 }
 
-/** java 用户名在 mock 中不存在时回落到该 mock 用户（默认 root） */
+/**
+ * mixture 下放行时使用的 mock 用户，以及（可选）内省映射回落用户。
+ * 默认 root。
+ */
 export function getJavaUserFallback(): string {
   const raw = process.env.AUTH_JAVA_USER_FALLBACK;
   if (raw === undefined || raw.trim() === "") return "root";
@@ -255,11 +280,13 @@ async function adoptFromJava(token: string, introspectUrl: string): Promise<bool
 }
 
 /**
- * hybrid 桥：本地无会话时尝试用 java 内省登记 token。
- * 由 middleware 在 handler 前调用；`verifyAccessToken` 仍保持同步。
+ * 可选：本地无会话时用 java 内省登记 token。
+ * - `AUTH_MODE=mixture`：不调用（不校验 token）
+ * - 须显式配置 `AUTH_JAVA_INTROSPECT_URL` 才会请求 java
  */
 export async function ensureTokenAdopted(token: string | null | undefined): Promise<void> {
   if (!token) return;
+  if (isMixtureMode()) return;
 
   const existing = sessions.get(token);
   if (existing) {
@@ -280,13 +307,25 @@ export async function ensureTokenAdopted(token: string | null | undefined): Prom
   await pending;
 }
 
+/** mixture：不校验 token，固定映射到 AUTH_JAVA_USER_FALLBACK（默认 root）。 */
+function resolveMixtureUser(): null | Omit<UserInfo, "password"> {
+  const sysUser = findSysUserByUsername(getJavaUserFallback());
+  if (!sysUser) return null;
+  return buildUserInfo(sysUser);
+}
+
 /**
- * 校验 Bearer token，成功则滑动续期并返回用户信息（不含 password）。
- * hybrid：请先经 middleware 调用 {@link ensureTokenAdopted}，以便识别 java 签发的 token。
+ * 校验访问身份并返回用户信息（不含 password）。
+ * - `mock`：校验本地 Bearer 会话（滑动续期）
+ * - `mixture`：**不校验** token，直接返回 fallback mock 用户（RBAC 用）
  */
 export function verifyAccessToken(
   event: H3Event<EventHandlerRequest>,
 ): null | Omit<UserInfo, "password"> {
+  if (isMixtureMode()) {
+    return resolveMixtureUser();
+  }
+
   const token = extractBearerToken(event);
   if (!token) {
     return null;

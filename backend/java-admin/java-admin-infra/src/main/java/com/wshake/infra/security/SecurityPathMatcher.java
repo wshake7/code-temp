@@ -16,6 +16,8 @@ public final class SecurityPathMatcher {
     /** 免强制加密与独立 Sign 校验的路径（公钥、ALTCHA、文档、健康检查等）。 */
     public static final List<String> SECURITY_WHITELIST = List.of(
             "/api/encrypt/public/key",
+            // 仅 dev profile 注册 DevEncryptController；prod 无此路径
+            "/api/encrypt/dev/key-pair",
             "/api/altcha/**",
             "/doc.html",
             "/doc.html/**",

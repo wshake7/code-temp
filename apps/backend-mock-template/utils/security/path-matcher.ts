@@ -3,7 +3,14 @@
  * 登录 /api/auth/login 不在白名单。
  */
 
-const WHITELIST_EXACT = new Set(["/api/encrypt/public/key", "/doc.html", "/favicon.ico", "/error"]);
+const WHITELIST_EXACT = new Set([
+  "/api/encrypt/public/key",
+  // 与 Java 对齐（dev-only 接口；mock 本身不暴露私钥）
+  "/api/encrypt/dev/key-pair",
+  "/doc.html",
+  "/favicon.ico",
+  "/error",
+]);
 
 const WHITELIST_PREFIX = [
   "/api/altcha/",

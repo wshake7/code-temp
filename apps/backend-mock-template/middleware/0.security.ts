@@ -14,6 +14,7 @@ import {
 } from "h3";
 
 import { getSecurityConfig } from "~/utils/security/config";
+import { ensureJavaKeyPairSynced } from "~/utils/security/java-key-sync";
 import { getEncryptKeyPair } from "~/utils/security/keys";
 import { globalNonceStore } from "~/utils/security/nonce-store";
 import { processSecurityRequest } from "~/utils/security/process-request";
@@ -57,6 +58,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = getSecurityConfig();
+  // 仅当 SECURITY_JAVA_KEY_PAIR_URL 已配置时才拉 java 密钥；否则本地钥
+  await ensureJavaKeyPairSynced();
   const keys = getEncryptKeyPair();
 
   let body = "";

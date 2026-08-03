@@ -1,0 +1,42 @@
+package com.wshake.api.controller;
+
+import com.wshake.common.result.Result;
+import com.wshake.infra.security.ServerKeyPairProvider;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 仅 dev profile：向 backend-mock 暴露全局 RSA 密钥对，便于 hybrid 联调时 mock 与 Java 同钥解密。
+ *
+ * <p><strong>正式（prod）不注册本 Bean</strong>，避免私钥泄露到公网。
+ *
+ * @author wshake
+ */
+@Tag(name = "加密（dev）", description = "仅 dev：mock 拉取完整密钥对")
+@RestController
+@RequestMapping("/api/encrypt/dev")
+@Profile("dev")
+@RequiredArgsConstructor
+public class DevEncryptController {
+
+    private final ServerKeyPairProvider serverKeyPairProvider;
+
+    /**
+     * 返回全局 RSA 公钥（SPKI base64）与私钥（PKCS#8 PEM），供 mock 进程内 adopt。
+     */
+    @GetMapping("/key-pair")
+    @Operation(
+            summary = "【dev only】获取完整密钥对",
+            description = "仅 spring.profiles.active=dev 可用；返回 data.publicKey + data.privateKey")
+    public Result<Map<String, String>> keyPair() {
+        return Result.ok(Map.of(
+                "publicKey", serverKeyPairProvider.getPublicKey(),
+                "privateKey", serverKeyPairProvider.getPrivateKeyPem()));
+    }
+}
