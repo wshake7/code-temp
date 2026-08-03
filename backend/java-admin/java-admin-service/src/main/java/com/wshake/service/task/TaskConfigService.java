@@ -1,0 +1,379 @@
+package com.wshake.service.task;
+
+import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.common.exception.BizException;
+import com.wshake.common.result.PageData;
+import com.wshake.common.result.ResultCode;
+import com.wshake.service.entity.TemporalTaskConfig;
+import com.wshake.service.entity.TemporalTaskExecution;
+import com.wshake.service.port.TaskTriggerPort;
+import com.wshake.service.port.TaskTriggerPort.TriggerRequest;
+import com.wshake.service.port.TaskTriggerPort.TriggerResult;
+import com.wshake.service.repository.TemporalTaskConfigRepository;
+import com.wshake.service.repository.TemporalTaskExecutionRepository;
+import com.wshake.service.task.TaskManageModels.CreateTaskConfigCommand;
+import com.wshake.service.task.TaskManageModels.TaskBatchCommand;
+import com.wshake.service.task.TaskManageModels.TaskBatchResult;
+import com.wshake.service.task.TaskManageModels.TaskConfigListQuery;
+import com.wshake.service.task.TaskManageModels.TaskConfigView;
+import com.wshake.service.task.TaskManageModels.TaskExecutionView;
+import com.wshake.service.task.TaskManageModels.TaskTriggerResult;
+import com.wshake.service.task.TaskManageModels.UpdateTaskConfigCommand;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 任务配置 Service：分页/CRUD/软删/batch/手动触发。
+ *
+ * <p>触发经 {@link TaskTriggerPort} 解耦执行后端；默认本地实现写镜像执行记录。
+ *
+ * @author wshake
+ */
+@Service
+@RequiredArgsConstructor
+public class TaskConfigService {
+
+    private static final Pattern CODE_RE = Pattern.compile(TaskManageModels.CODE_PATTERN);
+
+    private final TemporalTaskConfigRepository configRepository;
+    private final TemporalTaskExecutionRepository executionRepository;
+    private final TaskTriggerPort taskTriggerPort;
+
+    public PageData<TaskConfigView> page(TaskConfigListQuery query) {
+        EasyPageResult<TemporalTaskConfig> page = configRepository.page(
+                query.page(), query.pageSize(), query.codeExact(), query.codeLike(), query.name(), query.status());
+        List<TemporalTaskConfig> rows = page.getData() == null ? List.of() : page.getData();
+        return PageData.of(rows.stream().map(this::toConfigView).toList(), page.getTotal());
+    }
+
+    public TaskConfigView getById(Long id) {
+        return toConfigView(requireConfig(id));
+    }
+
+    @Transactional
+    public TaskConfigView create(CreateTaskConfigCommand cmd) {
+        String code = requireValidCode(cmd.code());
+        String name = requireNonBlank(cmd.name(), "name");
+        if (name.length() > 128) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "name must be ≤ 128 chars");
+        }
+        String workflowType = requireNonBlank(cmd.workflowType(), "workflowType");
+        String taskQueue = requireNonBlank(cmd.taskQueue(), "taskQueue");
+        if (configRepository.existsByCode(code, null)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "code " + code + " already exists");
+        }
+
+        TemporalTaskConfig row = new TemporalTaskConfig();
+        row.setCode(code);
+        row.setName(name);
+        row.setWorkflowType(workflowType);
+        row.setTaskQueue(taskQueue);
+        row.setCronExpr(normalizeCron(cmd.cronExpr()));
+        row.setRetryPolicy(TaskJsonSupport.toJson(cmd.retryPolicy(), "retryPolicy"));
+        row.setTimeoutSeconds(normalizeTimeout(cmd.timeoutSeconds(), true));
+        row.setRemark(TaskManageModels.nullToEmpty(cmd.remark()).trim());
+        row.setIsEnabled(TaskManageModels.normalize01(cmd.isEnabled(), 1));
+        configRepository.insert(row);
+        return toConfigView(requireConfig(row.getId()));
+    }
+
+    @Transactional
+    public TaskConfigView update(UpdateTaskConfigCommand cmd) {
+        TemporalTaskConfig row = requireConfig(cmd.id());
+
+        if (cmd.codePresent()) {
+            String code = requireValidCode(cmd.code());
+            if (configRepository.existsByCode(code, row.getId())) {
+                throw BizException.of(ResultCode.PARAM_INVALID, "code " + code + " already exists");
+            }
+            row.setCode(code);
+        }
+        if (cmd.namePresent()) {
+            String name = cmd.name() == null ? "" : cmd.name().trim();
+            if (name.isEmpty()) {
+                throw BizException.of(ResultCode.PARAM_INVALID, "name cannot be empty");
+            }
+            if (name.length() > 128) {
+                throw BizException.of(ResultCode.PARAM_INVALID, "name must be ≤ 128 chars");
+            }
+            row.setName(name);
+        }
+        if (cmd.workflowTypePresent()) {
+            String v = cmd.workflowType() == null ? "" : cmd.workflowType().trim();
+            if (v.isEmpty()) {
+                throw BizException.of(ResultCode.PARAM_INVALID, "workflowType cannot be empty");
+            }
+            row.setWorkflowType(v);
+        }
+        if (cmd.taskQueuePresent()) {
+            String v = cmd.taskQueue() == null ? "" : cmd.taskQueue().trim();
+            if (v.isEmpty()) {
+                throw BizException.of(ResultCode.PARAM_INVALID, "taskQueue cannot be empty");
+            }
+            row.setTaskQueue(v);
+        }
+        if (cmd.cronExprPresent()) {
+            row.setCronExpr(normalizeCron(cmd.cronExpr()));
+        }
+        if (cmd.retryPolicyPresent()) {
+            row.setRetryPolicy(TaskJsonSupport.toJson(cmd.retryPolicy(), "retryPolicy"));
+        }
+        if (cmd.timeoutSecondsPresent()) {
+            row.setTimeoutSeconds(normalizeTimeout(cmd.timeoutSeconds(), true));
+        }
+        if (cmd.remarkPresent()) {
+            row.setRemark(cmd.remark() == null ? "" : cmd.remark());
+        }
+        if (cmd.isEnabledPresent()) {
+            row.setIsEnabled(TaskManageModels.normalize01(cmd.isEnabled(), 1));
+        }
+
+        configRepository.update(row);
+        return toConfigView(requireConfig(row.getId()));
+    }
+
+    /**
+     * 软删任务配置；允许已有 execution（config_id 可悬空）。
+     */
+    @Transactional
+    public TaskConfigView softDelete(Long id) {
+        TemporalTaskConfig row = requireConfig(id);
+        TaskConfigView snapshot = toConfigView(row);
+        long n = configRepository.softDeleteById(id);
+        if (n == 0) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "task-config " + id + " not found");
+        }
+        long deletedAt = System.currentTimeMillis();
+        return new TaskConfigView(
+                snapshot.id(),
+                snapshot.code(),
+                snapshot.name(),
+                snapshot.workflowType(),
+                snapshot.taskQueue(),
+                snapshot.cronExpr(),
+                snapshot.retryPolicy(),
+                snapshot.timeoutSeconds(),
+                snapshot.remark(),
+                snapshot.isEnabled(),
+                deletedAt,
+                snapshot.createdAt(),
+                snapshot.updatedAt(),
+                snapshot.createdBy(),
+                snapshot.updatedBy());
+    }
+
+    @Transactional
+    public TaskBatchResult batch(TaskBatchCommand cmd) {
+        String action = cmd.action() == null ? "" : cmd.action().trim();
+        if (!TaskManageModels.BATCH_ACTIONS.contains(action)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete|trigger");
+        }
+        List<Long> ids = normalizeIds(cmd.ids());
+        if (ids.isEmpty()) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "ids must be a non-empty number[]");
+        }
+        List<TemporalTaskConfig> targets = configRepository.listByIds(ids);
+        if (targets.isEmpty()) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "no active task-config found for given ids");
+        }
+
+        if ("delete".equals(action)) {
+            List<Long> deleted = new ArrayList<>();
+            for (TemporalTaskConfig t : targets) {
+                configRepository.softDeleteById(t.getId());
+                deleted.add(t.getId());
+            }
+            return new TaskBatchResult(action, deleted.size(), deleted, List.of(), List.of());
+        }
+
+        if ("trigger".equals(action)) {
+            List<TemporalTaskConfig> enabled = targets.stream()
+                    .filter(t -> t.getIsEnabled() != null && t.getIsEnabled() == 1)
+                    .toList();
+            if (enabled.isEmpty()) {
+                throw BizException.of(ResultCode.PARAM_INVALID, "no enabled task-config to trigger");
+            }
+            List<Long> executionIds = new ArrayList<>();
+            List<Long> triggered = new ArrayList<>();
+            for (TemporalTaskConfig t : enabled) {
+                TaskExecutionView exec = doTrigger(t);
+                executionIds.add(exec.id());
+                triggered.add(t.getId());
+            }
+            List<Long> skipped = targets.stream()
+                    .filter(t -> t.getIsEnabled() == null || t.getIsEnabled() == 0)
+                    .map(TemporalTaskConfig::getId)
+                    .toList();
+            return new TaskBatchResult(action, triggered.size(), triggered, executionIds, skipped);
+        }
+
+        int enabled = "enable".equals(action) ? 1 : 0;
+        List<Long> affected = new ArrayList<>();
+        for (TemporalTaskConfig t : targets) {
+            configRepository.updateIsEnabled(t.getId(), enabled);
+            affected.add(t.getId());
+        }
+        return new TaskBatchResult(action, affected.size(), affected, List.of(), List.of());
+    }
+
+    /**
+     * 手动触发；禁用配置拒绝。
+     */
+    @Transactional
+    public TaskTriggerResult trigger(Long id) {
+        TemporalTaskConfig config = requireConfig(id);
+        if (config.getIsEnabled() == null || config.getIsEnabled() == 0) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "disabled task cannot be triggered");
+        }
+        TaskConfigView configView = toConfigView(config);
+        TaskExecutionView execution = doTrigger(config);
+        return new TaskTriggerResult(configView, execution);
+    }
+
+    private TaskExecutionView doTrigger(TemporalTaskConfig config) {
+        Map<String, Object> input = new LinkedHashMap<>();
+        input.put("trigger", "manual");
+        input.put("configCode", config.getCode());
+
+        TriggerResult started = taskTriggerPort.start(new TriggerRequest(
+                config.getId(),
+                config.getCode(),
+                config.getWorkflowType(),
+                config.getTaskQueue(),
+                config.getCronExpr(),
+                TaskJsonSupport.parseObject(config.getRetryPolicy(), "retryPolicy"),
+                config.getTimeoutSeconds(),
+                input));
+
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        TemporalTaskExecution exec = new TemporalTaskExecution();
+        exec.setConfigId(config.getId());
+        exec.setWorkflowId(started.workflowId());
+        exec.setRunId(started.runId());
+        exec.setWorkflowType(config.getWorkflowType());
+        exec.setTaskQueue(config.getTaskQueue());
+        exec.setStatus("RUNNING");
+        exec.setStartedAt(now);
+        exec.setClosedAt(null);
+        exec.setInputSummary(TaskJsonSupport.toJson(input, "inputSummary"));
+        exec.setResultSummary(null);
+        exec.setFailureReason(null);
+        exec.setCreatedAt(now);
+        executionRepository.insert(exec);
+
+        TemporalTaskExecution saved = executionRepository.findById(exec.getId());
+        return toExecutionView(saved != null ? saved : exec, config.getName());
+    }
+
+    private TemporalTaskConfig requireConfig(Long id) {
+        if (id == null) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "id 不能为空");
+        }
+        TemporalTaskConfig row = configRepository.findById(id);
+        if (row == null) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "task-config " + id + " not found");
+        }
+        return row;
+    }
+
+    private String requireValidCode(String raw) {
+        String code = requireNonBlank(raw, "code");
+        if (!CODE_RE.matcher(code).matches()) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "code must match ^[a-z][a-z0-9_]{0,63}$");
+        }
+        return code;
+    }
+
+    private static String requireNonBlank(String value, String field) {
+        if (value == null || value.trim().isEmpty()) {
+            throw BizException.of(ResultCode.PARAM_INVALID, field + " is required");
+        }
+        return value.trim();
+    }
+
+    private static String normalizeCron(String cronExpr) {
+        if (cronExpr == null) {
+            return null;
+        }
+        String c = cronExpr.trim();
+        if (c.isEmpty()) {
+            return null;
+        }
+        if (c.length() > 64) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "cronExpr must be ≤ 64 chars");
+        }
+        return c;
+    }
+
+    private static Integer normalizeTimeout(Integer timeoutSeconds, boolean allowNull) {
+        if (timeoutSeconds == null) {
+            if (allowNull) {
+                return null;
+            }
+            throw BizException.of(ResultCode.PARAM_INVALID, "timeoutSeconds is required");
+        }
+        if (timeoutSeconds < 0) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "timeoutSeconds must be a non-negative integer");
+        }
+        return timeoutSeconds;
+    }
+
+    private static List<Long> normalizeIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<Long> set = new LinkedHashSet<>();
+        for (Long id : ids) {
+            if (id != null && id > 0) {
+                set.add(id);
+            }
+        }
+        return List.copyOf(set);
+    }
+
+    private TaskConfigView toConfigView(TemporalTaskConfig t) {
+        return new TaskConfigView(
+                t.getId(),
+                t.getCode(),
+                t.getName(),
+                t.getWorkflowType(),
+                t.getTaskQueue(),
+                t.getCronExpr(),
+                TaskJsonSupport.parseObject(t.getRetryPolicy(), "retryPolicy"),
+                t.getTimeoutSeconds(),
+                TaskManageModels.nullToEmpty(t.getRemark()),
+                t.getIsEnabled(),
+                t.getDeletedAt() == null ? 0L : t.getDeletedAt(),
+                t.getCreatedAt(),
+                t.getUpdatedAt(),
+                t.getCreatedBy() == null ? 0L : t.getCreatedBy(),
+                t.getUpdatedBy() == null ? 0L : t.getUpdatedBy());
+    }
+
+    private TaskExecutionView toExecutionView(TemporalTaskExecution e, String configName) {
+        return new TaskExecutionView(
+                e.getId(),
+                e.getConfigId(),
+                configName,
+                e.getWorkflowId(),
+                e.getRunId(),
+                e.getWorkflowType(),
+                e.getTaskQueue(),
+                e.getStatus(),
+                e.getStartedAt(),
+                e.getClosedAt(),
+                TaskJsonSupport.parseObject(e.getInputSummary(), "inputSummary"),
+                TaskJsonSupport.parseObject(e.getResultSummary(), "resultSummary"),
+                e.getFailureReason(),
+                e.getCreatedAt());
+    }
+}

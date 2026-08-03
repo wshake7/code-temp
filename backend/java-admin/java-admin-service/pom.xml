@@ -55,6 +55,12 @@
             <artifactId>ip2region</artifactId>
         </dependency>
 
+        <!-- Jackson databind：任务 JSON 字段（retryPolicy / summary）序列化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

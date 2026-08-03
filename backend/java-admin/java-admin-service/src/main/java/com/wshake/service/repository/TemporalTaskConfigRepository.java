@@ -1,0 +1,102 @@
+package com.wshake.service.repository;
+
+import com.easy.query.api.proxy.client.EasyEntityQuery;
+import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.service.entity.TemporalTaskConfig;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+/**
+ * 任务配置 Repository。
+ *
+ * <p>软删过滤由 {@code BaseEntity#deletedAt} 的 {@code @LogicDelete} 自动附加。
+ *
+ * @author wshake
+ */
+@Component
+@RequiredArgsConstructor
+public class TemporalTaskConfigRepository {
+
+    private final EasyEntityQuery easyEntityQuery;
+
+    public TemporalTaskConfig findById(Long id) {
+        return easyEntityQuery
+                .queryable(TemporalTaskConfig.class)
+                .where(t -> t.id().eq(id))
+                .firstOrNull();
+    }
+
+    public boolean existsByCode(String code, Long excludeId) {
+        return easyEntityQuery
+                .queryable(TemporalTaskConfig.class)
+                .where(t -> {
+                    t.code().eq(code);
+                    t.id().ne(excludeId != null, excludeId);
+                })
+                .any();
+    }
+
+    public EasyPageResult<TemporalTaskConfig> page(
+            int page, int pageSize, List<String> codeExact, String codeLike, String name, Integer status) {
+        return easyEntityQuery
+                .queryable(TemporalTaskConfig.class)
+                .where(t -> {
+                    if (codeExact != null && !codeExact.isEmpty()) {
+                        t.code().in(codeExact);
+                    } else if (codeLike != null) {
+                        t.code().like(codeLike);
+                    }
+                    t.name().like(name != null, name);
+                    t.isEnabled().eq(status != null, status);
+                })
+                .orderBy(t -> t.id().asc())
+                .toPageResult(page, pageSize);
+    }
+
+    public List<TemporalTaskConfig> listByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return easyEntityQuery
+                .queryable(TemporalTaskConfig.class)
+                .where(t -> t.id().in(ids))
+                .orderBy(t -> t.id().asc())
+                .toList();
+    }
+
+    /** 按 id 批量解析名称（仅未软删配置，@LogicDelete 自动过滤）。 */
+    public Map<Long, String> mapNameByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return easyEntityQuery.queryable(TemporalTaskConfig.class).where(t -> t.id().in(ids)).toList().stream()
+                .collect(Collectors.toMap(TemporalTaskConfig::getId, TemporalTaskConfig::getName, (a, b) -> a));
+    }
+
+    public void insert(TemporalTaskConfig row) {
+        easyEntityQuery.insertable(row).executeRows(true);
+    }
+
+    public long update(TemporalTaskConfig row) {
+        return easyEntityQuery.updatable(row).executeRows();
+    }
+
+    public long softDeleteById(Long id) {
+        return easyEntityQuery
+                .deletable(TemporalTaskConfig.class)
+                .where(t -> t.id().eq(id))
+                .executeRows();
+    }
+
+    public long updateIsEnabled(Long id, int isEnabled) {
+        return easyEntityQuery
+                .updatable(TemporalTaskConfig.class)
+                .setColumns(t -> t.isEnabled().set(isEnabled))
+                .where(t -> t.id().eq(id))
+                .executeRows();
+    }
+}
