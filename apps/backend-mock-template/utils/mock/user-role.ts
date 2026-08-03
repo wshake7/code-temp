@@ -342,6 +342,13 @@ export function updateSysRole(
     }
   }
 
+  // 内置 Root 不可禁用，避免首登主体被锁死
+  if (patch.isEnabled !== undefined && Number(patch.isEnabled) === 0) {
+    if (mockSysRoleList[idx].code.toLowerCase() === "root") {
+      return { ok: false, reason: "内置 Root 角色不可禁用" };
+    }
+  }
+
   const before = mockSysRoleList[idx];
   const next: SysRole = {
     ...before,
@@ -378,6 +385,10 @@ export function softDeleteRole(
 ): { ok: true; row: SysRole } | { ok: false; reason: string } {
   const exists = mockSysRoleList.find((r) => r.id === id && r.deleted_at === 0);
   if (!exists) return { ok: false, reason: `role ${id} not found` };
+  // 内置 Root 不可删，避免 Casbin 通配主体被误删导致锁死
+  if (exists.code.toLowerCase() === "root") {
+    return { ok: false, reason: "内置 Root 角色不可删除" };
+  }
   if (hasRoleUsers(id)) return { ok: false, reason: "该角色下存在用户，请先移除用户角色绑定" };
   if (hasRoleChildren(id)) return { ok: false, reason: "请先删除子角色" };
 

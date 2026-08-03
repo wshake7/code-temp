@@ -19,7 +19,7 @@ import lombok.EqualsAndHashCode;
 @EntityProxy
 public class SysRole extends BaseEntity implements ProxyEntityAvailable<SysRole, SysRoleProxy> {
 
-    @Column(primaryKey = true)
+    @Column(primaryKey = true, generatedKey = true)
     private Long id;
 
     private String code;

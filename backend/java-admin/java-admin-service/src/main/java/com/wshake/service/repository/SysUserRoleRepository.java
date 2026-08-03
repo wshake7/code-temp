@@ -1,20 +1,24 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
-import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
 import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysRole;
 import com.wshake.service.entity.SysRoleApi;
+import com.wshake.service.entity.SysUser;
 import com.wshake.service.entity.SysUserRole;
 import com.wshake.service.entity.proxy.SysRoleApiProxy;
 import com.wshake.service.entity.proxy.SysRoleProxy;
+import com.wshake.service.entity.proxy.SysUserProxy;
 import com.wshake.service.entity.proxy.SysUserRoleProxy;
+import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -141,6 +145,78 @@ public class SysUserRoleRepository {
     /** 清除用户全部角色绑定。 */
     public void clearUserRoles(Long userId) {
         replaceUserRoles(userId, List.of());
+    }
+
+    /** 绑定了该角色的用户 ID（关联表无软删；调用方自行过滤已软删用户）。 */
+    public List<Long> findUserIdsByRoleId(Long roleId) {
+        return easyEntityQuery
+                .queryable(SysUserRole.class)
+                .where(ur -> ur.roleId().eq(roleId))
+                .select(SysUserRoleProxy::userId)
+                .distinct()
+                .toList();
+    }
+
+    /** 绑定了该角色且未软删的用户 ID（用于 Casbin 同步）。 */
+    public List<Long> findActiveUserIdsByRoleId(Long roleId) {
+        List<Long> userIds = findUserIdsByRoleId(roleId);
+        if (userIds.isEmpty()) {
+            return List.of();
+        }
+        return easyEntityQuery
+                .queryable(SysUser.class)
+                .where(u -> u.id().in(userIds))
+                .select(SysUserProxy::id)
+                .toList();
+    }
+
+    /**
+     * 批量统计角色下未软删用户数。
+     *
+     * @return roleId → count
+     */
+    public Map<Long, Long> countActiveUsersByRoleIds(List<Long> roleIds) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (roleIds == null || roleIds.isEmpty()) {
+            return counts;
+        }
+        for (Long roleId : roleIds) {
+            counts.put(roleId, 0L);
+        }
+        List<SysUserRole> rows = easyEntityQuery
+                .queryable(SysUserRole.class)
+                .where(ur -> ur.roleId().in(roleIds))
+                .toList();
+        if (rows.isEmpty()) {
+            return counts;
+        }
+        List<Long> userIds = rows.stream().map(SysUserRole::getUserId).distinct().toList();
+        // SysUser 带 LogicDelete：仅未软删
+        List<Long> activeUserIds = easyEntityQuery
+                .queryable(SysUser.class)
+                .where(u -> u.id().in(userIds))
+                .select(SysUserProxy::id)
+                .toList();
+        Set<Long> active = new HashSet<>(activeUserIds);
+        for (SysUserRole row : rows) {
+            if (!active.contains(row.getUserId())) {
+                continue;
+            }
+            counts.merge(row.getRoleId(), 1L, Long::sum);
+        }
+        return counts;
+    }
+
+    /** 该角色是否仍有未软删用户绑定。 */
+    public boolean hasActiveUsers(Long roleId) {
+        List<Long> userIds = findUserIdsByRoleId(roleId);
+        if (userIds.isEmpty()) {
+            return false;
+        }
+        return easyEntityQuery
+                .queryable(SysUser.class)
+                .where(u -> u.id().in(userIds))
+                .any();
     }
 
     /**
