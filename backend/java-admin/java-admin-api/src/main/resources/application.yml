@@ -94,7 +94,7 @@ app:
       enabled: ${SECURITY_TIMESTAMP_ENABLED:true}
       expire-ms: ${SECURITY_TIMESTAMP_EXPIRE_MS:300000}
     encrypt:
-      enabled: ${SECURITY_ENCRYPT_ENABLED:true}
+      enabled: ${SECURITY_ENCRYPT_ENABLED:false}
     nonce:
       enabled: ${SECURITY_NONCE_ENABLED:true}
     sign:
