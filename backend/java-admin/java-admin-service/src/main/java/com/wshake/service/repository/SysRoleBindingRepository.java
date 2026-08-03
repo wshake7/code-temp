@@ -178,6 +178,25 @@ public class SysRoleBindingRepository {
                 .executeRows();
     }
 
+    /** API 软删前：返回绑定了该 API 的角色 ID 列表。 */
+    public List<Long> findRoleIdsByApiId(Long apiId) {
+        return easyEntityQuery
+                .queryable(SysRoleApi.class)
+                .where(ra -> ra.apiId().eq(apiId))
+                .select(SysRoleApiProxy::roleId)
+                .distinct()
+                .toList();
+    }
+
+    /** API 软删前清除所有角色对该 API 的绑定。 */
+    public void clearApisByApiId(Long apiId) {
+        easyEntityQuery
+                .deletable(SysRoleApi.class)
+                .where(ra -> ra.apiId().eq(apiId))
+                .allowDeleteStatement(true)
+                .executeRows();
+    }
+
     public Set<Long> boundMenuIdSet(Long roleId) {
         return new HashSet<>(findMenuIdsByRoleId(roleId));
     }

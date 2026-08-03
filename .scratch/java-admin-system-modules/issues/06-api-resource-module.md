@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] API 资源分页/CRUD/软删；method+path / permission_code 唯一性符合软删约定
-- [ ] groups、all、batch 行为与前端消费一致
-- [ ] sync（或文档化的等价能力）可用且幂等合理
-- [ ] 三端 api 管理 API 对齐
-- [ ] HTTP 测试覆盖主路径
+- [x] API 资源分页/CRUD/软删；method+path / permission_code 唯一性符合软删约定
+- [x] groups、all、batch 行为与前端消费一致
+- [x] sync（或文档化的等价能力）可用且幂等合理
+- [x] 三端 api 管理 API 对齐
+- [x] HTTP 测试覆盖主路径

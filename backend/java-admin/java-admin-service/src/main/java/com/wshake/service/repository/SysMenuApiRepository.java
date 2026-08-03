@@ -124,6 +124,15 @@ public class SysMenuApiRepository {
                 .executeRows();
     }
 
+    /** API 软删前清除所有菜单对该 API 的绑定。 */
+    public void clearByApiId(Long apiId) {
+        easyEntityQuery
+                .deletable(SysMenuApi.class)
+                .where(ma -> ma.apiId().eq(apiId))
+                .allowDeleteStatement(true)
+                .executeRows();
+    }
+
     /** 菜单软删前清除所有角色对该菜单的绑定。 */
     public void clearRoleMenusByMenuId(Long menuId) {
         easyEntityQuery
