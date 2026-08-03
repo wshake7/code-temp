@@ -5,19 +5,14 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.atomic.AtomicLong;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
 
 /**
  * 本地任务触发实现（默认）：不连 Temporal，生成 mock 风格 workflowId/runId。
  *
- * <p>后续接入真实 Temporal 时新增 {@code TemporalTaskTriggerPort} 并注册为 Bean 即可覆盖本实现
- * （本类带 {@link ConditionalOnMissingBean}）。
+ * <p>由 {@link TaskTriggerConfiguration} 在缺少其它 {@link TaskTriggerPort} Bean 时注册。
  *
  * @author wshake
  */
-@Component
-@ConditionalOnMissingBean(TaskTriggerPort.class)
 public class LocalTaskTriggerPort implements TaskTriggerPort {
 
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
