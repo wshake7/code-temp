@@ -37,12 +37,7 @@ public class DictTypeService {
 
     public PageData<DictTypeView> page(DictTypeListQuery query) {
         EasyPageResult<DictType> page = dictTypeRepository.page(
-                query.page(),
-                query.pageSize(),
-                query.codeExact(),
-                query.codeLike(),
-                query.name(),
-                query.status());
+                query.page(), query.pageSize(), query.codeExact(), query.codeLike(), query.name(), query.status());
         List<DictType> rows = page.getData() == null ? List.of() : page.getData();
         return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
     }
@@ -151,8 +146,7 @@ public class DictTypeService {
         if ("delete".equals(action)) {
             for (DictType t : targets) {
                 if (dictDataRepository.existsActiveByTypeId(t.getId())) {
-                    throw BizException.of(
-                            ResultCode.PARAM_INVALID, "字典类型 " + t.getCode() + " 仍有字典项，请先清空");
+                    throw BizException.of(ResultCode.PARAM_INVALID, "字典类型 " + t.getCode() + " 仍有字典项，请先清空");
                 }
             }
             List<Long> deleted = new ArrayList<>();

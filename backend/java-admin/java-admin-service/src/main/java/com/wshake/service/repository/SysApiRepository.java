@@ -21,10 +21,7 @@ public class SysApiRepository {
     private final EasyEntityQuery easyEntityQuery;
 
     public SysApi findById(Long id) {
-        return easyEntityQuery
-                .queryable(SysApi.class)
-                .where(a -> a.id().eq(id))
-                .firstOrNull();
+        return easyEntityQuery.queryable(SysApi.class).where(a -> a.id().eq(id)).firstOrNull();
     }
 
     /** 全量未软删 API，按 id 升序。 */
@@ -101,10 +98,7 @@ public class SysApiRepository {
     }
 
     public long softDeleteById(Long id) {
-        return easyEntityQuery
-                .deletable(SysApi.class)
-                .where(a -> a.id().eq(id))
-                .executeRows();
+        return easyEntityQuery.deletable(SysApi.class).where(a -> a.id().eq(id)).executeRows();
     }
 
     public long updateIsEnabled(Long id, int isEnabled) {

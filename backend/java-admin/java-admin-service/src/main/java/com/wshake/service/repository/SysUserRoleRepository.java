@@ -190,7 +190,8 @@ public class SysUserRoleRepository {
         if (rows.isEmpty()) {
             return counts;
         }
-        List<Long> userIds = rows.stream().map(SysUserRole::getUserId).distinct().toList();
+        List<Long> userIds =
+                rows.stream().map(SysUserRole::getUserId).distinct().toList();
         // SysUser 带 LogicDelete：仅未软删
         List<Long> activeUserIds = easyEntityQuery
                 .queryable(SysUser.class)
@@ -245,7 +246,9 @@ public class SysUserRoleRepository {
                 .toList();
         List<ApiPolicy> policies = new ArrayList<>();
         for (SysApi api : apis) {
-            if (api.getPath() == null || api.getMethod() == null || api.getMethod().isBlank()) {
+            if (api.getPath() == null
+                    || api.getMethod() == null
+                    || api.getMethod().isBlank()) {
                 continue;
             }
             policies.add(new ApiPolicy(api.getPath(), api.getMethod().toUpperCase()));

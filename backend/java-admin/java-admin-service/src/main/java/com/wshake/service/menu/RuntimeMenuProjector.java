@@ -22,12 +22,10 @@ import java.util.regex.Pattern;
  */
 public final class RuntimeMenuProjector {
 
-    private static final Pattern STRING_FIELD =
-            Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+    private static final Pattern STRING_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern NUMBER_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
     private static final Pattern BOOL_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(true|false)");
-    private static final Pattern STRING_ARRAY_FIELD =
-            Pattern.compile("\"([^\"]+)\"\\s*:\\s*\\[([^\\]]*)]");
+    private static final Pattern STRING_ARRAY_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\\[([^\\]]*)]");
 
     private RuntimeMenuProjector() {}
 

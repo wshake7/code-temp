@@ -4,9 +4,9 @@ import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
+import com.wshake.service.entity.SysUser;
 import com.wshake.service.port.CasbinPolicyPort;
 import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
-import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.SysUserRepository;
 import com.wshake.service.repository.SysUserRoleRepository;
 import com.wshake.service.user.UserManageModels.CreateUserCommand;
@@ -55,7 +55,8 @@ public class SysUserService {
         List<SysUser> rows = page.getData() == null ? List.of() : page.getData();
         List<Long> userIds = rows.stream().map(SysUser::getId).toList();
         Map<Long, List<Long>> roleMap = sysUserRoleRepository.findRoleIdsByUserIds(userIds);
-        List<Long> allRoleIds = roleMap.values().stream().flatMap(List::stream).distinct().toList();
+        List<Long> allRoleIds =
+                roleMap.values().stream().flatMap(List::stream).distinct().toList();
         Map<Long, String> roleNames = sysUserRoleRepository.findRoleNamesByIds(allRoleIds);
 
         List<UserView> items = new ArrayList<>(rows.size());
@@ -195,14 +196,10 @@ public class SysUserService {
      */
     public void syncCasbinForUser(Long userId) {
         boolean keepWildcard = sysUserRoleRepository.userHasRootRole(userId);
-        List<ApiPolicy> policies =
-                keepWildcard ? List.of() : sysUserRoleRepository.findApiPoliciesByUserId(userId);
+        List<ApiPolicy> policies = keepWildcard ? List.of() : sysUserRoleRepository.findApiPoliciesByUserId(userId);
         casbinPolicyPort.replaceUserPolicies(String.valueOf(userId), policies, keepWildcard);
         log.info(
-                "[USER] casbin synced userId={} keepWildcard={} policyCount={}",
-                userId,
-                keepWildcard,
-                policies.size());
+                "[USER] casbin synced userId={} keepWildcard={} policyCount={}", userId, keepWildcard, policies.size());
     }
 
     private UserView loadView(Long userId) {

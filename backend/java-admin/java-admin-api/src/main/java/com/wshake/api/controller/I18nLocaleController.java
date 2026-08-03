@@ -64,8 +64,7 @@ public class I18nLocaleController {
             @RequestParam(required = false) List<String> code,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer status) {
-        PageData<LocaleView> pageData =
-                localeService.page(LocaleListQuery.of(page, pageSize, code, name, status));
+        PageData<LocaleView> pageData = localeService.page(LocaleListQuery.of(page, pageSize, code, name, status));
         List<I18nLocaleVO> items = converter.convert(pageData.getItems(), I18nLocaleVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }
@@ -98,7 +97,13 @@ public class I18nLocaleController {
     @Operation(summary = "更新语言")
     public Result<I18nLocaleVO> update(@PathVariable Long id, @Valid @RequestBody UpdateI18nLocaleRequest req) {
         UpdateLocaleCommand cmd = new UpdateLocaleCommand(
-                id, req.getCode(), req.getName(), req.getSort(), req.getRemark(), req.getIsDefault(), req.getIsEnabled());
+                id,
+                req.getCode(),
+                req.getName(),
+                req.getSort(),
+                req.getRemark(),
+                req.getIsDefault(),
+                req.getIsEnabled());
         return Result.ok(converter.convert(localeService.update(cmd), I18nLocaleVO.class));
     }
 

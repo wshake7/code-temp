@@ -46,12 +46,7 @@ public class I18nLocaleRepository {
     }
 
     public EasyPageResult<I18nLocale> page(
-            int page,
-            int pageSize,
-            List<String> codeExact,
-            String codeLike,
-            String name,
-            Integer status) {
+            int page, int pageSize, List<String> codeExact, String codeLike, String name, Integer status) {
         return easyEntityQuery
                 .queryable(I18nLocale.class)
                 .where(t -> {
@@ -70,8 +65,7 @@ public class I18nLocaleRepository {
                 .toPageResult(page, pageSize);
     }
 
-    public List<I18nLocale> listFiltered(
-            List<String> codeExact, String codeLike, String name, Integer status) {
+    public List<I18nLocale> listFiltered(List<String> codeExact, String codeLike, String name, Integer status) {
         return easyEntityQuery
                 .queryable(I18nLocale.class)
                 .where(t -> {

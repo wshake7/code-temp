@@ -66,8 +66,8 @@ public class DictTypeController {
             @RequestParam(required = false) List<String> code,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer status) {
-        List<DictTypeVO> items =
-                converter.convert(dictTypeService.listAll(DictTypeListQuery.allFilter(code, name, status)), DictTypeVO.class);
+        List<DictTypeVO> items = converter.convert(
+                dictTypeService.listAll(DictTypeListQuery.allFilter(code, name, status)), DictTypeVO.class);
         return Result.ok(items);
     }
 

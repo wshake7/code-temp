@@ -66,9 +66,7 @@ public class I18nTranslationController {
     private final Converter converter;
 
     @GetMapping("/list")
-    @Operation(
-            summary = "分页查询翻译",
-            description = "byKey=true 时按 translationKey 聚合；否则返回翻译行并附 localeCode")
+    @Operation(summary = "分页查询翻译", description = "byKey=true 时按 translationKey 聚合；否则返回翻译行并附 localeCode")
     public Result<PageData<?>> list(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
@@ -189,12 +187,7 @@ public class I18nTranslationController {
         ImportBatchResult result = translationService.importBatch(new ImportBatchCommand(items));
         List<I18nImportBatchVO.PerFile> perFile = result.affected().perFile().stream()
                 .map(p -> new I18nImportBatchVO.PerFile(
-                        p.name(),
-                        p.ok(),
-                        p.error(),
-                        p.createdLocales(),
-                        p.softDeleted(),
-                        p.createdTranslations()))
+                        p.name(), p.ok(), p.error(), p.createdLocales(), p.softDeleted(), p.createdTranslations()))
                 .toList();
         I18nImportBatchVO.Affected affected = new I18nImportBatchVO.Affected(
                 result.affected().createdLocales(),

@@ -168,8 +168,7 @@ class RoleControllerTest {
     @Test
     void apis_mapsBoundFlag() {
         when(sysRoleService.listApiBinds(2L))
-                .thenReturn(List.of(new RoleApiBindView(
-                        10L, "List", "GET", "/api/x", "p", "g", 1, false)));
+                .thenReturn(List.of(new RoleApiBindView(10L, "List", "GET", "/api/x", "p", "g", 1, false)));
 
         Result<List<RoleApiBindItemVO>> result = controller.apis(2L);
 
@@ -179,7 +178,6 @@ class RoleControllerTest {
 
     private static RoleView sampleRole(Long id, String code) {
         LocalDateTime now = LocalDateTime.of(2026, 1, 1, 12, 0);
-        return new RoleView(
-                id, code, "Name", null, 0, "", 1, 0L, now, now, 0L, 0L, 1L, null);
+        return new RoleView(id, code, "Name", null, 0, "", 1, 0L, now, now, 0L, 0L, 1L, null);
     }
 }

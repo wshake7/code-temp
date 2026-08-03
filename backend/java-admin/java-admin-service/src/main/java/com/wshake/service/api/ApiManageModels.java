@@ -22,13 +22,7 @@ public final class ApiManageModels {
             int page, int pageSize, String name, String path, String method, String group, Integer status) {
 
         public static ApiListQuery of(
-                Integer page,
-                Integer pageSize,
-                String name,
-                String path,
-                String method,
-                String group,
-                Integer status) {
+                Integer page, Integer pageSize, String name, String path, String method, String group, Integer status) {
             int pageNo = page == null || page < 1 ? 1 : page;
             int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
             String methodFilter = trimToNull(method);
@@ -42,13 +36,7 @@ public final class ApiManageModels {
                 groupFilter = null;
             }
             return new ApiListQuery(
-                    pageNo,
-                    size,
-                    trimToNull(name),
-                    trimToNull(path),
-                    methodFilter,
-                    groupFilter,
-                    status);
+                    pageNo, size, trimToNull(name), trimToNull(path), methodFilter, groupFilter, status);
         }
 
         private static String trimToNull(String value) {

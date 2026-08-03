@@ -34,8 +34,7 @@ class LoginLogControllerTest {
         when(loginLogService.page(ArgumentMatchers.any(LoginLogListQuery.class)))
                 .thenReturn(PageData.of(List.of(sampleView(1L, "root")), 1L));
 
-        Result<PageData<LoginLogVO>> result =
-                controller.list(1, 20, null, null, null, null, null, null, null);
+        Result<PageData<LoginLogVO>> result = controller.list(1, 20, null, null, null, null, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(1L);

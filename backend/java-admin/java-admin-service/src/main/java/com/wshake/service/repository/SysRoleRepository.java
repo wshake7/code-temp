@@ -107,5 +107,4 @@ public class SysRoleRepository {
         return easyEntityQuery.queryable(SysRole.class).where(r -> r.id().in(ids)).toList().stream()
                 .collect(Collectors.toMap(SysRole::getId, SysRole::getName, (a, b) -> a, LinkedHashMap::new));
     }
-
 }

@@ -41,12 +41,7 @@ public final class RoleManageModels {
      * <p>{@code parentId}：使用 {@link ParentIdChange} 区分「未传」与「置为 null」。
      */
     public record UpdateRoleCommand(
-            Long id,
-            String name,
-            ParentIdChange parentId,
-            Integer sort,
-            Integer isEnabled,
-            String remark) {}
+            Long id, String name, ParentIdChange parentId, Integer sort, Integer isEnabled, String remark) {}
 
     /** parentId 变更：absent=不改；present 含 null=设为无父。 */
     public record ParentIdChange(boolean present, Long value) {

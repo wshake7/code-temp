@@ -13,8 +13,7 @@ public final class UserManageModels {
     private UserManageModels() {}
 
     /** 列表筛选条件。 */
-    public record UserListQuery(
-            int page, int pageSize, String username, String nickname, Integer status, Long roleId) {
+    public record UserListQuery(int page, int pageSize, String username, String nickname, Integer status, Long roleId) {
 
         public static UserListQuery of(
                 Integer page, Integer pageSize, String username, String nickname, Integer status, Long roleId) {

@@ -44,8 +44,7 @@ class ApiControllerTest {
         when(sysApiService.pageApis(ArgumentMatchers.any(ApiListQuery.class)))
                 .thenReturn(new ApiListPage(List.of(sampleView(1L, "列表")), 2L, 5L));
 
-        Result<TreePageData<ApiListItemVO>> result =
-                controller.list(1, 20, null, null, null, null, null);
+        Result<TreePageData<ApiListItemVO>> result = controller.list(1, 20, null, null, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(2L);
@@ -55,8 +54,7 @@ class ApiControllerTest {
 
     @Test
     void create_mapsBody() {
-        when(sysApiService.create(ArgumentMatchers.any(CreateApiCommand.class)))
-                .thenReturn(sampleView(10L, "新建"));
+        when(sysApiService.create(ArgumentMatchers.any(CreateApiCommand.class))).thenReturn(sampleView(10L, "新建"));
         CreateApiRequest req = new CreateApiRequest();
         req.setName("新建");
         req.setMethod("POST");
@@ -74,8 +72,7 @@ class ApiControllerTest {
 
     @Test
     void update_forwardsFields() {
-        when(sysApiService.update(ArgumentMatchers.any(UpdateApiCommand.class)))
-                .thenReturn(sampleView(2L, "改"));
+        when(sysApiService.update(ArgumentMatchers.any(UpdateApiCommand.class))).thenReturn(sampleView(2L, "改"));
         UpdateApiRequest req = new UpdateApiRequest();
         req.setName("改");
         req.setIsEnabled(0);
@@ -91,8 +88,7 @@ class ApiControllerTest {
 
     @Test
     void batch_returnsAffected() {
-        when(sysApiService.batch(ArgumentMatchers.any()))
-                .thenReturn(new ApiBatchResult("delete", 2, List.of(1L, 2L)));
+        when(sysApiService.batch(ArgumentMatchers.any())).thenReturn(new ApiBatchResult("delete", 2, List.of(1L, 2L)));
         ApiBatchRequest req = new ApiBatchRequest();
         req.setAction("delete");
         req.setIds(List.of(1L, 2L));
@@ -125,7 +121,6 @@ class ApiControllerTest {
 
     private static ApiView sampleView(Long id, String name) {
         LocalDateTime now = LocalDateTime.of(2026, 1, 1, 0, 0);
-        return new ApiView(
-                id, name, "GET", "/api/x", "x:list", "分组", "", 1, 0L, now, now, 0L, 0L);
+        return new ApiView(id, name, "GET", "/api/x", "x:list", "分组", "", 1, 0L, now, now, 0L, 0L);
     }
 }

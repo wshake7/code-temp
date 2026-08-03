@@ -103,8 +103,7 @@ public class I18nTranslationRepository {
      * <p>{@code value} 对 translation_key 与 value 做 OR 模糊；实现为两次 like 或内存过滤。
      * 此处用 SQL 侧 OR。
      */
-    public EasyPageResult<I18nTranslation> page(
-            int page, int pageSize, Long localeId, String value, Integer status) {
+    public EasyPageResult<I18nTranslation> page(int page, int pageSize, Long localeId, String value, Integer status) {
         return easyEntityQuery
                 .queryable(I18nTranslation.class)
                 .where(t -> {
@@ -142,8 +141,7 @@ public class I18nTranslationRepository {
     /**
      * 导入预览：按 locale_id 集合 + key 集合过滤。
      */
-    public List<I18nTranslation> listByLocaleIdsAndKeys(
-            Collection<Long> localeIds, Collection<String> keys) {
+    public List<I18nTranslation> listByLocaleIdsAndKeys(Collection<Long> localeIds, Collection<String> keys) {
         if (localeIds == null || localeIds.isEmpty() || keys == null || keys.isEmpty()) {
             return List.of();
         }

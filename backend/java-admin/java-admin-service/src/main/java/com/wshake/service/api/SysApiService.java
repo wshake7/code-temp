@@ -50,8 +50,8 @@ public class SysApiService {
      * 分页列出接口：分页基数为 api_group；items 为当前页各组下的全部接口（扁平）。
      */
     public ApiListPage pageApis(ApiListQuery query) {
-        List<SysApi> filtered = apiRepository.listFiltered(
-                query.name(), query.path(), query.method(), query.group(), query.status());
+        List<SysApi> filtered =
+                apiRepository.listFiltered(query.name(), query.path(), query.method(), query.group(), query.status());
 
         Map<String, List<SysApi>> groupMap = new LinkedHashMap<>();
         for (SysApi a : filtered) {
@@ -276,7 +276,8 @@ public class SysApiService {
         if (!apiRepository.existsByPermissionCode(preferred, null)) {
             return preferred;
         }
-        String slug = path.replaceAll("[^a-zA-Z0-9]+", "_").replaceAll("^_|_$", "").toLowerCase(Locale.ROOT);
+        String slug =
+                path.replaceAll("[^a-zA-Z0-9]+", "_").replaceAll("^_|_$", "").toLowerCase(Locale.ROOT);
         if (slug.isEmpty()) {
             slug = "x";
         }
@@ -375,8 +376,7 @@ public class SysApiService {
     private static String requireAllowedMethod(String method) {
         String m = requireNonBlank(method, "method").toUpperCase(Locale.ROOT);
         if (!ApiManageModels.ALLOWED_METHODS.contains(m)) {
-            throw BizException.of(
-                    ResultCode.PARAM_INVALID, "method must be GET/POST/PUT/DELETE/PATCH/OPTIONS/HEAD");
+            throw BizException.of(ResultCode.PARAM_INVALID, "method must be GET/POST/PUT/DELETE/PATCH/OPTIONS/HEAD");
         }
         return m;
     }
@@ -396,6 +396,10 @@ public class SysApiService {
         if (ids == null) {
             return List.of();
         }
-        return ids.stream().filter(Objects::nonNull).filter(id -> id > 0).distinct().toList();
+        return ids.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .distinct()
+                .toList();
     }
 }

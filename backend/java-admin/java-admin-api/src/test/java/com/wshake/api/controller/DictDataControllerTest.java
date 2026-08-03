@@ -39,8 +39,7 @@ class DictDataControllerTest {
         when(dictDataService.page(ArgumentMatchers.any(DictDataListQuery.class)))
                 .thenReturn(PageData.of(List.of(sampleView(1L, "react-admin")), 1L));
 
-        Result<PageData<DictDataVO>> result =
-                controller.list(1, 20, null, null, null, null, null, "react-admin", true);
+        Result<PageData<DictDataVO>> result = controller.list(1, 20, null, null, null, null, null, "react-admin", true);
 
         assertThat(result.getCode()).isEqualTo(0);
         ArgumentCaptor<DictDataListQuery> cap = ArgumentCaptor.forClass(DictDataListQuery.class);
@@ -53,8 +52,7 @@ class DictDataControllerTest {
 
     @Test
     void byType_returnsEnabledItems() {
-        when(dictDataService.listByTypeCode("sys_yes_no"))
-                .thenReturn(List.of(sampleView(1L, "general")));
+        when(dictDataService.listByTypeCode("sys_yes_no")).thenReturn(List.of(sampleView(1L, "general")));
 
         Result<List<DictDataVO>> result = controller.byType("sys_yes_no");
 
@@ -98,8 +96,7 @@ class DictDataControllerTest {
 
     @Test
     void batch_returnsAffected() {
-        when(dictDataService.batch(ArgumentMatchers.any()))
-                .thenReturn(new DictBatchResult("enable", 1, List.of(3L)));
+        when(dictDataService.batch(ArgumentMatchers.any())).thenReturn(new DictBatchResult("enable", 1, List.of(3L)));
         DictBatchRequest req = new DictBatchRequest();
         req.setAction("enable");
         req.setIds(List.of(3L));
@@ -111,7 +108,6 @@ class DictDataControllerTest {
 
     private static DictDataView sampleView(Long id, String platform) {
         LocalDateTime now = LocalDateTime.of(2026, 1, 1, 0, 0);
-        return new DictDataView(
-                id, 1L, "Y", "是", 0, 0, platform, "default", 1, 0L, "", now, now, 0L, 0L, "sys_yes_no");
+        return new DictDataView(id, 1L, "Y", "是", 0, 0, platform, "default", 1, 0L, "", now, now, 0L, 0L, "sys_yes_no");
     }
 }

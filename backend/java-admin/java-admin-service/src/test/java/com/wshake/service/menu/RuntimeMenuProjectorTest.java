@@ -45,8 +45,7 @@ class RuntimeMenuProjectorTest {
         SysMenu page = menu(2L, 1L, "用户", "MENU", "/system/user", 1);
         page.setComponent("/system/user/index");
 
-        List<RuntimeMenuRoute> tree =
-                RuntimeMenuProjector.buildRuntimeMenuTree(List.of(root, page), Set.of(1L, 2L));
+        List<RuntimeMenuRoute> tree = RuntimeMenuProjector.buildRuntimeMenuTree(List.of(root, page), Set.of(1L, 2L));
         assertThat(tree).isEmpty();
     }
 

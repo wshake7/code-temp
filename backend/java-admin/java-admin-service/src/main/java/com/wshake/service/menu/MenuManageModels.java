@@ -22,20 +22,14 @@ public final class MenuManageModels {
             int page, int pageSize, String name, String type, String permissionCode, Integer status) {
 
         public static MenuListQuery of(
-                Integer page,
-                Integer pageSize,
-                String name,
-                String type,
-                String permissionCode,
-                Integer status) {
+                Integer page, Integer pageSize, String name, String type, String permissionCode, Integer status) {
             int pageNo = page == null || page < 1 ? 1 : page;
             int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
             String typeFilter = trimToNull(type);
             if (typeFilter != null && "全部".equals(typeFilter)) {
                 typeFilter = null;
             }
-            return new MenuListQuery(
-                    pageNo, size, trimToNull(name), typeFilter, trimToNull(permissionCode), status);
+            return new MenuListQuery(pageNo, size, trimToNull(name), typeFilter, trimToNull(permissionCode), status);
         }
 
         private static String trimToNull(String value) {

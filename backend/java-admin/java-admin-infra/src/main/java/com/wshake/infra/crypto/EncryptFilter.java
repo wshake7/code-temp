@@ -146,10 +146,7 @@ public final class EncryptFilter extends OncePerRequestFilter {
     }
 
     private void encryptResponseAndContinue(
-            HttpServletRequest requestToUse,
-            HttpServletResponse response,
-            FilterChain filterChain,
-            String aesKeyBase64)
+            HttpServletRequest requestToUse, HttpServletResponse response, FilterChain filterChain, String aesKeyBase64)
             throws ServletException, IOException {
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
         try {

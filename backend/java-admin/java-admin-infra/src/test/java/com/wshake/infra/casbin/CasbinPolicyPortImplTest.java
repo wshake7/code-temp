@@ -37,9 +37,7 @@ class CasbinPolicyPortImplTest {
     void replaceUserPolicies_expandsApis_andEnforces() {
         port.replaceUserPolicies(
                 "2",
-                List.of(
-                        new ApiPolicy("/api/system/user/list", "GET"),
-                        new ApiPolicy("/api/system/user", "POST")),
+                List.of(new ApiPolicy("/api/system/user/list", "GET"), new ApiPolicy("/api/system/user", "POST")),
                 false);
 
         assertThat(port.enforce("2", "/api/system/user/list", "GET")).isTrue();

@@ -53,7 +53,8 @@ class DictDataServiceTest {
                 return 1L;
             }
         };
-        when(dataRepo.page(1, 20, null, null, null, null, null, "react-admin", true)).thenReturn(easyPage);
+        when(dataRepo.page(1, 20, null, null, null, null, null, "react-admin", true))
+                .thenReturn(easyPage);
         when(typeRepo.listByIds(List.of(10L))).thenReturn(List.of(type(10L, "sys_yes_no")));
 
         PageData<DictDataView> page =
@@ -81,8 +82,8 @@ class DictDataServiceTest {
                 .insert(ArgumentMatchers.any(DictData.class));
         when(dataRepo.findById(100L)).thenReturn(data(100L, "Y", "react-admin"));
 
-        DictDataView view = service.create(new CreateDictDataCommand(
-                10L, "Y", "是", 0, false, "react-admin", "default", 1, ""));
+        DictDataView view =
+                service.create(new CreateDictDataCommand(10L, "Y", "是", 0, false, "react-admin", "default", 1, ""));
 
         assertThat(view.platform()).isEqualTo("react-admin");
         verify(dataRepo).insert(ArgumentMatchers.any(DictData.class));
@@ -93,8 +94,8 @@ class DictDataServiceTest {
         when(typeRepo.findById(10L)).thenReturn(type(10L, "sys_yes_no"));
         when(dataRepo.existsByTypeValuePlatform(10L, "Y", "general", null)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(new CreateDictDataCommand(
-                        10L, "Y", "是", 0, false, "general", "default", 1, "")))
+        assertThatThrownBy(() ->
+                        service.create(new CreateDictDataCommand(10L, "Y", "是", 0, false, "general", "default", 1, "")))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("already exists")
                 .hasMessageContaining("platform");
@@ -105,8 +106,8 @@ class DictDataServiceTest {
     void create_invalidPlatform_throws() {
         when(typeRepo.findById(10L)).thenReturn(type(10L, "sys_yes_no"));
 
-        assertThatThrownBy(() -> service.create(new CreateDictDataCommand(
-                        10L, "Y", "是", 0, false, "mobile", "default", 1, "")))
+        assertThatThrownBy(() ->
+                        service.create(new CreateDictDataCommand(10L, "Y", "是", 0, false, "mobile", "default", 1, "")))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("platform");
     }
@@ -141,8 +142,8 @@ class DictDataServiceTest {
         when(dataRepo.findById(5L)).thenReturn(data(5L, "Y", "general"));
         when(dataRepo.existsByTypeValuePlatform(10L, "Y", "react-admin", 5L)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.update(new UpdateDictDataCommand(
-                        5L, null, null, null, null, "react-admin", null, null, null)))
+        assertThatThrownBy(() -> service.update(
+                        new UpdateDictDataCommand(5L, null, null, null, null, "react-admin", null, null, null)))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("already exists");
         verify(dataRepo, never()).update(ArgumentMatchers.any());

@@ -47,9 +47,7 @@ public class DictDataController {
     private final Converter converter;
 
     @GetMapping("/list")
-    @Operation(
-            summary = "分页查询字典数据",
-            description = "platform 精确过滤；includeGeneral=true 时并入 general；list 附 typeCode")
+    @Operation(summary = "分页查询字典数据", description = "platform 精确过滤；includeGeneral=true 时并入 general；list 附 typeCode")
     public Result<PageData<DictDataVO>> list(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
@@ -60,8 +58,8 @@ public class DictDataController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String platform,
             @RequestParam(required = false) Boolean includeGeneral) {
-        PageData<DictDataView> pageData = dictDataService.page(DictDataListQuery.of(
-                page, pageSize, typeId, typeCode, label, value, status, platform, includeGeneral));
+        PageData<DictDataView> pageData = dictDataService.page(
+                DictDataListQuery.of(page, pageSize, typeId, typeCode, label, value, status, platform, includeGeneral));
         List<DictDataVO> items = converter.convert(pageData.getItems(), DictDataVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }

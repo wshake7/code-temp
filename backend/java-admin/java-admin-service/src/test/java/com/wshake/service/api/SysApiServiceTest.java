@@ -141,7 +141,8 @@ class SysApiServiceTest {
     @Test
     void syncFromManifest_skipsExisting_addsMissing() {
         // 第一条存在，其余模拟不存在
-        when(apiRepo.existsByMethodAndPath(ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.isNull()))
+        when(apiRepo.existsByMethodAndPath(
+                        ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.isNull()))
                 .thenAnswer(inv -> {
                     String path = inv.getArgument(1);
                     return "/api/auth/codes".equals(path);
@@ -165,8 +166,7 @@ class SysApiServiceTest {
         when(apiRepo.existsByMethodAndPath("GET", "/a", 1L)).thenReturn(false);
         when(apiRepo.existsByPermissionCode("taken", 1L)).thenReturn(true);
 
-        assertThatThrownBy(
-                        () -> service.update(new UpdateApiCommand(1L, null, null, null, "taken", null, null, null)))
+        assertThatThrownBy(() -> service.update(new UpdateApiCommand(1L, null, null, null, "taken", null, null, null)))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("permissionCode");
     }

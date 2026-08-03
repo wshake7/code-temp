@@ -87,7 +87,8 @@ public class ApiLogWriter {
             }
 
             ApiLog row = new ApiLog();
-            row.setMethod(nullToEmpty(cmd.method()).isBlank() ? "GET" : cmd.method().toUpperCase());
+            row.setMethod(
+                    nullToEmpty(cmd.method()).isBlank() ? "GET" : cmd.method().toUpperCase());
             row.setModule(nullToEmpty(cmd.module()));
             row.setPath(nullToEmpty(cmd.path()));
             row.setStatusCode(statusCode);

@@ -88,7 +88,8 @@ public final class SignFilter extends OncePerRequestFilter {
 
     private boolean shouldBypass(HttpServletRequest request) {
         // Encrypt 优先：开启时由 EncryptFilter 完成 body/AAD 完整性，不重复独立 Sign
-        if (securityProperties.getEncrypt().isEnabled() || !securityProperties.getSign().isEnabled()) {
+        if (securityProperties.getEncrypt().isEnabled()
+                || !securityProperties.getSign().isEnabled()) {
             return true;
         }
         if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || SecurityPathMatcher.isWhitelisted(request)) {

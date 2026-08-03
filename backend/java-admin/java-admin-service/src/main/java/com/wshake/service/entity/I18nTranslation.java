@@ -19,8 +19,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Table("i18n_translation")
 @EntityProxy
-public class I18nTranslation extends BaseEntity
-        implements ProxyEntityAvailable<I18nTranslation, I18nTranslationProxy> {
+public class I18nTranslation extends BaseEntity implements ProxyEntityAvailable<I18nTranslation, I18nTranslationProxy> {
 
     @Column(primaryKey = true, generatedKey = true)
     private Long id;

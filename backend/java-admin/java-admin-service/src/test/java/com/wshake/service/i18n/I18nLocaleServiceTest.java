@@ -132,8 +132,7 @@ class I18nLocaleServiceTest {
 
     @Test
     void batch_enable_ok() {
-        when(localeRepo.listByIds(List.of(2L, 3L)))
-                .thenReturn(List.of(locale(2L, "en-US", 0), locale(3L, "ja-JP", 0)));
+        when(localeRepo.listByIds(List.of(2L, 3L))).thenReturn(List.of(locale(2L, "en-US", 0), locale(3L, "ja-JP", 0)));
         when(localeRepo.updateIsEnabled(2L, 1)).thenReturn(1L);
         when(localeRepo.updateIsEnabled(3L, 1)).thenReturn(1L);
 

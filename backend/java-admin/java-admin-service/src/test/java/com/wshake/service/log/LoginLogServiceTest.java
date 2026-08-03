@@ -52,13 +52,13 @@ class LoginLogServiceTest {
         when(sysLoginLogRepository.pageHot(anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new DefaultPageResult<>(1L, List.of(row)));
 
-        PageData<LoginLogView> page = loginLogService.page(LoginLogListQuery.of(1, 20, "hot", "ro", 1, null, null, null, null));
+        PageData<LoginLogView> page =
+                loginLogService.page(LoginLogListQuery.of(1, 20, "hot", "ro", 1, null, null, null, null));
 
         assertThat(page.getTotal()).isEqualTo(1L);
         assertThat(page.getItems()).hasSize(1);
         assertThat(page.getItems().get(0).username()).isEqualTo("root");
         assertThat(page.getItems().get(0).archivedAt()).isNull();
-        verify(sysLoginLogRepository)
-                .pageHot(eq(1), eq(20), eq("ro"), eq(1), any(), any(), any(), any());
+        verify(sysLoginLogRepository).pageHot(eq(1), eq(20), eq("ro"), eq(1), any(), any(), any(), any());
     }
 }

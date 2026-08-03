@@ -38,8 +38,8 @@ public class DevEncryptController {
             summary = "【dev only】获取全局完整密钥对",
             description = "仅 spring.profiles.active=dev 可用；返回 data.publicKey + data.privateKey")
     public Result<RsaKeyPairVO> keyPair() {
-        return Result.ok(new RsaKeyPairVO(
-                serverKeyPairProvider.getPublicKey(), serverKeyPairProvider.getPrivateKeyPem()));
+        return Result.ok(
+                new RsaKeyPairVO(serverKeyPairProvider.getPublicKey(), serverKeyPairProvider.getPrivateKeyPem()));
     }
 
     /**
@@ -60,7 +60,6 @@ public class DevEncryptController {
         if (pair == null) {
             throw AuthException.notLogin();
         }
-        return Result.ok(new RsaKeyPairVO(
-                pair.publicKey() == null ? "" : pair.publicKey(), pair.privateKeyPem()));
+        return Result.ok(new RsaKeyPairVO(pair.publicKey() == null ? "" : pair.publicKey(), pair.privateKeyPem()));
     }
 }

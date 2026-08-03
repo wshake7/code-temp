@@ -2,8 +2,8 @@ package com.wshake.infra.language;
 
 import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.request.RequestContext;
-import com.wshake.infra.security.SecurityProperties;
 import com.wshake.infra.satoken.SaTokenConfigure;
+import com.wshake.infra.security.SecurityProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;

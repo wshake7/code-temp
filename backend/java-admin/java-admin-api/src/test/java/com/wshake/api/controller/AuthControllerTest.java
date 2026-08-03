@@ -12,10 +12,10 @@ import com.wshake.api.vo.LoginResponse;
 import com.wshake.api.vo.UserInfoVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
+import com.wshake.service.auth.AuthService;
 import com.wshake.service.auth.LoginClientMeta;
 import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;
-import com.wshake.service.auth.AuthService;
 import com.wshake.service.user.SysUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -71,7 +71,9 @@ class AuthControllerTest {
             stp.verify(() -> StpUtil.login(1L));
             // 私钥与公钥均写入 TokenSession
             org.mockito.Mockito.verify(tokenSession)
-                    .set(org.mockito.ArgumentMatchers.eq("encryptPrivateKey"), org.mockito.ArgumentMatchers.anyString());
+                    .set(
+                            org.mockito.ArgumentMatchers.eq("encryptPrivateKey"),
+                            org.mockito.ArgumentMatchers.anyString());
             org.mockito.Mockito.verify(tokenSession)
                     .set(org.mockito.ArgumentMatchers.eq("encryptPublicKey"), org.mockito.ArgumentMatchers.anyString());
         }

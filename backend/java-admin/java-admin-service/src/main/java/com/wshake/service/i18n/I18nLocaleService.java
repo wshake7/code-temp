@@ -37,20 +37,13 @@ public class I18nLocaleService {
 
     public PageData<LocaleView> page(LocaleListQuery query) {
         EasyPageResult<I18nLocale> page = localeRepository.page(
-                query.page(),
-                query.pageSize(),
-                query.codeExact(),
-                query.codeLike(),
-                query.name(),
-                query.status());
+                query.page(), query.pageSize(), query.codeExact(), query.codeLike(), query.name(), query.status());
         List<I18nLocale> rows = page.getData() == null ? List.of() : page.getData();
         return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
     }
 
     public List<LocaleView> listAll(LocaleListQuery query) {
-        return localeRepository
-                .listFiltered(query.codeExact(), query.codeLike(), query.name(), query.status())
-                .stream()
+        return localeRepository.listFiltered(query.codeExact(), query.codeLike(), query.name(), query.status()).stream()
                 .map(this::toView)
                 .toList();
     }
@@ -179,8 +172,7 @@ public class I18nLocaleService {
                     throw BizException.of(ResultCode.PARAM_INVALID, "默认语言禁止删除");
                 }
                 if (translationRepository.existsActiveByLocaleId(t.getId())) {
-                    throw BizException.of(
-                            ResultCode.PARAM_INVALID, "语言 " + t.getCode() + " 仍有翻译，请先清空");
+                    throw BizException.of(ResultCode.PARAM_INVALID, "语言 " + t.getCode() + " 仍有翻译，请先清空");
                 }
             }
             List<Long> deleted = new ArrayList<>();

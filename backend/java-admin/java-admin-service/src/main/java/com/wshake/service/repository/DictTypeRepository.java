@@ -46,12 +46,7 @@ public class DictTypeRepository {
     }
 
     public EasyPageResult<DictType> page(
-            int page,
-            int pageSize,
-            List<String> codeExact,
-            String codeLike,
-            String name,
-            Integer status) {
+            int page, int pageSize, List<String> codeExact, String codeLike, String name, Integer status) {
         return easyEntityQuery
                 .queryable(DictType.class)
                 .where(t -> {
@@ -67,8 +62,7 @@ public class DictTypeRepository {
                 .toPageResult(page, pageSize);
     }
 
-    public List<DictType> listFiltered(
-            List<String> codeExact, String codeLike, String name, Integer status) {
+    public List<DictType> listFiltered(List<String> codeExact, String codeLike, String name, Integer status) {
         return easyEntityQuery
                 .queryable(DictType.class)
                 .where(t -> {
@@ -97,11 +91,7 @@ public class DictTypeRepository {
 
     /** 按 code 模糊匹配，返回命中类型 id（用于 dict-data typeCode 单值过滤）。 */
     public List<Long> findIdsByCodeContains(String codeFragment) {
-        return easyEntityQuery
-                .queryable(DictType.class)
-                .where(t -> t.code().like(codeFragment))
-                .toList()
-                .stream()
+        return easyEntityQuery.queryable(DictType.class).where(t -> t.code().like(codeFragment)).toList().stream()
                 .map(DictType::getId)
                 .toList();
     }
@@ -111,11 +101,7 @@ public class DictTypeRepository {
         if (codes == null || codes.isEmpty()) {
             return List.of();
         }
-        return easyEntityQuery
-                .queryable(DictType.class)
-                .where(t -> t.code().in(codes))
-                .toList()
-                .stream()
+        return easyEntityQuery.queryable(DictType.class).where(t -> t.code().in(codes)).toList().stream()
                 .map(DictType::getId)
                 .toList();
     }

@@ -15,8 +15,7 @@ public final class DictManageModels {
 
     private DictManageModels() {}
 
-    public static final Set<String> ALLOWED_PLATFORMS =
-            Set.of("general", "react-admin", "vue-admin");
+    public static final Set<String> ALLOWED_PLATFORMS = Set.of("general", "react-admin", "vue-admin");
 
     public static final Set<String> ALLOWED_TAG_TYPES = Set.of(
             "default",

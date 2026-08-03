@@ -11,9 +11,9 @@ import static org.mockito.Mockito.when;
 import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
+import com.wshake.service.entity.SysUser;
 import com.wshake.service.port.CasbinPolicyPort;
 import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
-import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.SysUserRepository;
 import com.wshake.service.repository.SysUserRoleRepository;
 import com.wshake.service.user.UserManageModels.CreateUserCommand;
@@ -55,21 +55,21 @@ class SysUserServiceTest {
                 .when(userRepo)
                 .insert(ArgumentMatchers.any(SysUser.class));
         when(roleRepo.userHasRootRole(100L)).thenReturn(false);
-        when(roleRepo.findApiPoliciesByUserId(100L))
-                .thenReturn(List.of(new ApiPolicy("/api/system/user/list", "GET")));
+        when(roleRepo.findApiPoliciesByUserId(100L)).thenReturn(List.of(new ApiPolicy("/api/system/user/list", "GET")));
         when(userRepo.findById(100L)).thenReturn(user(100L, "alice", "$2a$10$hashed"));
         when(roleRepo.findRoleIdsByUserId(100L)).thenReturn(List.of(10L));
         when(roleRepo.findRoleNamesByIds(List.of(10L))).thenReturn(Map.of(10L, "Admin"));
 
-        UserView view = service.create(new CreateUserCommand(
-                "alice", "plain-secret", "Alice", null, null, null, null, 1, null, List.of(10L)));
+        UserView view = service.create(
+                new CreateUserCommand("alice", "plain-secret", "Alice", null, null, null, null, 1, null, List.of(10L)));
 
         assertThat(view.id()).isEqualTo(100L);
         assertThat(view.username()).isEqualTo("alice");
         ArgumentCaptor<SysUser> cap = ArgumentCaptor.forClass(SysUser.class);
         verify(userRepo).insert(cap.capture());
         assertThat(cap.getValue().getPasswordHash()).isNotEqualTo("plain-secret");
-        assertThat(new BCryptPasswordEncoder().matches("plain-secret", cap.getValue().getPasswordHash()))
+        assertThat(new BCryptPasswordEncoder()
+                        .matches("plain-secret", cap.getValue().getPasswordHash()))
                 .isTrue();
         verify(roleRepo).replaceUserRoles(100L, List.of(10L));
         verify(casbin)
@@ -82,8 +82,8 @@ class SysUserServiceTest {
     @Test
     void create_duplicateUsername_throws() {
         when(userRepo.existsByUsername("alice")).thenReturn(true);
-        assertThatThrownBy(() -> service.create(new CreateUserCommand(
-                        "alice", "x", "A", null, null, null, null, 1, null, List.of())))
+        assertThatThrownBy(() -> service.create(
+                        new CreateUserCommand("alice", "x", "A", null, null, null, null, 1, null, List.of())))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("已存在");
         verify(userRepo, never()).insert(ArgumentMatchers.any());
@@ -140,7 +140,8 @@ class SysUserServiceTest {
     @Test
     void resetPassword_encodesAndDoesNotReturnHash() {
         when(userRepo.findById(2L)).thenReturn(user(2L, "alice", "old"));
-        when(userRepo.updatePasswordHash(ArgumentMatchers.eq(2L), ArgumentMatchers.anyString())).thenReturn(1L);
+        when(userRepo.updatePasswordHash(ArgumentMatchers.eq(2L), ArgumentMatchers.anyString()))
+                .thenReturn(1L);
 
         Long id = service.resetPassword(2L, "new-pass");
         assertThat(id).isEqualTo(2L);
@@ -148,7 +149,8 @@ class SysUserServiceTest {
         ArgumentCaptor<String> hashCap = ArgumentCaptor.forClass(String.class);
         verify(userRepo).updatePasswordHash(ArgumentMatchers.eq(2L), hashCap.capture());
         assertThat(hashCap.getValue()).isNotEqualTo("new-pass");
-        assertThat(new BCryptPasswordEncoder().matches("new-pass", hashCap.getValue())).isTrue();
+        assertThat(new BCryptPasswordEncoder().matches("new-pass", hashCap.getValue()))
+                .isTrue();
     }
 
     @Test

@@ -84,8 +84,7 @@ class I18nLocaleControllerTest {
 
     @Test
     void batch_returnsAffected() {
-        when(localeService.batch(ArgumentMatchers.any()))
-                .thenReturn(new BatchResult("delete", 2, List.of(1L, 2L)));
+        when(localeService.batch(ArgumentMatchers.any())).thenReturn(new BatchResult("delete", 2, List.of(1L, 2L)));
         I18nBatchRequest req = new I18nBatchRequest();
         req.setAction("delete");
         req.setIds(List.of(1L, 2L));

@@ -50,8 +50,11 @@ public class DictDataService {
                 query.platform(),
                 query.includeGeneral());
         List<DictData> rows = page.getData() == null ? List.of() : page.getData();
-        Map<Long, String> typeCodeMap = loadTypeCodes(rows.stream().map(DictData::getTypeId).toList());
-        List<DictDataView> items = rows.stream().map(r -> toView(r, typeCodeMap.get(r.getTypeId()))).toList();
+        Map<Long, String> typeCodeMap =
+                loadTypeCodes(rows.stream().map(DictData::getTypeId).toList());
+        List<DictDataView> items = rows.stream()
+                .map(r -> toView(r, typeCodeMap.get(r.getTypeId())))
+                .toList();
         return PageData.of(items, page.getTotal());
     }
 
@@ -239,12 +242,10 @@ public class DictDataService {
             if (allowDefault) {
                 return "general";
             }
-            throw BizException.of(
-                    ResultCode.PARAM_INVALID, "platform must be one of general|react-admin|vue-admin");
+            throw BizException.of(ResultCode.PARAM_INVALID, "platform must be one of general|react-admin|vue-admin");
         }
         if (!DictManageModels.ALLOWED_PLATFORMS.contains(platform)) {
-            throw BizException.of(
-                    ResultCode.PARAM_INVALID, "platform must be one of general|react-admin|vue-admin");
+            throw BizException.of(ResultCode.PARAM_INVALID, "platform must be one of general|react-admin|vue-admin");
         }
         return platform;
     }
@@ -259,8 +260,7 @@ public class DictDataService {
         if (!DictManageModels.ALLOWED_TAG_TYPES.contains(tagType)) {
             throw BizException.of(
                     ResultCode.PARAM_INVALID,
-                    "tagType must be one of "
-                            + String.join("|", DictManageModels.ALLOWED_TAG_TYPES));
+                    "tagType must be one of " + String.join("|", DictManageModels.ALLOWED_TAG_TYPES));
         }
         return tagType;
     }

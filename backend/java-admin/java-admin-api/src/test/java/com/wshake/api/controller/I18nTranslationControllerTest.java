@@ -38,8 +38,7 @@ class I18nTranslationControllerTest {
 
     private final I18nTranslationService translationService = mock(I18nTranslationService.class);
     private final Converter converter = new Converter();
-    private final I18nTranslationController controller =
-            new I18nTranslationController(translationService, converter);
+    private final I18nTranslationController controller = new I18nTranslationController(translationService, converter);
 
     @Test
     void list_returnsRows() {
@@ -55,8 +54,7 @@ class I18nTranslationControllerTest {
     @Test
     void list_byKey_returnsAggregated() {
         LocalDateTime now = LocalDateTime.of(2026, 1, 1, 0, 0);
-        PageData<?> page =
-                PageData.of(List.of(new TranslationKeyView("common.ok", 2, 1L, 1L, "zh-CN", now)), 1L);
+        PageData<?> page = PageData.of(List.of(new TranslationKeyView("common.ok", 2, 1L, 1L, "zh-CN", now)), 1L);
         doReturn(page).when(translationService).page(ArgumentMatchers.any(TranslationListQuery.class));
 
         Result<PageData<?>> result = controller.list(1, 20, null, null, null, null, "true");

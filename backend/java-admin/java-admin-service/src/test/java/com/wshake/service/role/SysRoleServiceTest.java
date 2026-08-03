@@ -143,8 +143,8 @@ class SysRoleServiceTest {
     void update_disableRoot_throws() {
         when(roleRepo.findById(1L)).thenReturn(role(1L, "root", "超级管理员", null));
 
-        assertThatThrownBy(() -> service.update(new UpdateRoleCommand(
-                        1L, null, ParentIdChange.absent(), null, 0, null)))
+        assertThatThrownBy(
+                        () -> service.update(new UpdateRoleCommand(1L, null, ParentIdChange.absent(), null, 0, null)))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("不可禁用");
     }

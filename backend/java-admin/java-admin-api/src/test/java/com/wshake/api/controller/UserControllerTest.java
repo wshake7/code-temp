@@ -36,6 +36,7 @@ class UserControllerTest {
     private final SysUserService sysUserService = mock(SysUserService.class);
     /** 无 Spring 上下文：DefaultConverterFactory 从 classpath 加载 mapstruct-plus 生成 Mapper。 */
     private final Converter converter = new Converter();
+
     private final UserController controller = new UserController(sysUserService, converter);
 
     @Test
@@ -57,7 +58,8 @@ class UserControllerTest {
 
     @Test
     void create_mapsBodyAndReturnsUser() {
-        when(sysUserService.create(ArgumentMatchers.any(CreateUserCommand.class))).thenReturn(sampleView(3L, "bob"));
+        when(sysUserService.create(ArgumentMatchers.any(CreateUserCommand.class)))
+                .thenReturn(sampleView(3L, "bob"));
 
         CreateUserRequest req = new CreateUserRequest();
         req.setUsername("bob");
@@ -77,7 +79,8 @@ class UserControllerTest {
 
     @Test
     void update_forwardsRoleIds() {
-        when(sysUserService.update(ArgumentMatchers.any(UpdateUserCommand.class))).thenReturn(sampleView(2L, "alice"));
+        when(sysUserService.update(ArgumentMatchers.any(UpdateUserCommand.class)))
+                .thenReturn(sampleView(2L, "alice"));
         UpdateUserRequest req = new UpdateUserRequest();
         req.setNickname("Alice2");
         req.setRoleIds(List.of(11L));

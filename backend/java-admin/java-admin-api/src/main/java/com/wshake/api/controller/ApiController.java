@@ -111,9 +111,8 @@ public class ApiController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<ApiBatchResultVO> batch(@RequestBody ApiBatchRequest req) {
-        ApiBatchResult result =
-                sysApiService.batch(new com.wshake.service.api.ApiManageModels.ApiBatchCommand(
-                        req.getAction(), req.getIds()));
+        ApiBatchResult result = sysApiService.batch(
+                new com.wshake.service.api.ApiManageModels.ApiBatchCommand(req.getAction(), req.getIds()));
         return Result.ok(new ApiBatchResultVO(result.action(), result.affected(), result.ids()));
     }
 

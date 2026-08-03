@@ -120,7 +120,9 @@ public class SysMenuService {
             path = requireNonBlank(cmd.path(), "path");
             component = blankToNull(cmd.component());
         }
-        String icon = MenuManageModels.TYPE_BUTTON.equals(type) ? "" : nullToEmpty(cmd.icon()).trim();
+        String icon = MenuManageModels.TYPE_BUTTON.equals(type)
+                ? ""
+                : nullToEmpty(cmd.icon()).trim();
 
         SysMenu menu = new SysMenu();
         menu.setParentId(parentId);
@@ -306,8 +308,7 @@ public class SysMenuService {
         if ("delete".equals(action)) {
             for (SysMenu t : targets) {
                 if (menuRepository.hasChildren(t.getId())) {
-                    throw BizException.of(
-                            ResultCode.PARAM_INVALID, "菜单 " + t.getName() + " 存在子菜单，无法删除");
+                    throw BizException.of(ResultCode.PARAM_INVALID, "菜单 " + t.getName() + " 存在子菜单，无法删除");
                 }
             }
             List<Long> deleted = new ArrayList<>();
@@ -473,7 +474,8 @@ public class SysMenuService {
         }
         if (query.permissionCode() != null) {
             String code = m.getPermissionCode();
-            if (code == null || !code.toLowerCase().contains(query.permissionCode().toLowerCase())) {
+            if (code == null
+                    || !code.toLowerCase().contains(query.permissionCode().toLowerCase())) {
                 return false;
             }
         }
@@ -543,7 +545,11 @@ public class SysMenuService {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
-        return ids.stream().filter(Objects::nonNull).filter(id -> id > 0).distinct().toList();
+        return ids.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .distinct()
+                .toList();
     }
 
     private static Long normalizeParentId(Long parentId) {

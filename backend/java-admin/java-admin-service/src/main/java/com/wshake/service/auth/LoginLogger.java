@@ -2,8 +2,8 @@ package com.wshake.service.auth;
 
 import com.wshake.common.util.UserAgentParser;
 import com.wshake.service.entity.SysLoginLog;
-import com.wshake.service.support.geo.IpLocationResolver;
 import com.wshake.service.repository.SysLoginLogRepository;
+import com.wshake.service.support.geo.IpLocationResolver;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;

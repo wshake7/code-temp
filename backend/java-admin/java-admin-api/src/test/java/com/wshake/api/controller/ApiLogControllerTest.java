@@ -34,8 +34,8 @@ class ApiLogControllerTest {
         when(apiLogService.page(ArgumentMatchers.any(ApiLogListQuery.class)))
                 .thenReturn(PageData.of(List.of(sampleView(9L)), 1L));
 
-        Result<PageData<ApiLogVO>> result = controller.list(
-                1, 20, null, null, null, null, null, null, null, null, null, null, null);
+        Result<PageData<ApiLogVO>> result =
+                controller.list(1, 20, null, null, null, null, null, null, null, null, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(1L);

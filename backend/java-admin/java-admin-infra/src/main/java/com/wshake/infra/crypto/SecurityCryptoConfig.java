@@ -1,6 +1,5 @@
 package com.wshake.infra.crypto;
 
-import com.wshake.infra.crypto.CryptoService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

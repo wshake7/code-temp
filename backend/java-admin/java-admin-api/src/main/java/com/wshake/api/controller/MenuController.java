@@ -123,23 +123,20 @@ public class MenuController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<MenuBatchResultVO> batch(@RequestBody MenuBatchRequest req) {
-        MenuBatchResult result =
-                sysMenuService.batch(new MenuBatchCommand(req.getAction(), req.getIds()));
+        MenuBatchResult result = sysMenuService.batch(new MenuBatchCommand(req.getAction(), req.getIds()));
         return Result.ok(new MenuBatchResultVO(result.action(), result.affected(), result.ids()));
     }
 
     @GetMapping("/{id}/apis")
     @Operation(summary = "读取菜单已绑定 API（含 bound 标记）")
     public Result<List<MenuApiBindItemVO>> menuApis(@PathVariable Long id) {
-        List<MenuApiBindItemVO> items =
-                converter.convert(sysMenuService.listMenuApis(id), MenuApiBindItemVO.class);
+        List<MenuApiBindItemVO> items = converter.convert(sysMenuService.listMenuApis(id), MenuApiBindItemVO.class);
         return Result.ok(items);
     }
 
     @PostMapping("/{id}/apis")
     @Operation(summary = "全量替换菜单-API 绑定")
-    public Result<MenuApiBindResultVO> setMenuApis(
-            @PathVariable Long id, @RequestBody MenuApiBindRequest req) {
+    public Result<MenuApiBindResultVO> setMenuApis(@PathVariable Long id, @RequestBody MenuApiBindRequest req) {
         MenuApiBindResult result = sysMenuService.setMenuApis(id, req.getApiIds());
         return Result.ok(new MenuApiBindResultVO(result.menuId(), result.apiIds()));
     }

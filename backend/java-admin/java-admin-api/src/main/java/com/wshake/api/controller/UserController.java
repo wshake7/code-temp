@@ -100,8 +100,7 @@ public class UserController {
 
     @PutMapping("/{id}/status")
     @Operation(summary = "启停用户")
-    public Result<UserListItemVO> toggleStatus(
-            @PathVariable Long id, @RequestBody ToggleUserStatusRequest req) {
+    public Result<UserListItemVO> toggleStatus(@PathVariable Long id, @RequestBody ToggleUserStatusRequest req) {
         Integer status = req.getStatus() != null ? req.getStatus() : req.getIsEnabled();
         if (status == null) {
             throw BizException.of(ResultCode.PARAM_INVALID, "status 必须为 0 或 1");
@@ -111,8 +110,7 @@ public class UserController {
 
     @PostMapping("/{id}/password")
     @Operation(summary = "重置密码", description = "BCrypt 存储；响应仅 {id}")
-    public Result<IdOnlyVO> resetPassword(
-            @PathVariable Long id, @Valid @RequestBody ResetPasswordRequest req) {
+    public Result<IdOnlyVO> resetPassword(@PathVariable Long id, @Valid @RequestBody ResetPasswordRequest req) {
         Long userId = sysUserService.resetPassword(id, req.getPassword());
         return Result.ok(new IdOnlyVO(userId));
     }

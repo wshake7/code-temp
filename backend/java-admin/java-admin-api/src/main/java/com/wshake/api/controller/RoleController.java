@@ -61,8 +61,7 @@ public class RoleController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer status) {
-        PageData<RoleView> pageData =
-                sysRoleService.pageRoles(RoleListQuery.of(page, pageSize, code, name, status));
+        PageData<RoleView> pageData = sysRoleService.pageRoles(RoleListQuery.of(page, pageSize, code, name, status));
         List<RoleListItemVO> items = converter.convert(pageData.getItems(), RoleListItemVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }
@@ -102,15 +101,13 @@ public class RoleController {
     @GetMapping("/{id}/menus")
     @Operation(summary = "角色菜单绑定列表", description = "全量菜单 + bound 标记")
     public Result<List<RoleMenuBindItemVO>> menus(@PathVariable Long id) {
-        List<RoleMenuBindItemVO> items =
-                converter.convert(sysRoleService.listMenuBinds(id), RoleMenuBindItemVO.class);
+        List<RoleMenuBindItemVO> items = converter.convert(sysRoleService.listMenuBinds(id), RoleMenuBindItemVO.class);
         return Result.ok(items);
     }
 
     @PostMapping("/{id}/menus")
     @Operation(summary = "全量替换角色菜单绑定")
-    public Result<RoleMenuBindResultVO> setMenus(
-            @PathVariable Long id, @Valid @RequestBody RoleMenuBindRequest req) {
+    public Result<RoleMenuBindResultVO> setMenus(@PathVariable Long id, @Valid @RequestBody RoleMenuBindRequest req) {
         RoleMenuBindResult result = sysRoleService.replaceMenus(id, req.getMenuIds());
         return Result.ok(new RoleMenuBindResultVO(result.roleId(), result.menuIds()));
     }
@@ -118,15 +115,13 @@ public class RoleController {
     @GetMapping("/{id}/apis")
     @Operation(summary = "角色 API 绑定列表", description = "全量接口 + bound 标记")
     public Result<List<RoleApiBindItemVO>> apis(@PathVariable Long id) {
-        List<RoleApiBindItemVO> items =
-                converter.convert(sysRoleService.listApiBinds(id), RoleApiBindItemVO.class);
+        List<RoleApiBindItemVO> items = converter.convert(sysRoleService.listApiBinds(id), RoleApiBindItemVO.class);
         return Result.ok(items);
     }
 
     @PostMapping("/{id}/apis")
     @Operation(summary = "全量替换角色 API 绑定", description = "变更后同步受影响用户的 Casbin 策略")
-    public Result<RoleApiBindResultVO> setApis(
-            @PathVariable Long id, @Valid @RequestBody RoleApiBindRequest req) {
+    public Result<RoleApiBindResultVO> setApis(@PathVariable Long id, @Valid @RequestBody RoleApiBindRequest req) {
         RoleApiBindResult result = sysRoleService.replaceApis(id, req.getApiIds());
         return Result.ok(new RoleApiBindResultVO(result.roleId(), result.apiIds()));
     }

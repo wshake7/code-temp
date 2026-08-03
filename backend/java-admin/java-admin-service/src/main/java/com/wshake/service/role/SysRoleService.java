@@ -237,10 +237,7 @@ public class SysRoleService {
         List<RoleView> items = new ArrayList<>(rows.size());
         for (SysRole row : rows) {
             Long pid = row.getParentId();
-            items.add(toView(
-                    row,
-                    userCounts.getOrDefault(row.getId(), 0L),
-                    pid == null ? null : parentNames.get(pid)));
+            items.add(toView(row, userCounts.getOrDefault(row.getId(), 0L), pid == null ? null : parentNames.get(pid)));
         }
         return items;
     }
@@ -250,7 +247,8 @@ public class SysRoleService {
         Map<Long, Long> counts = userRoleRepository.countActiveUsersByRoleIds(List.of(id));
         String parentName = null;
         if (role.getParentId() != null) {
-            parentName = roleRepository.findNamesByIds(List.of(role.getParentId())).get(role.getParentId());
+            parentName =
+                    roleRepository.findNamesByIds(List.of(role.getParentId())).get(role.getParentId());
         }
         return toView(role, counts.getOrDefault(id, 0L), parentName);
     }

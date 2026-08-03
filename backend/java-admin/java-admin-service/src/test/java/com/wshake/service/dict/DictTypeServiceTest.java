@@ -125,8 +125,7 @@ class DictTypeServiceTest {
 
     @Test
     void batch_delete_blockedWhenAnyHasData() {
-        when(typeRepo.listByIds(List.of(1L, 2L)))
-                .thenReturn(List.of(type(1L, "a"), type(2L, "b")));
+        when(typeRepo.listByIds(List.of(1L, 2L))).thenReturn(List.of(type(1L, "a"), type(2L, "b")));
         when(dataRepo.existsActiveByTypeId(1L)).thenReturn(false);
         when(dataRepo.existsActiveByTypeId(2L)).thenReturn(true);
 
