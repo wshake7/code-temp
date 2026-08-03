@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * 本地任务触发实现（默认）：不连 Temporal，生成 mock 风格 workflowId/runId。
  *
- * <p>由 {@link TaskTriggerConfiguration} 在缺少其它 {@link TaskTriggerPort} Bean 时注册。
+ * <p>由 infra 的 {@code TemporalTaskTriggerConfiguration} 在缺少 {@code WorkflowClient} 时注册。
  *
  * @author wshake
  */
