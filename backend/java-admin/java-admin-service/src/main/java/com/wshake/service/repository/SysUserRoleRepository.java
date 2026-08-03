@@ -1,7 +1,7 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
-import com.wshake.service.casbin.CasbinPolicyPort.ApiPolicy;
+import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
 import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysRole;
 import com.wshake.service.entity.SysRoleApi;

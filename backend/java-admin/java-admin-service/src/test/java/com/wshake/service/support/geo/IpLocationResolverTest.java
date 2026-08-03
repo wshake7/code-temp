@@ -1,4 +1,4 @@
-package com.wshake.service.geo;
+package com.wshake.service.support.geo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

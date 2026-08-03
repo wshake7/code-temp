@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 import com.wshake.service.entity.SysLoginLog;
-import com.wshake.service.geo.IpLocationResolver;
+import com.wshake.service.support.geo.IpLocationResolver;
 import com.wshake.service.repository.SysLoginLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

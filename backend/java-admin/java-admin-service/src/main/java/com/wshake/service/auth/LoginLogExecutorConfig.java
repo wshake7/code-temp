@@ -1,4 +1,4 @@
-package com.wshake.service.config;
+package com.wshake.service.auth;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;

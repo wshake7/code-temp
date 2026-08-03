@@ -15,7 +15,7 @@ import com.wshake.common.result.Result;
 import com.wshake.service.auth.LoginClientMeta;
 import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;
-import com.wshake.service.user.AuthService;
+import com.wshake.service.auth.AuthService;
 import com.wshake.service.user.SysUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;

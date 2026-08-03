@@ -2,7 +2,7 @@ package com.wshake.service.auth;
 
 import com.wshake.common.util.UserAgentParser;
 import com.wshake.service.entity.SysLoginLog;
-import com.wshake.service.geo.IpLocationResolver;
+import com.wshake.service.support.geo.IpLocationResolver;
 import com.wshake.service.repository.SysLoginLogRepository;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executor;

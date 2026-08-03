@@ -1,4 +1,4 @@
-package com.wshake.service.user;
+package com.wshake.service.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,10 +7,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.wshake.common.exception.AuthException;
-import com.wshake.service.auth.AltchaService;
-import com.wshake.service.auth.LoginClientMeta;
-import com.wshake.service.auth.LoginLogger;
-import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.AuthQueryRepository;
 import com.wshake.service.repository.SysUserRepository;

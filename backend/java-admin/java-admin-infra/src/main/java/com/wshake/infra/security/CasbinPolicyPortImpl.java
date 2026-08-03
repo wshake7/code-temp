@@ -1,6 +1,6 @@
 package com.wshake.infra.security;
 
-import com.wshake.service.casbin.CasbinPolicyPort;
+import com.wshake.service.port.CasbinPolicyPort;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

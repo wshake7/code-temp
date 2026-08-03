@@ -2,7 +2,7 @@ package com.wshake.infra.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.wshake.service.casbin.CasbinPolicyPort.ApiPolicy;
+import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

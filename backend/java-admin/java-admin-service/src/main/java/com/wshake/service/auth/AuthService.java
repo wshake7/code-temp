@@ -1,11 +1,7 @@
-package com.wshake.service.user;
+package com.wshake.service.auth;
 
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.ResultCode;
-import com.wshake.service.auth.AltchaService;
-import com.wshake.service.auth.LoginClientMeta;
-import com.wshake.service.auth.LoginLogger;
-import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.AuthQueryRepository;
 import com.wshake.service.repository.SysUserRepository;
