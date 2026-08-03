@@ -250,6 +250,82 @@ describe("mock security protocol seam", () => {
     expect(result.body.code).toBe(SecurityResultCode.REQUEST_ERROR.code);
   });
 
+  it("sign when encrypt off: GET with query params in AAD passes", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: true });
+    const aesKey = generateAesKey();
+    const encryptedKey = rsaEncrypt(aesKey, keyPair.publicKeyBase64);
+    const now = Date.now();
+    // 对齐前端 normalizeParams：数组只取首值
+    const query = {
+      typeCode: "sys_switch_status",
+      page: "1",
+      pageSize: "20",
+      includeGeneral: "true",
+      platform: "react-admin",
+    };
+    const aad = buildAad({
+      [SECURITY_HEADERS.REQUEST_ID]: "sign-query",
+      [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+      ...query,
+    });
+    const sign = aesEncrypt("", aesKey, aad);
+
+    const result = processSecurityRequest(
+      {
+        method: "GET",
+        path: "/api/system/dict-data/list",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_SIGNATURE]: sign.tagIv,
+          [SECURITY_HEADERS.REQUEST_ID]: "sign-query",
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: "",
+        query,
+        nowMs: now,
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("sign when encrypt off: AAD query mismatch yields 1008", () => {
+    deps.config = fullConfig({ encryptEnabled: false, signEnabled: true });
+    const aesKey = generateAesKey();
+    const encryptedKey = rsaEncrypt(aesKey, keyPair.publicKeyBase64);
+    const now = Date.now();
+    // 错误复现：客户端把数组 String() 成 "a,b"，服务端只有首值 "a"
+    const aadClient = buildAad({
+      [SECURITY_HEADERS.REQUEST_ID]: "sign-mismatch",
+      [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+      typeCode: "sys_switch_status,sys_platform",
+    });
+    const sign = aesEncrypt("", aesKey, aadClient);
+
+    const result = processSecurityRequest(
+      {
+        method: "GET",
+        path: "/api/system/dict-data/list",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_SIGNATURE]: sign.tagIv,
+          [SECURITY_HEADERS.REQUEST_ID]: "sign-mismatch",
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: "",
+        query: { typeCode: "sys_switch_status" },
+        nowMs: now,
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.body.code).toBe(SecurityResultCode.REQUEST_SIGN_FAILED.code);
+  });
+
+
   it("encrypt on: missing encrypted key on login is rejected", () => {
     const result = processSecurityRequest(
       {

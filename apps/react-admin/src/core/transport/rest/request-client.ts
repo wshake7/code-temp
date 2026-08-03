@@ -63,6 +63,12 @@ class RequestClient {
         'Content-Type': 'application/json;charset=utf-8' as RequestContentType,
       },
       timeout: 10_000,
+      // 数组 query 用重复键 typeCode=a&typeCode=b，避免默认 typeCode[]= 导致
+      // 签名 AAD 的 key 与 mock/Java 解析结果不一致（1008 签名错误）。
+      // 与 security/request-encryption.normalizeParams（多值取首项）配套。
+      paramsSerializer: {
+        indexes: null,
+      },
     };
     const { ...axiosConfig } = options;
     const requestConfig = merge(axiosConfig, defaultConfig);

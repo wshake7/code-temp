@@ -145,6 +145,50 @@ describe('createSignedRequestConfig', () => {
     ].join('&');
     expect(encrypt).toHaveBeenCalledWith(aesKey, expectedAad, undefined);
   });
+
+  it('Sign 模式：数组 query 只取首值进 AAD（对齐 mock/Java，修 dict-data typeCode[]）', async () => {
+    const aesKey = {} as CryptoKey;
+    const encrypt = vi.fn().mockResolvedValue({
+      Ciphertext: '',
+      TagIv: 'sign-arr',
+    });
+
+    await createSignedRequestConfig(
+      {
+        headers: {},
+        method: 'GET',
+        params: {
+          typeCode: ['sys_switch_status', 'sys_platform'],
+          page: 1,
+          pageSize: 20,
+          includeGeneral: true,
+          platform: 'react-admin',
+          emptyArr: [],
+        },
+      },
+      {
+        aesEncrypt: encrypt,
+        ensurePublicKey: vi.fn().mockResolvedValue('pk'),
+        generateAesKey: vi.fn().mockResolvedValue({ key: aesKey, keyBase64: 'k' }),
+        getPublicCryptoKey: vi.fn().mockResolvedValue({} as CryptoKey),
+        now: () => 4000,
+        nonce: () => 'arr-n',
+        rsaEncrypt: vi.fn().mockResolvedValue('arr-ek'),
+      },
+    );
+
+    // 多值只取首项；不得变成 "a,b"；空数组跳过
+    const expectedAad = [
+      'X-Request-ID=arr-n',
+      'X-Request-Timestamp=4000',
+      'includeGeneral=true',
+      'page=1',
+      'pageSize=20',
+      'platform=react-admin',
+      'typeCode=sys_switch_status',
+    ].join('&');
+    expect(encrypt).toHaveBeenCalledWith(aesKey, expectedAad, undefined);
+  });
 });
 
 describe('applySecurityIdentityHeaders', () => {

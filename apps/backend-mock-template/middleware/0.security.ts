@@ -91,10 +91,17 @@ export default defineEventHandler(async (event) => {
   }
 
   const queryRaw = getQuery(event);
+  // 签名 AAD 用 query：多值取首项；axios 默认 brackets 的 key 形如 typeCode[]，
+  // 剥掉尾部 [] 以对齐前端 AAD 的 typeCode 与 Java parameter 名习惯。
   const query: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(queryRaw)) {
-    if (Array.isArray(v)) query[k] = v[0] != null ? String(v[0]) : undefined;
-    else if (v != null) query[k] = String(v);
+    const key = k.endsWith("[]") ? k.slice(0, -2) : k;
+    if (!key) continue;
+    const raw = Array.isArray(v) ? v[0] : v;
+    if (raw == null || raw === "") continue;
+    // 同名键已存在时保留先写入的值（与 Java values[0] 语义一致）
+    if (query[key] !== undefined) continue;
+    query[key] = String(raw);
   }
 
   const result = processSecurityRequest(

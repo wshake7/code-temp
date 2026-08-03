@@ -37,6 +37,14 @@ export interface SecurityHeaderFlags {
   existingTimestamp?: string;
 }
 
+/**
+ * 将 query params 规范为「签名 AAD 用」的单值 map。
+ *
+ * 对齐 Java SignFilter / mock processSecurityRequest：多值参数只取**第一个**非空值。
+ * 注意：axios 默认会把数组序列化成 `typeCode[]=a&typeCode[]=b`，若 AAD 用
+ * `String(array)`（得 `a,b`）或 key 名不一致，服务端会报 1008 签名错误。
+ * 客户端应配合 `paramsSerializer: { indexes: null }` 发出 `typeCode=a&typeCode=b`。
+ */
 function normalizeParams(
   params: Record<string, unknown> | string | URLSearchParams | undefined,
 ): Record<string, string> {
@@ -53,6 +61,13 @@ function normalizeParams(
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === null || v === '') continue;
+    if (Array.isArray(v)) {
+      // 与服务端 putQueryParams / mock 扁平化一致：仅首个非空值进入 AAD
+      const first = v.find((item) => item !== undefined && item !== null && item !== '');
+      if (first === undefined) continue;
+      out[k] = String(first);
+      continue;
+    }
     out[k] = String(v);
   }
   return out;
