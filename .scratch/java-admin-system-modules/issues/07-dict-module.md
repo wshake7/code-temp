@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] dict-type 分页/all/CRUD/软删/batch
-- [ ] dict-data 分页/by-type/CRUD/软删/batch；platform 与唯一键语义正确
-- [ ] 三端字典 API 对齐
-- [ ] HTTP 测试覆盖主路径与平台维度
+- [x] dict-type 分页/all/CRUD/软删/batch
+- [x] dict-data 分页/by-type/CRUD/软删/batch；platform 与唯一键语义正确
+- [x] 三端字典 API 对齐
+- [x] HTTP 测试覆盖主路径与平台维度

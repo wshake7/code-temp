@@ -128,12 +128,21 @@ export default defineEventHandler(async (event) => {
   }
 
   const list = getMockDictDataList();
+  // 唯一键与 schema 对齐：(type_id, value, platform, deleted_at)
+  // 同 type 下不同 platform 允许同名 value
   const conflict = list.find(
-    (x) => x.deleted_at === 0 && x.type_id === typeId && x.value === value,
+    (x) =>
+      x.deleted_at === 0 &&
+      x.type_id === typeId &&
+      x.value === value &&
+      x.platform === platform,
   );
   if (conflict) {
     setResponseStatus(event, 400);
-    return useResponseError("BadRequest", `value ${value} already exists in type ${typeId}`);
+    return useResponseError(
+      "BadRequest",
+      `value ${value} already exists in type ${typeId} platform ${platform}`,
+    );
   }
 
   const now = isoNow();

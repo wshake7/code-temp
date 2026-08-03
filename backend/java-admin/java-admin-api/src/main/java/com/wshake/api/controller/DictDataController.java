@@ -1,0 +1,111 @@
+package com.wshake.api.controller;
+
+import com.wshake.api.dto.CreateDictDataRequest;
+import com.wshake.api.dto.DictBatchRequest;
+import com.wshake.api.dto.UpdateDictDataRequest;
+import com.wshake.api.vo.DictBatchResultVO;
+import com.wshake.api.vo.DictDataVO;
+import com.wshake.common.result.PageData;
+import com.wshake.common.result.Result;
+import com.wshake.service.dict.DictDataService;
+import com.wshake.service.dict.DictManageModels.CreateDictDataCommand;
+import com.wshake.service.dict.DictManageModels.DictBatchCommand;
+import com.wshake.service.dict.DictManageModels.DictBatchResult;
+import com.wshake.service.dict.DictManageModels.DictDataListQuery;
+import com.wshake.service.dict.DictManageModels.DictDataView;
+import com.wshake.service.dict.DictManageModels.UpdateDictDataCommand;
+import io.github.linpeilie.Converter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 字典数据管理（路径对齐前端 {@code /api/system/dict-data/*}）。
+ *
+ * @author wshake
+ */
+@Tag(name = "字典数据", description = "分页/by-type/CRUD/软删/batch；唯一键含 platform")
+@RestController
+@RequestMapping("/api/system/dict-data")
+@RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
+public class DictDataController {
+
+    private final DictDataService dictDataService;
+    private final Converter converter;
+
+    @GetMapping("/list")
+    @Operation(
+            summary = "分页查询字典数据",
+            description = "platform 精确过滤；includeGeneral=true 时并入 general；list 附 typeCode")
+    public Result<PageData<DictDataVO>> list(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) Long typeId,
+            @RequestParam(required = false) List<String> typeCode,
+            @RequestParam(required = false) String label,
+            @RequestParam(required = false) String value,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String platform,
+            @RequestParam(required = false) Boolean includeGeneral) {
+        PageData<DictDataView> pageData = dictDataService.page(DictDataListQuery.of(
+                page, pageSize, typeId, typeCode, label, value, status, platform, includeGeneral));
+        List<DictDataVO> items = converter.convert(pageData.getItems(), DictDataVO.class);
+        return Result.ok(PageData.of(items, pageData.getTotal()));
+    }
+
+    @GetMapping("/by-type/{code}")
+    @Operation(summary = "按类型 code 取启用字典项", description = "供前端下拉；类型不存在返回参数错误")
+    public Result<List<DictDataVO>> byType(@PathVariable String code) {
+        List<DictDataVO> items = converter.convert(dictDataService.listByTypeCode(code), DictDataVO.class);
+        return Result.ok(items);
+    }
+
+    @PostMapping
+    @Operation(summary = "创建字典数据", description = "唯一键 (typeId,value,platform)")
+    public Result<DictDataVO> create(@Valid @RequestBody CreateDictDataRequest req) {
+        CreateDictDataCommand cmd = converter.convert(req, CreateDictDataCommand.class);
+        return Result.ok(converter.convert(dictDataService.create(cmd), DictDataVO.class));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "更新字典数据")
+    public Result<DictDataVO> update(@PathVariable Long id, @Valid @RequestBody UpdateDictDataRequest req) {
+        UpdateDictDataCommand cmd = new UpdateDictDataCommand(
+                id,
+                req.getValue(),
+                req.getLabel(),
+                req.getSort(),
+                req.getIsDefault(),
+                req.getPlatform(),
+                req.getTagType(),
+                req.getIsEnabled(),
+                req.getRemark());
+        return Result.ok(converter.convert(dictDataService.update(cmd), DictDataVO.class));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "软删字典数据")
+    public Result<DictDataVO> delete(@PathVariable Long id) {
+        return Result.ok(converter.convert(dictDataService.softDelete(id), DictDataVO.class));
+    }
+
+    @PostMapping("/batch")
+    @Operation(summary = "批量 enable|disable|delete")
+    public Result<DictBatchResultVO> batch(@RequestBody DictBatchRequest req) {
+        DictBatchResult result = dictDataService.batch(new DictBatchCommand(req.getAction(), req.getIds()));
+        return Result.ok(new DictBatchResultVO(result.action(), result.affected(), result.ids()));
+    }
+}

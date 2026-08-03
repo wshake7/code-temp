@@ -57,23 +57,6 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 400);
       return useResponseError("BadRequest", "value must be ≤ 64 chars");
     }
-    // 唯一性：(type_id, value, platform) 三元组；platform 是隔离维度，
-    // 因此同 type 下不同 platform 的同名 value 不应判重。
-    const conflict = list.find(
-      (x) =>
-        x.id !== id &&
-        x.deleted_at === 0 &&
-        x.type_id === list[idx].type_id &&
-        x.value === v &&
-        x.platform === list[idx].platform,
-    );
-    if (conflict) {
-      setResponseStatus(event, 400);
-      return useResponseError(
-        "BadRequest",
-        `value ${v} already exists in type ${list[idx].type_id}`,
-      );
-    }
     patch.value = v;
   }
   if ("label" in patch) {
@@ -111,6 +94,29 @@ export default defineEventHandler(async (event) => {
       return useResponseError(
         "BadRequest",
         "platform must be one of general|react-admin|vue-admin",
+      );
+    }
+  }
+
+  // 唯一性：(type_id, value, platform) 三元组；value/platform 任一变更都要重检
+  {
+    const nextValue = ("value" in patch ? (patch.value as string) : list[idx].value) as string;
+    const nextPlatform = (
+      "platform" in patch ? (patch.platform as string) : list[idx].platform
+    ) as string;
+    const conflict = list.find(
+      (x) =>
+        x.id !== id &&
+        x.deleted_at === 0 &&
+        x.type_id === list[idx].type_id &&
+        x.value === nextValue &&
+        x.platform === nextPlatform,
+    );
+    if (conflict) {
+      setResponseStatus(event, 400);
+      return useResponseError(
+        "BadRequest",
+        `value ${nextValue} already exists in type ${list[idx].type_id} platform ${nextPlatform}`,
       );
     }
   }

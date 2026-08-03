@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   const typeIds = new Set(types.map((t) => t.id));
 
   const items = getMockDictDataList()
-    .filter((d) => typeIds.has(d.type_id) && d.is_enabled === 1)
+    .filter((d) => typeIds.has(d.type_id) && d.deleted_at === 0 && d.is_enabled === 1)
     .sort((a, b) => a.sort - b.sort || a.id - b.id)
     .map(toDictCamelRow);
   return useResponseSuccess(items);
