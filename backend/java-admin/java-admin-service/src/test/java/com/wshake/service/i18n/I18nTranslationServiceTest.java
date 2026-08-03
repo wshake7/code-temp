@@ -88,12 +88,14 @@ class I18nTranslationServiceTest {
                 .thenReturn(List.of(locale(1L, "zh-CN"), locale(2L, "en-US")));
 
         @SuppressWarnings("unchecked")
-        PageData<TranslationKeyView> page =
-                (PageData<TranslationKeyView>) service.page(TranslationListQuery.of(1, 20, null, null, null, null, "true"));
+        PageData<TranslationKeyView> page = (PageData<TranslationKeyView>)
+                service.page(TranslationListQuery.of(1, 20, null, null, null, null, "true"));
 
         assertThat(page.getTotal()).isEqualTo(2L);
-        TranslationKeyView ok =
-                page.getItems().stream().filter(k -> "common.ok".equals(k.translationKey())).findFirst().orElseThrow();
+        TranslationKeyView ok = page.getItems().stream()
+                .filter(k -> "common.ok".equals(k.translationKey()))
+                .findFirst()
+                .orElseThrow();
         assertThat(ok.localeCount()).isEqualTo(2);
     }
 
@@ -101,8 +103,7 @@ class I18nTranslationServiceTest {
     void create_missingLocale_throws() {
         when(localeRepo.findById(9L)).thenReturn(null);
 
-        assertThatThrownBy(
-                        () -> service.create(new CreateTranslationCommand(9L, "k", "v", "", 1)))
+        assertThatThrownBy(() -> service.create(new CreateTranslationCommand(9L, "k", "v", "", 1)))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("not found");
         verify(translationRepo, never()).insert(ArgumentMatchers.any());
@@ -149,9 +150,7 @@ class I18nTranslationServiceTest {
         when(translationRepo.findByLocaleAndKey(1L, "common.ok")).thenReturn(translation(1L, 1L, "common.ok", "旧"));
         when(translationRepo.findByLocaleAndKey(2L, "common.ok")).thenReturn(null);
         when(translationRepo.listByTranslationKey("common.ok"))
-                .thenReturn(List.of(
-                        translation(1L, 1L, "common.ok", "确认"),
-                        translation(99L, 2L, "common.ok", "OK")));
+                .thenReturn(List.of(translation(1L, 1L, "common.ok", "确认"), translation(99L, 2L, "common.ok", "OK")));
         when(localeRepo.listByIds(ArgumentMatchers.anyList()))
                 .thenReturn(List.of(locale(1L, "zh-CN"), locale(2L, "en-US")));
         doAnswer(inv -> {
@@ -165,9 +164,7 @@ class I18nTranslationServiceTest {
         BatchUpsertByKeyResult result = service.batchUpsertByKey(new BatchUpsertByKeyCommand(
                 "common.ok",
                 null,
-                List.of(
-                        new BatchUpsertItem(1L, "确认", "", 1),
-                        new BatchUpsertItem(2L, "OK", "", 1)),
+                List.of(new BatchUpsertItem(1L, "确认", "", 1), new BatchUpsertItem(2L, "OK", "", 1)),
                 List.of()));
 
         assertThat(result.ok()).isTrue();
@@ -182,8 +179,8 @@ class I18nTranslationServiceTest {
         when(translationRepo.listByLocaleIdsAndKeys(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection()))
                 .thenReturn(List.of(translation(1L, 1L, "common.ok", "确认")));
 
-        ImportPreviewResult result = service.importPreview(new ImportPreviewCommand(
-                List.of(new ImportPreviewItem("zh-CN", List.of("common.ok")))));
+        ImportPreviewResult result = service.importPreview(
+                new ImportPreviewCommand(List.of(new ImportPreviewItem("zh-CN", List.of("common.ok")))));
 
         assertThat(result.currentRows()).hasSize(1);
         assertThat(result.currentRows().get(0).localeCode()).isEqualTo("zh-CN");
@@ -214,8 +211,8 @@ class I18nTranslationServiceTest {
         common.put("ok", "OK");
         payload.put("common", common);
 
-        ImportBatchResult result = service.importBatch(new ImportBatchCommand(List.of(
-                new ImportBatchItem("fr.json", null, "fr-FR", "simple", payload))));
+        ImportBatchResult result = service.importBatch(
+                new ImportBatchCommand(List.of(new ImportBatchItem("fr.json", null, "fr-FR", "simple", payload))));
 
         assertThat(result.ok()).isTrue();
         assertThat(result.affected().createdLocales()).isEqualTo(1);
@@ -229,6 +226,46 @@ class I18nTranslationServiceTest {
         assertThatThrownBy(() -> service.listByLocaleCode("xx-YY"))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("not found");
+    }
+
+    @Test
+    void getPublicBundle_returnsKvAndHash() {
+        when(localeRepo.findByCode("zh-CN")).thenReturn(locale(1L, "zh-CN"));
+        when(translationRepo.listEnabledByLocaleId(1L))
+                .thenReturn(
+                        List.of(translation(1L, 1L, "common.ok", "确认"), translation(2L, 1L, "common.cancel", "取消")));
+
+        var bundle = service.getPublicBundle("zh-CN", null);
+
+        assertThat(bundle.unchanged()).isFalse();
+        assertThat(bundle.data()).containsEntry("common.ok", "确认").containsEntry("common.cancel", "取消");
+        assertThat(bundle.hash()).isEqualTo(I18nTranslationService.computeI18nHash(bundle.data()));
+    }
+
+    @Test
+    void getPublicBundle_sameHash_returnsUnchanged() {
+        when(localeRepo.findByCode("zh-CN")).thenReturn(locale(1L, "zh-CN"));
+        when(translationRepo.listEnabledByLocaleId(1L)).thenReturn(List.of(translation(1L, 1L, "common.ok", "确认")));
+
+        var first = service.getPublicBundle("zh-CN", null);
+        var second = service.getPublicBundle("zh-CN", first.hash());
+
+        assertThat(second.unchanged()).isTrue();
+        assertThat(second.data()).isNull();
+        assertThat(second.hash()).isNull();
+    }
+
+    @Test
+    void computeI18nHash_stableSorted() {
+        Map<String, String> a = new LinkedHashMap<>();
+        a.put("b", "2");
+        a.put("a", "1");
+        Map<String, String> b = new LinkedHashMap<>();
+        b.put("a", "1");
+        b.put("b", "2");
+        assertThat(I18nTranslationService.computeI18nHash(a))
+                .isEqualTo(I18nTranslationService.computeI18nHash(b))
+                .hasSize(8);
     }
 
     private static I18nLocale locale(Long id, String code) {

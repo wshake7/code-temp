@@ -439,6 +439,7 @@ describe("mock security protocol seam", () => {
     expect(isSecurityWhitelisted("/api/encrypt/public/key")).toBe(true);
     expect(isSecurityWhitelisted("/api/encrypt/dev/key-pair")).toBe(true);
     expect(isSecurityWhitelisted("/api/altcha/challenge")).toBe(true);
+    expect(isSecurityWhitelisted("/api/public/i18n/zh-CN")).toBe(true);
     expect(isSecurityWhitelisted("/api/auth/login")).toBe(false);
   });
 });

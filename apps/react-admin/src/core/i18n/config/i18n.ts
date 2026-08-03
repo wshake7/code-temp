@@ -1,8 +1,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { resources, allNamespaces, type SupportedLocale } from '@/locales';
-import { fetchBackendI18n } from '@/core/i18n/utils';
 
+/**
+ * 仅初始化 i18next 本地 bundle。
+ * 后端 public 翻译拉取须在 RequestClient.init 之后（见 bootstrap），否则 getInstance 会抛错被静默吞掉。
+ */
 export const initI18n = async (initialLang: SupportedLocale) => {
   await i18n.use(initReactI18next).init({
     lng: initialLang,
@@ -19,9 +22,6 @@ export const initI18n = async (initialLang: SupportedLocale) => {
         }
       : undefined,
   });
-
-  // 后台拉取后端翻译，不阻塞 UI
-  fetchBackendI18n(initialLang);
 
   return i18n;
 };

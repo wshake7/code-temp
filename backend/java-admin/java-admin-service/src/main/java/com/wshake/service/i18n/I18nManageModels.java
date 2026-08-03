@@ -64,13 +64,7 @@ public final class I18nManageModels {
     // ---------- translation ----------
 
     public record TranslationListQuery(
-            int page,
-            int pageSize,
-            Long localeId,
-            String localeCode,
-            String value,
-            Integer status,
-            boolean byKey) {
+            int page, int pageSize, Long localeId, String localeCode, String value, Integer status, boolean byKey) {
 
         public static TranslationListQuery of(
                 Integer page,
@@ -119,13 +113,28 @@ public final class I18nManageModels {
 
     public record TranslationByKeyView(String translationKey, List<TranslationView> values) {}
 
+    /**
+     * 公开翻译包（对齐 mock {@code GET /api/public/i18n/:code}）。
+     *
+     * @param unchanged 客户端 hash 与服务端一致时为 true，此时 hash/data 可为 null
+     * @param hash 内容 hash（SHA256 前 8 位 hex）；unchanged 时为 null
+     * @param data translationKey → value；unchanged 时为 null
+     */
+    public record PublicI18nBundle(boolean unchanged, String hash, Map<String, String> data) {
+        /** hash 一致：无新数据。 */
+        public static PublicI18nBundle noChange() {
+            return new PublicI18nBundle(true, null, null);
+        }
+
+        public static PublicI18nBundle of(String hash, Map<String, String> data) {
+            return new PublicI18nBundle(false, hash, data == null ? Map.of() : Map.copyOf(data));
+        }
+    }
+
     public record BatchUpsertItem(Long localeId, String value, String remark, Integer isEnabled) {}
 
     public record BatchUpsertByKeyCommand(
-            String translationKey,
-            String newTranslationKey,
-            List<BatchUpsertItem> items,
-            List<Long> deletedIds) {}
+            String translationKey, String newTranslationKey, List<BatchUpsertItem> items, List<Long> deletedIds) {}
 
     public record BatchUpsertError(String code, String message, Long localeId, Long id) {}
 
@@ -144,18 +153,12 @@ public final class I18nManageModels {
 
     public record ExportCommand(List<Long> ids, String type) {}
 
-    public record ImportBatchItem(
-            String name, String prefix, String localeCode, String format, Object payload) {}
+    public record ImportBatchItem(String name, String prefix, String localeCode, String format, Object payload) {}
 
     public record ImportBatchCommand(List<ImportBatchItem> items) {}
 
     public record ImportPerFileResult(
-            String name,
-            boolean ok,
-            String error,
-            int createdLocales,
-            int softDeleted,
-            int createdTranslations) {}
+            String name, boolean ok, String error, int createdLocales, int softDeleted, int createdTranslations) {}
 
     public record ImportBatchAffected(
             int createdLocales, int softDeleted, int createdTranslations, List<ImportPerFileResult> perFile) {}

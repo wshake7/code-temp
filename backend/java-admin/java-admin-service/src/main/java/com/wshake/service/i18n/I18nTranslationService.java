@@ -18,10 +18,10 @@ import com.wshake.service.i18n.I18nManageModels.ExportBatchCommand;
 import com.wshake.service.i18n.I18nManageModels.ExportBatchFile;
 import com.wshake.service.i18n.I18nManageModels.ExportBatchResult;
 import com.wshake.service.i18n.I18nManageModels.ExportCommand;
+import com.wshake.service.i18n.I18nManageModels.ImportBatchAffected;
 import com.wshake.service.i18n.I18nManageModels.ImportBatchCommand;
 import com.wshake.service.i18n.I18nManageModels.ImportBatchItem;
 import com.wshake.service.i18n.I18nManageModels.ImportBatchResult;
-import com.wshake.service.i18n.I18nManageModels.ImportBatchAffected;
 import com.wshake.service.i18n.I18nManageModels.ImportPerFileResult;
 import com.wshake.service.i18n.I18nManageModels.ImportPreviewCommand;
 import com.wshake.service.i18n.I18nManageModels.ImportPreviewItem;
@@ -34,6 +34,9 @@ import com.wshake.service.i18n.I18nManageModels.TranslationView;
 import com.wshake.service.i18n.I18nManageModels.UpdateTranslationCommand;
 import com.wshake.service.repository.I18nLocaleRepository;
 import com.wshake.service.repository.I18nTranslationRepository;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -70,10 +74,11 @@ public class I18nTranslationService {
         if (query.localeCode() != null && query.localeId() == null && localeId == null) {
             return PageData.of(List.of(), 0L);
         }
-        EasyPageResult<I18nTranslation> page = translationRepository.page(
-                query.page(), query.pageSize(), localeId, query.value(), query.status());
+        EasyPageResult<I18nTranslation> page =
+                translationRepository.page(query.page(), query.pageSize(), localeId, query.value(), query.status());
         List<I18nTranslation> rows = page.getData() == null ? List.of() : page.getData();
-        Map<Long, String> codeMap = loadLocaleCodes(rows.stream().map(I18nTranslation::getLocaleId).toList());
+        Map<Long, String> codeMap =
+                loadLocaleCodes(rows.stream().map(I18nTranslation::getLocaleId).toList());
         List<TranslationView> items =
                 rows.stream().map(r -> toView(r, codeMap.get(r.getLocaleId()))).toList();
         return PageData.of(items, page.getTotal());
@@ -84,8 +89,8 @@ public class I18nTranslationService {
      */
     private PageData<TranslationKeyView> pageByKey(TranslationListQuery query) {
         List<I18nTranslation> all = translationRepository.listFiltered(null, query.value(), query.status());
-        Map<Long, String> codeMap =
-                loadLocaleCodes(all.stream().map(I18nTranslation::getLocaleId).distinct().toList());
+        Map<Long, String> codeMap = loadLocaleCodes(
+                all.stream().map(I18nTranslation::getLocaleId).distinct().toList());
 
         Map<String, TranslationKeyView> byKey = new LinkedHashMap<>();
         for (I18nTranslation row : all) {
@@ -139,6 +144,63 @@ public class I18nTranslationService {
         return translationRepository.listEnabledByLocaleId(locale.getId()).stream()
                 .map(t -> toView(t, locale.getCode()))
                 .toList();
+    }
+
+    /**
+     * 公开翻译包：按 locale code 返回启用中的 KV，并支持 hash 增量。
+     *
+     * <p>hash 算法对齐 mock {@code computeI18nHash}：对 {@code key=value} 按 key 排序后用 {@code \n}
+     * 拼接，SHA-256 取 hex 前 8 位。
+     *
+     * @param code BCP-47 语言码（如 zh-CN）
+     * @param clientHash 前端缓存 hash；一致时返回 {@link I18nManageModels.PublicI18nBundle#noChange()}
+     */
+    public I18nManageModels.PublicI18nBundle getPublicBundle(String code, String clientHash) {
+        String localeCode = I18nManageModels.trimToNull(code);
+        if (localeCode == null) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "code is required");
+        }
+        I18nLocale locale = localeRepository.findByCode(localeCode);
+        if (locale == null) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "i18n-locale " + localeCode + " not found");
+        }
+
+        Map<String, String> data = new TreeMap<>();
+        for (I18nTranslation row : translationRepository.listEnabledByLocaleId(locale.getId())) {
+            if (row.getTranslationKey() == null) {
+                continue;
+            }
+            data.put(row.getTranslationKey(), row.getValue() == null ? "" : row.getValue());
+        }
+
+        String serverHash = computeI18nHash(data);
+        String normalizedClient = clientHash == null ? "" : clientHash.trim();
+        if (!normalizedClient.isEmpty() && normalizedClient.equals(serverHash)) {
+            return I18nManageModels.PublicI18nBundle.noChange();
+        }
+        return I18nManageModels.PublicI18nBundle.of(serverHash, data);
+    }
+
+    /**
+     * 与 mock {@code apps/backend-mock-template/utils/i18n-hash.ts} 一致。
+     */
+    static String computeI18nHash(Map<String, String> kvMap) {
+        String sorted = kvMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> e.getKey() + "=" + (e.getValue() == null ? "" : e.getValue()))
+                .collect(Collectors.joining("\n"));
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(sorted.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(8);
+            // 前 4 字节 → 8 位 hex
+            for (int i = 0; i < 4; i++) {
+                hex.append(String.format("%02x", digest[i]));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 
     public TranslationByKeyView getByKey(String key) {
@@ -283,7 +345,8 @@ public class I18nTranslationService {
         if (translationKey.length() > 255) {
             throw BizException.of(ResultCode.PARAM_INVALID, "translationKey must be ≤ 255 chars");
         }
-        String newKey = cmd.newTranslationKey() == null ? null : cmd.newTranslationKey().trim();
+        String newKey =
+                cmd.newTranslationKey() == null ? null : cmd.newTranslationKey().trim();
         if (newKey != null && (newKey.isEmpty() || newKey.length() > 255)) {
             throw BizException.of(ResultCode.PARAM_INVALID, "newTranslationKey must be 1..255 chars");
         }
@@ -333,8 +396,7 @@ public class I18nTranslationService {
         }
 
         // Stage 3: upsert
-        String effectiveKey =
-                newKey != null && !newKey.equals(translationKey) ? newKey : translationKey;
+        String effectiveKey = newKey != null && !newKey.equals(translationKey) ? newKey : translationKey;
         List<BatchUpsertItem> items = cmd.items() == null ? List.of() : cmd.items();
         for (BatchUpsertItem rawItem : items) {
             Long localeId = rawItem.localeId();
@@ -352,8 +414,7 @@ public class I18nTranslationService {
 
             I18nLocale locale = localeRepository.findById(localeId);
             if (locale == null) {
-                errors.add(new BatchUpsertError(
-                        "BadRequest", "locale " + localeId + " not found", localeId, null));
+                errors.add(new BatchUpsertError("BadRequest", "locale " + localeId + " not found", localeId, null));
                 continue;
             }
 
@@ -381,10 +442,7 @@ public class I18nTranslationService {
 
         TranslationByKeyView refreshed = getByKey(effectiveKey);
         return new BatchUpsertByKeyResult(
-                true,
-                new BatchUpsertAffected(renamed, created, updated, deleted),
-                refreshed.values(),
-                null);
+                true, new BatchUpsertAffected(renamed, created, updated, deleted), refreshed.values(), null);
     }
 
     // ---------- export ----------
@@ -454,7 +512,11 @@ public class I18nTranslationService {
         Map<String, Object> result = new LinkedHashMap<>();
         if ("raw".equals(type)) {
             result.put("@type", "raw");
-            result.put("locales", selected.stream().map(l -> localeToMap(localeService.toView(l))).toList());
+            result.put(
+                    "locales",
+                    selected.stream()
+                            .map(l -> localeToMap(localeService.toView(l)))
+                            .toList());
             List<Map<String, Object>> translations = new ArrayList<>();
             for (I18nTranslation t : allTranslations) {
                 Map<String, Object> tr = new LinkedHashMap<>();
@@ -484,8 +546,7 @@ public class I18nTranslationService {
                 if (code == null) {
                     continue;
                 }
-                locales.computeIfAbsent(code, k -> new LinkedHashMap<>())
-                        .put(t.getTranslationKey(), t.getValue());
+                locales.computeIfAbsent(code, k -> new LinkedHashMap<>()).put(t.getTranslationKey(), t.getValue());
             }
             result.put("locales", locales);
         }
@@ -564,9 +625,7 @@ public class I18nTranslationService {
         }
         boolean ok = perFile.stream().allMatch(ImportPerFileResult::ok);
         return new ImportBatchResult(
-                ok,
-                new ImportBatchAffected(
-                        totalCreatedLocales, totalSoftDeleted, totalCreatedTranslations, perFile));
+                ok, new ImportBatchAffected(totalCreatedLocales, totalSoftDeleted, totalCreatedTranslations, perFile));
     }
 
     @SuppressWarnings("unchecked")
@@ -613,13 +672,11 @@ public class I18nTranslationService {
                         if (keyObj == null || !(valObj instanceof String)) {
                             continue;
                         }
-                        String finalKey = prefix.isEmpty()
-                                ? String.valueOf(keyObj)
-                                : prefix + "." + keyObj;
+                        String finalKey = prefix.isEmpty() ? String.valueOf(keyObj) : prefix + "." + keyObj;
                         String remark = t.get("remark") == null ? "" : String.valueOf(t.get("remark"));
                         int isEnabled = parse01(t.get("isEnabled"), 1);
-                        SoftCreate sc = replaceTranslation(
-                                locale.getId(), finalKey, String.valueOf(valObj), remark, isEnabled);
+                        SoftCreate sc =
+                                replaceTranslation(locale.getId(), finalKey, String.valueOf(valObj), remark, isEnabled);
                         softDeleted += sc.softDeleted();
                         createdTranslations += sc.created();
                     }
@@ -734,7 +791,8 @@ public class I18nTranslationService {
         if (localeIds == null || localeIds.isEmpty()) {
             return Map.of();
         }
-        List<Long> distinct = localeIds.stream().filter(Objects::nonNull).distinct().toList();
+        List<Long> distinct =
+                localeIds.stream().filter(Objects::nonNull).distinct().toList();
         if (distinct.isEmpty()) {
             return Map.of();
         }

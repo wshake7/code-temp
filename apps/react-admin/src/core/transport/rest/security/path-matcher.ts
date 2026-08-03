@@ -67,6 +67,9 @@ export function isSecurityWhitelisted(path: string): boolean {
     if (candidate === '/swagger-ui' || candidate.startsWith('/swagger-ui/')) return true;
     if (candidate === '/api/altcha' || candidate.startsWith('/api/altcha/')) return true;
     if (candidate === '/altcha' || candidate.startsWith('/altcha/')) return true;
+    // 公开翻译包：进页/切语言拉取
+    if (candidate === '/api/public/i18n' || candidate.startsWith('/api/public/i18n/')) return true;
+    if (candidate === '/public/i18n' || candidate.startsWith('/public/i18n/')) return true;
     if (candidate === '/api/health' || candidate.startsWith('/api/health/')) return true;
     if (candidate === '/health' || candidate.startsWith('/health/')) return true;
     if (candidate === '/actuator' || candidate.startsWith('/actuator/')) return true;

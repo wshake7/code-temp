@@ -13,13 +13,15 @@ public final class SecurityPathMatcher {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    /** 免强制加密与独立 Sign 校验的路径（公钥、ALTCHA、文档、健康检查等）。 */
+    /** 免强制加密与独立 Sign 校验的路径（公钥、ALTCHA、公开 i18n、文档、健康检查等）。 */
     public static final List<String> SECURITY_WHITELIST = List.of(
             "/api/encrypt/public/key",
             // 仅 dev profile 注册 DevEncryptController；prod 无此路径
             "/api/encrypt/dev/key-pair",
             "/api/encrypt/dev/session-key",
             "/api/altcha/**",
+            // 进页/未登录拉取翻译包
+            "/api/public/i18n/**",
             "/doc.html",
             "/doc.html/**",
             "/swagger-ui/**",

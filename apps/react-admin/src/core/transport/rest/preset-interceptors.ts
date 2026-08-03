@@ -3,13 +3,28 @@ import axios from 'axios';
 import type { MakeErrorMessageFn, ResponseInterceptorConfig } from './types';
 import { getDefaultErrorMsg } from './utils';
 
+function getRequestUrl(error: {
+  config?: { url?: string };
+  response?: { config?: { url?: string } };
+}): string {
+  const url = error?.config?.url ?? error?.response?.config?.url ?? '';
+  return typeof url === 'string' ? url : '';
+}
+
 /** 登录等未持 token 的鉴权接口：业务 401 不是会话过期，不应 forceLogout / 吞掉错误提示 */
 function isUnauthenticatedAuthRequest(error: {
   config?: { url?: string };
   response?: { config?: { url?: string } };
 }): boolean {
-  const url = error?.config?.url ?? error?.response?.config?.url ?? '';
-  return typeof url === 'string' && url.includes('/auth/login');
+  return getRequestUrl(error).includes('/auth/login');
+}
+
+/** 公开可选接口（如 /public/i18n）失败：不登出、不 toast */
+function isPublicOptionalRequest(error: {
+  config?: { url?: string };
+  response?: { config?: { url?: string } };
+}): boolean {
+  return getRequestUrl(error).includes('/public/');
 }
 
 /**
@@ -31,8 +46,8 @@ export const authenticateResponseInterceptor = ({
         throw error;
       }
 
-      // 登录失败本身会返回 401：只交给错误消息拦截器提示，不触发登出
-      if (isUnauthenticatedAuthRequest(error)) {
+      // 登录失败 / 公开可选接口 401：只交给错误消息拦截器，不触发登出
+      if (isUnauthenticatedAuthRequest(error) || isPublicOptionalRequest(error)) {
         throw error;
       }
 
@@ -64,6 +79,15 @@ export const errorMessageResponseInterceptor = (
 
       // 已由认证拦截器处理的错误，不弹窗
       if (error && typeof error === 'object' && '__handledByAuthInterceptor' in error) {
+        return Promise.reject(error);
+      }
+
+      // 公开可选接口静默失败（本地 i18n 已兜底）
+      if (
+        error &&
+        typeof error === 'object' &&
+        isPublicOptionalRequest(error as { config?: { url?: string } })
+      ) {
         return Promise.reject(error);
       }
 

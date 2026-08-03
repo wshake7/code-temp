@@ -45,6 +45,8 @@ public final class WebConfig implements WebMvcConfigurer {
                         "/api/auth/logout",
                         "/api/altcha/challenge",
                         "/api/encrypt/public/key",
+                        // 进页/未登录拉取后端翻译
+                        "/api/public/i18n/**",
                         // dev-only：mock 拉密钥对；prod 无此 Controller
                         "/api/encrypt/dev/key-pair");
 
@@ -59,6 +61,7 @@ public final class WebConfig implements WebMvcConfigurer {
                         "/api/auth/logout",
                         "/api/altcha/challenge",
                         "/api/encrypt/public/key",
+                        "/api/public/i18n/**",
                         "/api/encrypt/dev/key-pair",
                         "/doc.html",
                         "/doc.html/**",

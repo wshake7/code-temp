@@ -15,6 +15,7 @@ const WHITELIST_EXACT = new Set([
 
 const WHITELIST_PREFIX = [
   "/api/altcha/",
+  "/api/public/i18n/",
   "/doc.html/",
   "/swagger-ui/",
   "/v3/api-docs/",
@@ -30,6 +31,8 @@ export function isSecurityWhitelisted(path: string): boolean {
   if (normalized === "/v3/api-docs" || normalized.startsWith("/v3/api-docs/")) return true;
   if (normalized === "/swagger-ui" || normalized.startsWith("/swagger-ui/")) return true;
   if (normalized === "/api/altcha" || normalized.startsWith("/api/altcha/")) return true;
+  // 公开翻译包：进页/未登录即可拉，免强制加密与独立 Sign
+  if (normalized === "/api/public/i18n" || normalized.startsWith("/api/public/i18n/")) return true;
   if (normalized === "/api/health" || normalized.startsWith("/api/health/")) return true;
   if (normalized === "/actuator" || normalized.startsWith("/actuator/")) return true;
   for (const prefix of WHITELIST_PREFIX) {

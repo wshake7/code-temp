@@ -195,6 +195,17 @@ class SecurityFilterTest {
     }
 
     @Test
+    void encrypt_publicI18nPath_allowsPlaintext() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/public/i18n/zh-CN");
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+        AtomicBoolean chainCalled = new AtomicBoolean(false);
+
+        encryptFilter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
+
+        assertThat(chainCalled).isTrue();
+    }
+
+    @Test
     void encrypt_disabled_allowsPlainLogin() throws Exception {
         securityProperties.getEncrypt().setEnabled(false);
         MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/auth/login");

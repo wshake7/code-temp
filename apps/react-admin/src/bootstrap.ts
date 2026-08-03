@@ -1,9 +1,11 @@
 import { message } from 'antd';
 import { initI18n } from '@/core/i18n';
+import { fetchBackendI18n } from '@/core/i18n/utils';
 import { usePreferencesStore } from '@/core/preferences';
 import { type HttpResponse, RequestClient } from '@/core/transport/rest';
 import i18n from 'i18next';
 import { useAuthStore } from '@/stores';
+import type { SupportedLocale } from '@/locales';
 
 /**
  * 应用启动初始化
@@ -19,13 +21,13 @@ export async function bootstrap() {
 
 async function _initI18n() {
   // 从 preferences 获取初始语言
-  const initialLocale = usePreferencesStore.getState().preferences.app.locale;
+  const initialLocale = usePreferencesStore.getState().preferences.app
+    .locale as SupportedLocale;
 
-  // 初始化 i18n（传入初始语言）
+  // 1) 本地 i18n bundle（不依赖 RequestClient）
   await initI18n(initialLocale);
 
-  // 注入 RequestClient 回调（业务层 → 基础设施层）
-  // 必须在 initStores 之后，因为 getToken 依赖 accessStore
+  // 2) 注入 RequestClient（必须先于任何依赖 getInstance 的请求）
   RequestClient.init(import.meta.env.VITE_API_URL, {
     getToken: () => useAuthStore.getState().accessToken,
     getLocale: () => i18n.language,
@@ -41,6 +43,9 @@ async function _initI18n() {
     },
     getErrorMsg: getErrorMsg,
   });
+
+  // 3) 进页拉取后端 public 翻译（fire-and-forget，对齐 Vue loadMessages）
+  fetchBackendI18n(initialLocale);
 }
 
 /**
