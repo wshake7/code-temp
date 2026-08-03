@@ -22,6 +22,7 @@ import com.wshake.service.user.UserManageModels.CreateUserCommand;
 import com.wshake.service.user.UserManageModels.UpdateUserCommand;
 import com.wshake.service.user.UserManageModels.UserListQuery;
 import com.wshake.service.user.UserManageModels.UserView;
+import io.github.linpeilie.Converter;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,9 @@ import org.mockito.MockedStatic;
 class UserControllerTest {
 
     private final SysUserService sysUserService = mock(SysUserService.class);
-    private final UserController controller = new UserController(sysUserService);
+    /** 无 Spring 上下文：DefaultConverterFactory 从 classpath 加载 mapstruct-plus 生成 Mapper。 */
+    private final Converter converter = new Converter();
+    private final UserController controller = new UserController(sysUserService, converter);
 
     @Test
     void list_whenNotLogin_throwsAuthNotLogin() {

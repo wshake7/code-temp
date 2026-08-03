@@ -1,5 +1,7 @@
 package com.wshake.api.dto;
 
+import com.wshake.service.user.UserManageModels.CreateUserCommand;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -12,6 +14,7 @@ import lombok.Data;
  * @author wshake
  */
 @Data
+@AutoMapper(target = CreateUserCommand.class)
 @Schema(description = "创建用户")
 public class CreateUserRequest {
 

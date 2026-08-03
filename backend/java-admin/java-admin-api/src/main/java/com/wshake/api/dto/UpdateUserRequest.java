@@ -1,5 +1,7 @@
 package com.wshake.api.dto;
 
+import com.wshake.service.user.UserManageModels.UpdateUserCommand;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -8,9 +10,12 @@ import lombok.Data;
 /**
  * 更新用户请求（username/password 不可改）。
  *
+ * <p>映射到 {@link UpdateUserCommand} 时 {@code id} 由路径参数补全（见 Controller）。
+ *
  * @author wshake
  */
 @Data
+@AutoMapper(target = UpdateUserCommand.class)
 @Schema(description = "更新用户")
 public class UpdateUserRequest {
 

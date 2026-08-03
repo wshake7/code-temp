@@ -1,5 +1,7 @@
 package com.wshake.api.vo;
 
+import com.wshake.service.role.RoleManageModels.RoleMenuBindView;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -14,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AutoMapper(target = RoleMenuBindView.class)
 @Schema(description = "角色菜单绑定项")
 public class RoleMenuBindItemVO {
 

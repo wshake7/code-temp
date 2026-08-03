@@ -1,5 +1,7 @@
 package com.wshake.api.vo;
 
+import com.wshake.service.role.RoleManageModels.RoleView;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -14,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AutoMapper(target = RoleView.class)
 @Schema(description = "角色信息")
 public class RoleListItemVO {
 

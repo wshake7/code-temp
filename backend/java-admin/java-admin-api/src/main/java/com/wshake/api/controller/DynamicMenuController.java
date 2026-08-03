@@ -4,8 +4,8 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.api.vo.RuntimeMenuRouteVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
-import com.wshake.service.menu.MenuManageModels.RuntimeMenuRoute;
 import com.wshake.service.menu.SysMenuService;
+import io.github.linpeilie.Converter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public final class DynamicMenuController {
 
     private final SysMenuService sysMenuService;
+    private final Converter converter;
 
     @GetMapping("/all")
     @Operation(summary = "当前用户动态菜单", description = "user→role_menu→祖先补全→DIR/MENU 投影")
@@ -38,16 +39,7 @@ public final class DynamicMenuController {
         Object loginId = StpUtil.getLoginId();
         Long userId = loginId instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(loginId));
         List<RuntimeMenuRouteVO> routes =
-                sysMenuService.listRuntimeMenusForUser(userId).stream().map(DynamicMenuController::toVo).toList();
+                converter.convert(sysMenuService.listRuntimeMenusForUser(userId), RuntimeMenuRouteVO.class);
         return Result.ok(routes);
-    }
-
-    private static RuntimeMenuRouteVO toVo(RuntimeMenuRoute route) {
-        List<RuntimeMenuRouteVO> children = null;
-        if (route.children() != null && !route.children().isEmpty()) {
-            children = route.children().stream().map(DynamicMenuController::toVo).toList();
-        }
-        return new RuntimeMenuRouteVO(
-                route.name(), route.path(), route.component(), route.redirect(), route.meta(), children);
     }
 }

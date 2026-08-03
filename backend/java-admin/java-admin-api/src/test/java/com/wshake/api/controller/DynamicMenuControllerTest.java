@@ -12,6 +12,7 @@ import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
 import com.wshake.service.menu.MenuManageModels.RuntimeMenuRoute;
 import com.wshake.service.menu.SysMenuService;
+import io.github.linpeilie.Converter;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,8 @@ import org.mockito.MockedStatic;
 class DynamicMenuControllerTest {
 
     private final SysMenuService sysMenuService = mock(SysMenuService.class);
-    private final DynamicMenuController controller = new DynamicMenuController(sysMenuService);
+    private final Converter converter = new Converter();
+    private final DynamicMenuController controller = new DynamicMenuController(sysMenuService, converter);
 
     @Test
     void all_whenNotLogin_throws() {

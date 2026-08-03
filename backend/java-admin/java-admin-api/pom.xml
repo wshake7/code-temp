@@ -33,6 +33,12 @@
             <artifactId>java-admin-infra</artifactId>
         </dependency>
 
+        <!-- MapStruct Plus：@AutoMapper + Converter（View↔VO / Request→Command） -->
+        <dependency>
+            <groupId>io.github.linpeilie</groupId>
+            <artifactId>mapstruct-plus-spring-boot-starter</artifactId>
+        </dependency>
+
         <!-- Spring Cloud Alibaba Nacos Config（可插拔） -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>

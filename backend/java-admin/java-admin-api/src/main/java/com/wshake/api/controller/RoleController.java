@@ -16,13 +16,12 @@ import com.wshake.common.result.Result;
 import com.wshake.service.role.RoleManageModels.CreateRoleCommand;
 import com.wshake.service.role.RoleManageModels.ParentIdChange;
 import com.wshake.service.role.RoleManageModels.RoleApiBindResult;
-import com.wshake.service.role.RoleManageModels.RoleApiBindView;
 import com.wshake.service.role.RoleManageModels.RoleListQuery;
 import com.wshake.service.role.RoleManageModels.RoleMenuBindResult;
-import com.wshake.service.role.RoleManageModels.RoleMenuBindView;
 import com.wshake.service.role.RoleManageModels.RoleView;
 import com.wshake.service.role.RoleManageModels.UpdateRoleCommand;
 import com.wshake.service.role.SysRoleService;
+import io.github.linpeilie.Converter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,6 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 public final class RoleController {
 
     private final SysRoleService sysRoleService;
+    private final Converter converter;
 
     @GetMapping("/list")
     @Operation(summary = "分页查询角色", description = "data={items,total}；附 userCount/parentName")
@@ -64,7 +64,7 @@ public final class RoleController {
         requireLogin();
         PageData<RoleView> pageData =
                 sysRoleService.pageRoles(RoleListQuery.of(page, pageSize, code, name, status));
-        List<RoleListItemVO> items = pageData.getItems().stream().map(RoleController::toVo).toList();
+        List<RoleListItemVO> items = converter.convert(pageData.getItems(), RoleListItemVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }
 
@@ -72,7 +72,7 @@ public final class RoleController {
     @Operation(summary = "全量角色", description = "用户表单角色下拉；可选 status 过滤")
     public Result<List<RoleListItemVO>> all(@RequestParam(required = false) Integer status) {
         requireLogin();
-        List<RoleListItemVO> items = sysRoleService.listAll(status).stream().map(RoleController::toVo).toList();
+        List<RoleListItemVO> items = converter.convert(sysRoleService.listAll(status), RoleListItemVO.class);
         return Result.ok(items);
     }
 
@@ -80,32 +80,28 @@ public final class RoleController {
     @Operation(summary = "创建角色")
     public Result<RoleListItemVO> create(@Valid @RequestBody CreateRoleRequest req) {
         requireLogin();
-        RoleView view = sysRoleService.create(new CreateRoleCommand(
-                req.getCode(),
-                req.getName(),
-                req.getParentId(),
-                req.getSort(),
-                req.getIsEnabled(),
-                req.getRemark()));
-        return Result.ok(toVo(view));
+        CreateRoleCommand cmd = converter.convert(req, CreateRoleCommand.class);
+        RoleView view = sysRoleService.create(cmd);
+        return Result.ok(converter.convert(view, RoleListItemVO.class));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新角色", description = "code 不可改；parentId 省略不改，显式 null 清父")
     public Result<RoleListItemVO> update(@PathVariable Long id, @Valid @RequestBody UpdateRoleRequest req) {
         requireLogin();
+        // ParentIdChange 含 presence 语义，保留手写组装
         ParentIdChange parentChange =
                 req.isParentIdPresent() ? ParentIdChange.of(req.getParentId()) : ParentIdChange.absent();
         RoleView view = sysRoleService.update(new UpdateRoleCommand(
                 id, req.getName(), parentChange, req.getSort(), req.getIsEnabled(), req.getRemark()));
-        return Result.ok(toVo(view));
+        return Result.ok(converter.convert(view, RoleListItemVO.class));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "软删角色", description = "Root/有用户/有子角色时拒绝")
     public Result<RoleListItemVO> delete(@PathVariable Long id) {
         requireLogin();
-        return Result.ok(toVo(sysRoleService.softDelete(id)));
+        return Result.ok(converter.convert(sysRoleService.softDelete(id), RoleListItemVO.class));
     }
 
     @GetMapping("/{id}/menus")
@@ -113,7 +109,7 @@ public final class RoleController {
     public Result<List<RoleMenuBindItemVO>> menus(@PathVariable Long id) {
         requireLogin();
         List<RoleMenuBindItemVO> items =
-                sysRoleService.listMenuBinds(id).stream().map(RoleController::toMenuVo).toList();
+                converter.convert(sysRoleService.listMenuBinds(id), RoleMenuBindItemVO.class);
         return Result.ok(items);
     }
 
@@ -131,7 +127,7 @@ public final class RoleController {
     public Result<List<RoleApiBindItemVO>> apis(@PathVariable Long id) {
         requireLogin();
         List<RoleApiBindItemVO> items =
-                sysRoleService.listApiBinds(id).stream().map(RoleController::toApiVo).toList();
+                converter.convert(sysRoleService.listApiBinds(id), RoleApiBindItemVO.class);
         return Result.ok(items);
     }
 
@@ -148,58 +144,5 @@ public final class RoleController {
         if (!StpUtil.isLogin()) {
             throw AuthException.notLogin();
         }
-    }
-
-    private static RoleListItemVO toVo(RoleView view) {
-        return new RoleListItemVO(
-                view.id(),
-                view.code(),
-                view.name(),
-                view.parentId(),
-                view.sort(),
-                view.remark(),
-                view.isEnabled(),
-                view.deletedAt(),
-                view.createdAt(),
-                view.updatedAt(),
-                view.createdBy(),
-                view.updatedBy(),
-                view.userCount(),
-                view.parentName());
-    }
-
-    private static RoleMenuBindItemVO toMenuVo(RoleMenuBindView view) {
-        return new RoleMenuBindItemVO(
-                view.id(),
-                view.parentId(),
-                view.name(),
-                view.type(),
-                view.path(),
-                view.component(),
-                view.icon(),
-                view.redirect(),
-                view.permissionCode(),
-                view.treePath(),
-                view.metadata(),
-                view.sort(),
-                view.isHidden(),
-                view.isEnabled(),
-                view.remark(),
-                view.deletedAt(),
-                view.createdAt(),
-                view.updatedAt(),
-                view.bound());
-    }
-
-    private static RoleApiBindItemVO toApiVo(RoleApiBindView view) {
-        return new RoleApiBindItemVO(
-                view.id(),
-                view.name(),
-                view.method(),
-                view.path(),
-                view.permissionCode(),
-                view.apiGroup(),
-                view.isEnabled(),
-                view.bound());
     }
 }

@@ -17,7 +17,6 @@ import com.wshake.common.result.Result;
 import com.wshake.common.result.TreePageData;
 import com.wshake.service.menu.MenuManageModels.CreateMenuCommand;
 import com.wshake.service.menu.MenuManageModels.MenuApiBindResult;
-import com.wshake.service.menu.MenuManageModels.MenuApiBindView;
 import com.wshake.service.menu.MenuManageModels.MenuBatchCommand;
 import com.wshake.service.menu.MenuManageModels.MenuBatchResult;
 import com.wshake.service.menu.MenuManageModels.MenuListPage;
@@ -27,6 +26,7 @@ import com.wshake.service.menu.MenuManageModels.MetadataChange;
 import com.wshake.service.menu.MenuManageModels.ParentIdChange;
 import com.wshake.service.menu.MenuManageModels.UpdateMenuCommand;
 import com.wshake.service.menu.SysMenuService;
+import io.github.linpeilie.Converter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,6 +56,7 @@ import org.springframework.web.bind.annotation.RestController;
 public final class MenuController {
 
     private final SysMenuService sysMenuService;
+    private final Converter converter;
 
     @GetMapping("/list")
     @Operation(summary = "分页查询菜单", description = "按根节点分页；data={items,total,itemTotal}")
@@ -69,7 +70,7 @@ public final class MenuController {
         requireLogin();
         MenuListPage pageData =
                 sysMenuService.pageMenus(MenuListQuery.of(page, pageSize, name, type, permissionCode, status));
-        List<MenuListItemVO> items = pageData.items().stream().map(MenuController::toVo).toList();
+        List<MenuListItemVO> items = converter.convert(pageData.items(), MenuListItemVO.class);
         return Result.ok(TreePageData.of(items, pageData.total(), pageData.itemTotal()));
     }
 
@@ -80,7 +81,7 @@ public final class MenuController {
         requireLogin();
         String typeFilter = type == null || "全部".equals(type) ? null : type;
         List<MenuListItemVO> items =
-                sysMenuService.listAll(typeFilter, status).stream().map(MenuController::toVo).toList();
+                converter.convert(sysMenuService.listAll(typeFilter, status), MenuListItemVO.class);
         return Result.ok(items);
     }
 
@@ -88,27 +89,16 @@ public final class MenuController {
     @Operation(summary = "创建菜单")
     public Result<MenuListItemVO> create(@Valid @RequestBody CreateMenuRequest req) {
         requireLogin();
-        MenuView view = sysMenuService.create(new CreateMenuCommand(
-                req.getParentId(),
-                req.getName(),
-                req.getType(),
-                req.getPath(),
-                req.getComponent(),
-                req.getIcon(),
-                req.getRedirect(),
-                req.getPermissionCode(),
-                req.getMetadata(),
-                req.getSort(),
-                req.getIsHidden(),
-                req.getIsEnabled(),
-                req.getRemark()));
-        return Result.ok(toVo(view));
+        CreateMenuCommand cmd = converter.convert(req, CreateMenuCommand.class);
+        MenuView view = sysMenuService.create(cmd);
+        return Result.ok(converter.convert(view, MenuListItemVO.class));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新菜单")
     public Result<MenuListItemVO> update(@PathVariable Long id, @RequestBody JsonNode body) {
         requireLogin();
+        // ParentIdChange / MetadataChange 含 presence 语义，保留手写组装
         UpdateMenuRequest req = parseUpdate(body);
         UpdateMenuCommand cmd = new UpdateMenuCommand(
                 id,
@@ -125,14 +115,14 @@ public final class MenuController {
                 req.getIsHidden(),
                 req.getIsEnabled(),
                 req.getRemark());
-        return Result.ok(toVo(sysMenuService.update(cmd)));
+        return Result.ok(converter.convert(sysMenuService.update(cmd), MenuListItemVO.class));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "软删菜单")
     public Result<MenuListItemVO> delete(@PathVariable Long id) {
         requireLogin();
-        return Result.ok(toVo(sysMenuService.softDelete(id)));
+        return Result.ok(converter.convert(sysMenuService.softDelete(id), MenuListItemVO.class));
     }
 
     @PostMapping("/batch")
@@ -149,7 +139,7 @@ public final class MenuController {
     public Result<List<MenuApiBindItemVO>> menuApis(@PathVariable Long id) {
         requireLogin();
         List<MenuApiBindItemVO> items =
-                sysMenuService.listMenuApis(id).stream().map(MenuController::toApiVo).toList();
+                converter.convert(sysMenuService.listMenuApis(id), MenuApiBindItemVO.class);
         return Result.ok(items);
     }
 
@@ -261,41 +251,5 @@ public final class MenuController {
         if (!StpUtil.isLogin()) {
             throw AuthException.notLogin();
         }
-    }
-
-    private static MenuListItemVO toVo(MenuView view) {
-        return new MenuListItemVO(
-                view.id(),
-                view.parentId(),
-                view.name(),
-                view.type(),
-                view.path(),
-                view.component(),
-                view.icon(),
-                view.redirect(),
-                view.permissionCode(),
-                view.treePath(),
-                view.metadata(),
-                view.sort(),
-                view.isHidden(),
-                view.isEnabled(),
-                view.deletedAt(),
-                view.remark(),
-                view.createdAt(),
-                view.updatedAt(),
-                view.createdBy(),
-                view.updatedBy());
-    }
-
-    private static MenuApiBindItemVO toApiVo(MenuApiBindView view) {
-        return new MenuApiBindItemVO(
-                view.id(),
-                view.name(),
-                view.method(),
-                view.path(),
-                view.permissionCode(),
-                view.apiGroup(),
-                view.isEnabled(),
-                view.bound());
     }
 }

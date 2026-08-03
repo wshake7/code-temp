@@ -17,6 +17,7 @@ import com.wshake.service.user.UserManageModels.CreateUserCommand;
 import com.wshake.service.user.UserManageModels.UpdateUserCommand;
 import com.wshake.service.user.UserManageModels.UserListQuery;
 import com.wshake.service.user.UserManageModels.UserView;
+import io.github.linpeilie.Converter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,6 +47,7 @@ import org.springframework.web.bind.annotation.RestController;
 public final class UserController {
 
     private final SysUserService sysUserService;
+    private final Converter converter;
 
     @GetMapping("/list")
     @Operation(summary = "分页查询用户", description = "data={items,total}；筛选 username/nickname/status/roleId")
@@ -59,7 +61,7 @@ public final class UserController {
         requireLogin();
         PageData<UserView> pageData =
                 sysUserService.pageUsers(UserListQuery.of(page, pageSize, username, nickname, status, roleId));
-        List<UserListItemVO> items = pageData.getItems().stream().map(UserController::toVo).toList();
+        List<UserListItemVO> items = converter.convert(pageData.getItems(), UserListItemVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }
 
@@ -67,18 +69,9 @@ public final class UserController {
     @Operation(summary = "创建用户")
     public Result<UserListItemVO> create(@Valid @RequestBody CreateUserRequest req) {
         requireLogin();
-        UserView view = sysUserService.create(new CreateUserCommand(
-                req.getUsername(),
-                req.getPassword(),
-                req.getNickname(),
-                req.getEmail(),
-                req.getPhone(),
-                req.getAvatar(),
-                req.getLanguageCode(),
-                req.getIsEnabled(),
-                req.getRemark(),
-                req.getRoleIds()));
-        return Result.ok(toVo(view));
+        CreateUserCommand cmd = converter.convert(req, CreateUserCommand.class);
+        UserView view = sysUserService.create(cmd);
+        return Result.ok(converter.convert(view, UserListItemVO.class));
     }
 
     @PutMapping("/{id}")
@@ -86,24 +79,27 @@ public final class UserController {
     public Result<UserListItemVO> update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest req) {
         requireLogin();
         // roleIds：JSON 显式 null 与省略在 Jackson 下均为 null → 不改；传 [] 清空
-        UserView view = sysUserService.update(new UpdateUserCommand(
+        // id 来自路径，映射体只覆盖可改字段
+        UpdateUserCommand body = converter.convert(req, UpdateUserCommand.class);
+        UpdateUserCommand cmd = new UpdateUserCommand(
                 id,
-                req.getNickname(),
-                req.getEmail(),
-                req.getPhone(),
-                req.getAvatar(),
-                req.getLanguageCode(),
-                req.getIsEnabled(),
-                req.getRemark(),
-                req.getRoleIds()));
-        return Result.ok(toVo(view));
+                body.nickname(),
+                body.email(),
+                body.phone(),
+                body.avatar(),
+                body.languageCode(),
+                body.isEnabled(),
+                body.remark(),
+                body.roleIds());
+        UserView view = sysUserService.update(cmd);
+        return Result.ok(converter.convert(view, UserListItemVO.class));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "软删用户")
     public Result<UserListItemVO> delete(@PathVariable Long id) {
         requireLogin();
-        return Result.ok(toVo(sysUserService.softDelete(id)));
+        return Result.ok(converter.convert(sysUserService.softDelete(id), UserListItemVO.class));
     }
 
     @PutMapping("/{id}/status")
@@ -115,7 +111,7 @@ public final class UserController {
         if (status == null) {
             throw BizException.of(ResultCode.PARAM_INVALID, "status 必须为 0 或 1");
         }
-        return Result.ok(toVo(sysUserService.toggleStatus(id, status)));
+        return Result.ok(converter.convert(sysUserService.toggleStatus(id, status), UserListItemVO.class));
     }
 
     @PostMapping("/{id}/password")
@@ -131,25 +127,5 @@ public final class UserController {
         if (!StpUtil.isLogin()) {
             throw AuthException.notLogin();
         }
-    }
-
-    private static UserListItemVO toVo(UserView view) {
-        return new UserListItemVO(
-                view.id(),
-                view.username(),
-                view.nickname(),
-                view.email(),
-                view.phone(),
-                view.avatar(),
-                view.languageCode(),
-                view.lastLoginAt(),
-                view.lastLoginIp(),
-                view.remark(),
-                view.isEnabled(),
-                view.deletedAt(),
-                view.createdAt(),
-                view.updatedAt(),
-                view.roleIds(),
-                view.roleNames());
     }
 }

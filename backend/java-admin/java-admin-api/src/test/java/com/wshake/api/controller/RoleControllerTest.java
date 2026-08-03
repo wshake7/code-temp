@@ -29,6 +29,7 @@ import com.wshake.service.role.RoleManageModels.RoleMenuBindView;
 import com.wshake.service.role.RoleManageModels.RoleView;
 import com.wshake.service.role.RoleManageModels.UpdateRoleCommand;
 import com.wshake.service.role.SysRoleService;
+import io.github.linpeilie.Converter;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,8 @@ import org.mockito.MockedStatic;
 class RoleControllerTest {
 
     private final SysRoleService sysRoleService = mock(SysRoleService.class);
-    private final RoleController controller = new RoleController(sysRoleService);
+    private final Converter converter = new Converter();
+    private final RoleController controller = new RoleController(sysRoleService, converter);
 
     @Test
     void list_whenNotLogin_throwsAuthNotLogin() {

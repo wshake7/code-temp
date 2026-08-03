@@ -1,5 +1,7 @@
 package com.wshake.api.vo;
 
+import com.wshake.service.menu.MenuManageModels.RuntimeMenuRoute;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AutoMapper(target = RuntimeMenuRoute.class)
 @Schema(description = "动态菜单路由")
 public class RuntimeMenuRouteVO {
 

@@ -1,5 +1,7 @@
 package com.wshake.api.vo;
 
+import com.wshake.service.user.UserManageModels.UserView;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AutoMapper(target = UserView.class)
 @Schema(description = "用户信息（管理端）")
 public class UserListItemVO {
 

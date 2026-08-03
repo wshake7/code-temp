@@ -1,5 +1,7 @@
 package com.wshake.api.vo;
 
+import com.wshake.service.role.RoleManageModels.RoleApiBindView;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,6 +15,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AutoMapper(target = RoleApiBindView.class)
 @Schema(description = "角色 API 绑定项")
 public class RoleApiBindItemVO {
 

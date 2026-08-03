@@ -26,6 +26,7 @@ import com.wshake.service.menu.MenuManageModels.MenuListPage;
 import com.wshake.service.menu.MenuManageModels.MenuListQuery;
 import com.wshake.service.menu.MenuManageModels.MenuView;
 import com.wshake.service.menu.SysMenuService;
+import io.github.linpeilie.Converter;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,8 @@ import org.mockito.MockedStatic;
 class MenuControllerTest {
 
     private final SysMenuService sysMenuService = mock(SysMenuService.class);
-    private final MenuController controller = new MenuController(sysMenuService);
+    private final Converter converter = new Converter();
+    private final MenuController controller = new MenuController(sysMenuService, converter);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
