@@ -1,0 +1,21 @@
+package com.wshake.api.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
+import lombok.Data;
+
+/**
+ * i18n 批量 enable|disable|delete。
+ *
+ * @author wshake
+ */
+@Data
+@Schema(description = "i18n 批量操作")
+public class I18nBatchRequest {
+
+    @Schema(description = "enable | disable | delete", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String action;
+
+    @Schema(description = "ID 列表", requiredMode = Schema.RequiredMode.REQUIRED)
+    private List<Long> ids;
+}

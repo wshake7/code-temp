@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Auth + ALTCHA + 三端契约基线
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] i18n-locale 分页/all/CRUD/软删/batch；默认语言约束合理
-- [ ] i18n-translation CRUD/list/by-key/by-locale/batch-upsert 等主路径可用
-- [ ] 导入预览/导入/导出 batch 与 mock 等价或明确降级并三端一致
-- [ ] 三端 i18n API 对齐
-- [ ] HTTP 测试覆盖主路径
+- [x] i18n-locale 分页/all/CRUD/软删/batch；默认语言约束合理
+- [x] i18n-translation CRUD/list/by-key/by-locale/batch-upsert 等主路径可用
+- [x] 导入预览/导入/导出 batch 与 mock 等价或明确降级并三端一致
+- [x] 三端 i18n API 对齐
+- [x] HTTP 测试覆盖主路径
