@@ -1,10 +1,10 @@
 package com.wshake.api.controller;
 
+import com.wshake.api.vo.PublicKeyVO;
 import com.wshake.common.result.Result;
 import com.wshake.infra.crypto.ServerKeyPairProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,7 +28,7 @@ public class EncryptController {
      */
     @GetMapping("/public/key")
     @Operation(summary = "获取加密公钥", description = "返回 data.publicKey（X.509 SPKI base64）")
-    public Result<Map<String, String>> publicKey() {
-        return Result.ok(Map.of("publicKey", serverKeyPairProvider.getPublicKey()));
+    public Result<PublicKeyVO> publicKey() {
+        return Result.ok(new PublicKeyVO(serverKeyPairProvider.getPublicKey()));
     }
 }

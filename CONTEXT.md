@@ -43,3 +43,7 @@ _Avoid_: 仅前端假校验、跳过服务端验证
 **Config Properties**：
 java-admin 配置统一用类型安全的 Properties 类（`@ConfigurationProperties` 按前缀聚合）注入，例如 `AltchaProperties`、`CasbinProperties`、`FlywayMigratorProperties`。
 _Avoid_: 业务或配置代码中直接使用 `@Value` 散落绑定配置键
+
+**API Response VO**：
+Controller 接口成功体 `Result` / `ObjectResult` 的 `data` 优先使用强类型 VO（`com.wshake.api.vo`），字段名与对外 JSON 契约对齐；批量结果、绑定结果、公钥等小对象也建专用 VO，不手写 `Map.of` / `LinkedHashMap` 拼装。
+_Avoid_: `Result<Map<…>>` 作为业务接口返回类型（除非键集合本身动态、无法稳定建模，如动态路由 `meta` 自由形态；Service/Repository 内部聚合 Map 不在此限）

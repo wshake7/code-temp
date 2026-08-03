@@ -7,7 +7,10 @@ import com.wshake.api.dto.CreateMenuRequest;
 import com.wshake.api.dto.MenuApiBindRequest;
 import com.wshake.api.dto.MenuBatchRequest;
 import com.wshake.api.dto.UpdateMenuRequest;
+import com.wshake.api.vo.ApisByMenusResultVO;
 import com.wshake.api.vo.MenuApiBindItemVO;
+import com.wshake.api.vo.MenuApiBindResultVO;
+import com.wshake.api.vo.MenuBatchResultVO;
 import com.wshake.api.vo.MenuListItemVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
@@ -28,9 +31,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -136,15 +137,11 @@ public final class MenuController {
 
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
-    public Result<Map<String, Object>> batch(@RequestBody MenuBatchRequest req) {
+    public Result<MenuBatchResultVO> batch(@RequestBody MenuBatchRequest req) {
         requireLogin();
         MenuBatchResult result =
                 sysMenuService.batch(new MenuBatchCommand(req.getAction(), req.getIds()));
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("action", result.action());
-        data.put("affected", result.affected());
-        data.put("ids", result.ids());
-        return Result.ok(data);
+        return Result.ok(new MenuBatchResultVO(result.action(), result.affected(), result.ids()));
     }
 
     @GetMapping("/{id}/apis")
@@ -158,25 +155,19 @@ public final class MenuController {
 
     @PostMapping("/{id}/apis")
     @Operation(summary = "全量替换菜单-API 绑定")
-    public Result<Map<String, Object>> setMenuApis(
+    public Result<MenuApiBindResultVO> setMenuApis(
             @PathVariable Long id, @RequestBody MenuApiBindRequest req) {
         requireLogin();
         MenuApiBindResult result = sysMenuService.setMenuApis(id, req.getApiIds());
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("menuId", result.menuId());
-        data.put("apiIds", result.apiIds());
-        return Result.ok(data);
+        return Result.ok(new MenuApiBindResultVO(result.menuId(), result.apiIds()));
     }
 
     @PostMapping("/apis-by-menus")
     @Operation(summary = "按菜单聚合 API IDs")
-    public Result<Map<String, Object>> apisByMenus(@RequestBody ApisByMenusRequest req) {
+    public Result<ApisByMenusResultVO> apisByMenus(@RequestBody ApisByMenusRequest req) {
         requireLogin();
         var result = sysMenuService.apisByMenus(req.getMenuIds());
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("menuIds", result.menuIds());
-        data.put("apiIds", result.apiIds());
-        return Result.ok(data);
+        return Result.ok(new ApisByMenusResultVO(result.menuIds(), result.apiIds()));
     }
 
     @GetMapping("/name-exists")

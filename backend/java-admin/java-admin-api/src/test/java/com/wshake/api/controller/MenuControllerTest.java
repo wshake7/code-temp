@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.wshake.api.dto.CreateMenuRequest;
 import com.wshake.api.dto.MenuApiBindRequest;
 import com.wshake.api.dto.MenuBatchRequest;
+import com.wshake.api.vo.MenuApiBindResultVO;
+import com.wshake.api.vo.MenuBatchResultVO;
 import com.wshake.api.vo.MenuListItemVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
@@ -26,7 +28,6 @@ import com.wshake.service.menu.MenuManageModels.MenuView;
 import com.wshake.service.menu.SysMenuService;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -113,8 +114,8 @@ class MenuControllerTest {
 
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::isLogin).thenReturn(true);
-            Result<Map<String, Object>> result = controller.batch(req);
-            assertThat(result.getData().get("affected")).isEqualTo(2);
+            Result<MenuBatchResultVO> result = controller.batch(req);
+            assertThat(result.getData().getAffected()).isEqualTo(2);
         }
     }
 
@@ -127,9 +128,9 @@ class MenuControllerTest {
 
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::isLogin).thenReturn(true);
-            Result<Map<String, Object>> result = controller.setMenuApis(5L, req);
-            assertThat(result.getData().get("menuId")).isEqualTo(5L);
-            assertThat(result.getData().get("apiIds")).isEqualTo(List.of(9L));
+            Result<MenuApiBindResultVO> result = controller.setMenuApis(5L, req);
+            assertThat(result.getData().getMenuId()).isEqualTo(5L);
+            assertThat(result.getData().getApiIds()).isEqualTo(List.of(9L));
         }
     }
 

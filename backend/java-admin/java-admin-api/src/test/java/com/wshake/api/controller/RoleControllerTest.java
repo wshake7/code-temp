@@ -13,8 +13,10 @@ import com.wshake.api.dto.RoleApiBindRequest;
 import com.wshake.api.dto.RoleMenuBindRequest;
 import com.wshake.api.dto.UpdateRoleRequest;
 import com.wshake.api.vo.RoleApiBindItemVO;
+import com.wshake.api.vo.RoleApiBindResultVO;
 import com.wshake.api.vo.RoleListItemVO;
 import com.wshake.api.vo.RoleMenuBindItemVO;
+import com.wshake.api.vo.RoleMenuBindResultVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.Result;
@@ -29,7 +31,6 @@ import com.wshake.service.role.RoleManageModels.UpdateRoleCommand;
 import com.wshake.service.role.SysRoleService;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -152,11 +153,11 @@ class RoleControllerTest {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::isLogin).thenReturn(true);
 
-            Result<Map<String, Object>> result = controller.setApis(2L, req);
+            Result<RoleApiBindResultVO> result = controller.setApis(2L, req);
 
             assertThat(result.getCode()).isEqualTo(0);
-            assertThat(result.getData()).containsEntry("roleId", 2L);
-            assertThat(result.getData().get("apiIds")).isEqualTo(List.of(10L, 11L));
+            assertThat(result.getData().getRoleId()).isEqualTo(2L);
+            assertThat(result.getData().getApiIds()).isEqualTo(List.of(10L, 11L));
         }
     }
 
@@ -170,10 +171,10 @@ class RoleControllerTest {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::isLogin).thenReturn(true);
 
-            Result<Map<String, Object>> result = controller.setMenus(2L, req);
+            Result<RoleMenuBindResultVO> result = controller.setMenus(2L, req);
 
             assertThat(result.getCode()).isEqualTo(0);
-            assertThat(result.getData()).containsEntry("roleId", 2L);
+            assertThat(result.getData().getRoleId()).isEqualTo(2L);
         }
     }
 

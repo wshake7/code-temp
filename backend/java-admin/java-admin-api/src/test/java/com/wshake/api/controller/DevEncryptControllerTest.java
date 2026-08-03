@@ -8,12 +8,12 @@ import static org.mockito.Mockito.when;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
+import com.wshake.api.vo.RsaKeyPairVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
 import com.wshake.infra.crypto.ServerKeyPairProvider;
 import com.wshake.infra.crypto.SessionEncryptKeys;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
@@ -31,13 +31,11 @@ class DevEncryptControllerTest {
         when(provider.getPrivateKeyPem()).thenReturn("-----BEGIN PRIVATE KEY-----\nX\n-----END PRIVATE KEY-----");
         DevEncryptController controller = new DevEncryptController(provider);
 
-        Result<Map<String, String>> result = controller.keyPair();
+        Result<RsaKeyPairVO> result = controller.keyPair();
 
         assertThat(result.getCode()).isZero();
-        assertThat(result.getData())
-                .containsEntry("publicKey", "BASE64_PUBLIC_KEY")
-                .containsKey("privateKey");
-        assertThat(result.getData().get("privateKey")).contains("BEGIN PRIVATE KEY");
+        assertThat(result.getData().getPublicKey()).isEqualTo("BASE64_PUBLIC_KEY");
+        assertThat(result.getData().getPrivateKey()).contains("BEGIN PRIVATE KEY");
     }
 
     @Test
@@ -55,12 +53,12 @@ class DevEncryptControllerTest {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(() -> StpUtil.getTokenSessionByToken("tok-1")).thenReturn(tokenSession);
 
-            Result<Map<String, String>> result = controller.sessionKey(request);
+            Result<RsaKeyPairVO> result = controller.sessionKey(request);
 
             assertThat(result.getCode()).isZero();
-            assertThat(result.getData())
-                    .containsEntry("publicKey", "SESSION_PUBLIC")
-                    .containsEntry("privateKey", "-----BEGIN PRIVATE KEY-----\nSESSION\n-----END PRIVATE KEY-----");
+            assertThat(result.getData().getPublicKey()).isEqualTo("SESSION_PUBLIC");
+            assertThat(result.getData().getPrivateKey())
+                    .isEqualTo("-----BEGIN PRIVATE KEY-----\nSESSION\n-----END PRIVATE KEY-----");
         }
     }
 

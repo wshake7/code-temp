@@ -6,8 +6,10 @@ import com.wshake.api.dto.RoleApiBindRequest;
 import com.wshake.api.dto.RoleMenuBindRequest;
 import com.wshake.api.dto.UpdateRoleRequest;
 import com.wshake.api.vo.RoleApiBindItemVO;
+import com.wshake.api.vo.RoleApiBindResultVO;
 import com.wshake.api.vo.RoleListItemVO;
 import com.wshake.api.vo.RoleMenuBindItemVO;
+import com.wshake.api.vo.RoleMenuBindResultVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.Result;
@@ -25,9 +27,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -119,14 +119,11 @@ public final class RoleController {
 
     @PostMapping("/{id}/menus")
     @Operation(summary = "全量替换角色菜单绑定")
-    public Result<Map<String, Object>> setMenus(
+    public Result<RoleMenuBindResultVO> setMenus(
             @PathVariable Long id, @Valid @RequestBody RoleMenuBindRequest req) {
         requireLogin();
         RoleMenuBindResult result = sysRoleService.replaceMenus(id, req.getMenuIds());
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("roleId", result.roleId());
-        data.put("menuIds", result.menuIds());
-        return Result.ok(data);
+        return Result.ok(new RoleMenuBindResultVO(result.roleId(), result.menuIds()));
     }
 
     @GetMapping("/{id}/apis")
@@ -140,14 +137,11 @@ public final class RoleController {
 
     @PostMapping("/{id}/apis")
     @Operation(summary = "全量替换角色 API 绑定", description = "变更后同步受影响用户的 Casbin 策略")
-    public Result<Map<String, Object>> setApis(
+    public Result<RoleApiBindResultVO> setApis(
             @PathVariable Long id, @Valid @RequestBody RoleApiBindRequest req) {
         requireLogin();
         RoleApiBindResult result = sysRoleService.replaceApis(id, req.getApiIds());
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("roleId", result.roleId());
-        data.put("apiIds", result.apiIds());
-        return Result.ok(data);
+        return Result.ok(new RoleApiBindResultVO(result.roleId(), result.apiIds()));
     }
 
     private static void requireLogin() {

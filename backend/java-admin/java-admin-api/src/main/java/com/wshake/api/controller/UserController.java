@@ -5,6 +5,7 @@ import com.wshake.api.dto.CreateUserRequest;
 import com.wshake.api.dto.ResetPasswordRequest;
 import com.wshake.api.dto.ToggleUserStatusRequest;
 import com.wshake.api.dto.UpdateUserRequest;
+import com.wshake.api.vo.IdOnlyVO;
 import com.wshake.api.vo.UserListItemVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.exception.BizException;
@@ -21,7 +22,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -120,11 +120,11 @@ public final class UserController {
 
     @PostMapping("/{id}/password")
     @Operation(summary = "重置密码", description = "BCrypt 存储；响应仅 {id}")
-    public Result<Map<String, Long>> resetPassword(
+    public Result<IdOnlyVO> resetPassword(
             @PathVariable Long id, @Valid @RequestBody ResetPasswordRequest req) {
         requireLogin();
         Long userId = sysUserService.resetPassword(id, req.getPassword());
-        return Result.ok(Map.of("id", userId));
+        return Result.ok(new IdOnlyVO(userId));
     }
 
     private static void requireLogin() {

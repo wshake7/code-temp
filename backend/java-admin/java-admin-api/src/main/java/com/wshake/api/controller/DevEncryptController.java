@@ -1,5 +1,6 @@
 package com.wshake.api.controller;
 
+import com.wshake.api.vo.RsaKeyPairVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
 import com.wshake.infra.crypto.ServerKeyPairProvider;
@@ -7,7 +8,6 @@ import com.wshake.infra.crypto.SessionEncryptKeys;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,10 +37,9 @@ public class DevEncryptController {
     @Operation(
             summary = "【dev only】获取全局完整密钥对",
             description = "仅 spring.profiles.active=dev 可用；返回 data.publicKey + data.privateKey")
-    public Result<Map<String, String>> keyPair() {
-        return Result.ok(Map.of(
-                "publicKey", serverKeyPairProvider.getPublicKey(),
-                "privateKey", serverKeyPairProvider.getPrivateKeyPem()));
+    public Result<RsaKeyPairVO> keyPair() {
+        return Result.ok(new RsaKeyPairVO(
+                serverKeyPairProvider.getPublicKey(), serverKeyPairProvider.getPrivateKeyPem()));
     }
 
     /**
@@ -52,7 +51,7 @@ public class DevEncryptController {
     @Operation(
             summary = "【dev only】获取当前 token 会话专属密钥对",
             description = "须带 Authorization: Bearer <accessToken>；返回 data.publicKey + data.privateKey")
-    public Result<Map<String, String>> sessionKey(HttpServletRequest request) {
+    public Result<RsaKeyPairVO> sessionKey(HttpServletRequest request) {
         String token = SessionEncryptKeys.extractBearerToken(request);
         if (token == null) {
             throw AuthException.notLogin();
@@ -61,8 +60,7 @@ public class DevEncryptController {
         if (pair == null) {
             throw AuthException.notLogin();
         }
-        return Result.ok(Map.of(
-                "publicKey", pair.publicKey() == null ? "" : pair.publicKey(),
-                "privateKey", pair.privateKeyPem()));
+        return Result.ok(new RsaKeyPairVO(
+                pair.publicKey() == null ? "" : pair.publicKey(), pair.privateKeyPem()));
     }
 }

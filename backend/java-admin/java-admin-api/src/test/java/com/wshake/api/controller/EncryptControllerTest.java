@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.wshake.api.vo.PublicKeyVO;
 import com.wshake.common.result.Result;
 import com.wshake.infra.crypto.ServerKeyPairProvider;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,9 +22,9 @@ class EncryptControllerTest {
         when(provider.getPublicKey()).thenReturn("BASE64_PUBLIC_KEY");
         EncryptController controller = new EncryptController(provider);
 
-        Result<Map<String, String>> result = controller.publicKey();
+        Result<PublicKeyVO> result = controller.publicKey();
 
         assertThat(result.getCode()).isZero();
-        assertThat(result.getData()).containsEntry("publicKey", "BASE64_PUBLIC_KEY");
+        assertThat(result.getData().getPublicKey()).isEqualTo("BASE64_PUBLIC_KEY");
     }
 }

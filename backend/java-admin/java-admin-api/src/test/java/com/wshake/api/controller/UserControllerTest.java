@@ -12,6 +12,7 @@ import com.wshake.api.dto.CreateUserRequest;
 import com.wshake.api.dto.ResetPasswordRequest;
 import com.wshake.api.dto.ToggleUserStatusRequest;
 import com.wshake.api.dto.UpdateUserRequest;
+import com.wshake.api.vo.IdOnlyVO;
 import com.wshake.api.vo.UserListItemVO;
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.PageData;
@@ -23,7 +24,6 @@ import com.wshake.service.user.UserManageModels.UserListQuery;
 import com.wshake.service.user.UserManageModels.UserView;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -148,8 +148,8 @@ class UserControllerTest {
 
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::isLogin).thenReturn(true);
-            Result<Map<String, Long>> result = controller.resetPassword(2L, req);
-            assertThat(result.getData()).containsEntry("id", 2L);
+            Result<IdOnlyVO> result = controller.resetPassword(2L, req);
+            assertThat(result.getData().getId()).isEqualTo(2L);
         }
     }
 
