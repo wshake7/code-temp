@@ -4,6 +4,10 @@ import i18next from 'i18next';
 import { loginApi, getUserInfoApi, logoutApi } from '@/api/rest/auth';
 import type { UserInfo, LoginRequest } from '@/api/rest/types';
 import { queryClient } from '@/core/query-client';
+import {
+  clearCachedPublicKey,
+  setCachedPublicKey,
+} from '@/core/transport/rest/security';
 import { clearAccessMenusCache } from '@/utils/menu-cache';
 
 const STORAGE_KEY = 'auth-storage';
@@ -141,12 +145,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ loginLoading: true, error: null });
 
     try {
-      // 1. 登录（明文密码），只持久化 accessToken
+      // 1. 登录（明文密码），持久化 accessToken；缓存会话专属 publicKey
       const response = await loginApi(params);
       const accessToken = response.accessToken;
 
       set({ accessToken });
       persistState({ accessToken }, remember);
+      if (response.publicKey) {
+        setCachedPublicKey(response.publicKey);
+      }
 
       // 2. 拉取完整用户信息（vben 形态）
       let userInfo: UserInfo | null = null;
@@ -192,6 +199,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       queryClient.clear();
       clearPersisted();
       clearAccessMenusCache();
+      clearCachedPublicKey();
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem('user-storage');
       }
@@ -213,6 +221,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     queryClient.clear();
     clearPersisted();
     clearAccessMenusCache();
+    clearCachedPublicKey();
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('user-storage');
     }

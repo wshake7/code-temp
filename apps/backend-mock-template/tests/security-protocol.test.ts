@@ -73,6 +73,70 @@ describe("mock security protocol seam", () => {
     expect(enc.length).toBeGreaterThan(0);
   });
 
+  it("whitelists java dev session-key path (align SecurityPathMatcher)", () => {
+    expect(isSecurityWhitelisted("/api/encrypt/dev/session-key")).toBe(true);
+    expect(isSecurityWhitelisted("/api/encrypt/dev/key-pair")).toBe(true);
+    expect(isSecurityWhitelisted("/api/auth/login")).toBe(false);
+  });
+
+  it("session private key decrypts when deps use session keypair", () => {
+    const sessionPair = generateRsaKeyPair();
+    const aesKey = generateAesKey();
+    const encryptedKey = rsaEncrypt(aesKey, sessionPair.publicKeyBase64);
+    const now = Date.now();
+    const plainBody = JSON.stringify({ ping: true });
+
+    const buildEnc = (requestId: string) => {
+      const aad = buildAad({
+        [SECURITY_HEADERS.REQUEST_ID]: requestId,
+        [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+      });
+      return aesEncrypt(plainBody, aesKey, aad);
+    };
+
+    // 全局钥无法解密会话公钥加密的 AES key
+    const encGlobal = buildEnc("session-key-global-fail");
+    const withGlobal = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/menu/all",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_SIGNATURE]: encGlobal.tagIv,
+          [SECURITY_HEADERS.REQUEST_ID]: "session-key-global-fail",
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: encGlobal.ciphertext,
+        contentType: "application/json",
+        nowMs: now,
+      },
+      deps,
+    );
+    expect(withGlobal.ok).toBe(false);
+
+    // 换新 requestId，避免 Nonce 冲突
+    const encSession = buildEnc("session-key-ok");
+    const withSession = processSecurityRequest(
+      {
+        method: "POST",
+        path: "/api/menu/all",
+        headers: {
+          [SECURITY_HEADERS.REQUEST_ENCRYPTED_KEY]: encryptedKey,
+          [SECURITY_HEADERS.REQUEST_SIGNATURE]: encSession.tagIv,
+          [SECURITY_HEADERS.REQUEST_ID]: "session-key-ok",
+          [SECURITY_HEADERS.REQUEST_TIMESTAMP]: String(now),
+        },
+        body: encSession.ciphertext,
+        contentType: "application/json",
+        nowMs: now,
+      },
+      { ...deps, privateKeyPem: sessionPair.privateKeyPem },
+    );
+    expect(withSession.ok).toBe(true);
+    if (!withSession.ok) return;
+    expect(withSession.body).toBe(plainBody);
+  });
+
   it("encrypt on: encrypted request succeeds and response can be encrypted", () => {
     const aesKey = generateAesKey();
     const encryptedKey = rsaEncrypt(aesKey, keyPair.publicKeyBase64);

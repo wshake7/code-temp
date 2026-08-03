@@ -7,6 +7,7 @@ const WHITELIST_EXACT = new Set([
   "/api/encrypt/public/key",
   // 与 Java 对齐（dev-only 接口；mock 本身不暴露私钥）
   "/api/encrypt/dev/key-pair",
+  "/api/encrypt/dev/session-key",
   "/doc.html",
   "/favicon.ico",
   "/error",

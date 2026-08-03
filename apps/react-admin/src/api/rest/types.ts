@@ -14,6 +14,8 @@ export interface LoginResponse {
   roles: string[];
   homePath?: string;
   accessToken: string;
+  /** 会话专属 RSA 公钥（SPKI base64）；登录后客户端加密应使用此钥 */
+  publicKey?: string;
 }
 
 export type AccessCode = string;

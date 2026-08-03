@@ -6,9 +6,9 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 
 ## Auth（sa-token 风格单 token）
 
-- 登录 `POST /api/auth/login` 只返回 `accessToken`（opaque UUID 会话）
+- 登录 `POST /api/auth/login` 返回 `accessToken` + 会话专属 `publicKey`（opaque UUID 会话）
 - 请求头：`Authorization: Bearer <token>`
-- 服务端内存会话表：每次合法校验会**滑动续期**（后端自行续期，无 `/auth/refresh`）
+- 服务端内存会话表：每次合法校验会**滑动续期**（后端自行续期，无 `/auth/refresh`）；会话绑定专属 RSA 私钥用于 Encrypt 解密
 - 登出 `POST /api/auth/logout` 作废当前 Bearer 会话
 
 环境变量（可选，开发默认见 `.env.development`，`pnpm start` / nitro dev 自动加载）：
@@ -22,8 +22,10 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 | `AUTH_JAVA_USER_FALLBACK`         | `root`             | `mixture` 下 RBAC 使用的 mock 用户                                   |
 | `AUTH_JAVA_INTROSPECT_URL`        | （空，关闭）       | 仅 `mock` 且显式配置时才对未知 token 调 java 内省                    |
 | `AUTH_JAVA_INTROSPECT_TIMEOUT_MS` | `3000`             | 内省 HTTP 超时（毫秒）                                               |
-| `SECURITY_JAVA_KEY_PAIR_URL`      | （空，不访问）     | 填完整 URL 才从 java 拉密钥对；未填绝不请求                          |
-| `SECURITY_JAVA_KEY_PAIR_TIMEOUT_MS` | `3000`           | 拉密钥 HTTP 超时（毫秒）                                             |
+| `SECURITY_JAVA_KEY_PAIR_URL`        | （空，不访问）     | 填完整 URL 才从 java 拉**全局**密钥对；未填绝不请求                  |
+| `SECURITY_JAVA_KEY_PAIR_TIMEOUT_MS` | `3000`           | 拉全局密钥 HTTP 超时（毫秒）                                         |
+| `SECURITY_JAVA_SESSION_KEY_URL`     | （空，不访问）     | 填完整 URL 才按 Bearer 从 java 拉**会话专属**密钥；未填绝不请求      |
+| `SECURITY_JAVA_SESSION_KEY_TIMEOUT_MS` | `3000`        | 拉会话密钥 HTTP 超时（毫秒）                                         |
 
 修改 `.env` / `.env.development` 后需**重启 mock**。进程重启后会话清空（mock 可接受）。
 
@@ -71,14 +73,24 @@ pnpm -C apps/backend-mock-template test
 AUTH_MODE=mixture
 AUTH_JAVA_USER_FALLBACK=root
 SECURITY_JAVA_KEY_PAIR_URL=http://localhost:4080/api/encrypt/dev/key-pair
+SECURITY_JAVA_SESSION_KEY_URL=http://localhost:4080/api/encrypt/dev/session-key
 ```
 
-### 加密密钥：`SECURITY_JAVA_KEY_PAIR_URL`
+### 加密密钥
+
+#### 全局：`SECURITY_JAVA_KEY_PAIR_URL`
 
 - **未配置**：不访问 java，本地自生成或 `SECURITY_RSA_*`
-- **已配置**：`0.security` 首次请求时 GET 该地址 adopt 密钥（java 仅 dev：`/api/encrypt/dev/key-pair`）
+- **已配置**：`0.security` 首次请求时 GET 该地址 adopt **全局**密钥（java 仅 dev：`/api/encrypt/dev/key-pair`）
+- 用于登录前（前端尚未拿到会话 publicKey）与无会话回退
 
-前端公钥走 java 时，mixture 下务必配置该 URL，否则 mock 解密会 `1006 密钥错误`。
+#### 会话专属：`SECURITY_JAVA_SESSION_KEY_URL`
+
+- **未配置**：仅 mock 本地登录写入的会话钥可用
+- **已配置**：请求带 Bearer 且本地无会话钥时，GET 该 URL（携带 `Authorization`）拉取 java TokenSession 密钥并缓存（java 仅 dev：`/api/encrypt/dev/session-key`）
+- hybrid 下登录走 java、业务走 mock 时**必须配置**，否则登录后前端用会话公钥加密会在 mock 上 `1006 密钥错误`
+
+登录成功后客户端应改用响应中的 `publicKey` 加密后续请求（与 java-admin / harness Go 一致）。
 
 ## Running the app
 

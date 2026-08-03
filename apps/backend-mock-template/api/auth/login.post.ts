@@ -85,7 +85,8 @@ export default defineEventHandler(async (event) => {
 
   const roles = getUserRoleCodes(sysUser.id);
 
-  const accessToken = createSession({
+  // 对齐 java-admin：每次登录生成会话专属 RSA，返回 publicKey 供前端后续加密
+  const { accessToken, publicKey } = createSession({
     id: sysUser.id,
     username: sysUser.username,
   });
@@ -97,5 +98,6 @@ export default defineEventHandler(async (event) => {
     roles,
     homePath: "/analytics",
     accessToken,
+    publicKey,
   });
 });

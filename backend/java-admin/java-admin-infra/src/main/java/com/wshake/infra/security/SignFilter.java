@@ -85,7 +85,7 @@ public class SignFilter extends OncePerRequestFilter {
 
         String aesKeyBase64;
         try {
-            String privateKeyPem = serverKeyPairProvider.getPrivateKeyPem();
+            String privateKeyPem = SessionEncryptKeys.resolvePrivateKeyPem(request, serverKeyPairProvider);
             aesKeyBase64 = cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
         } catch (Exception e) {
             log.debug("Sign 路径 RSA 解密 AES key 失败: {}", e.getMessage());

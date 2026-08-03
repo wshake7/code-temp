@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.api.dto.LoginRequest;
 import com.wshake.api.vo.LoginResponse;
@@ -25,7 +26,7 @@ import org.mockito.MockedStatic;
 /**
  * {@link AuthController} 行为测试（standalone，不启 Spring 容器）。
  *
- * <p>验证登录成功响应含 accessToken、失败透传 AuthException。
+ * <p>验证登录成功响应含 accessToken + 会话 publicKey、失败透传 AuthException。
  *
  * @author wshake
  */
@@ -37,7 +38,7 @@ class AuthControllerTest {
     private final HttpServletRequest request = mock(HttpServletRequest.class);
 
     @Test
-    void login_success_returnsAccessTokenAndUserSummary() {
+    void login_success_returnsAccessTokenAndSessionPublicKey() {
         SysUser user = new SysUser();
         user.setId(1L);
         user.setUsername("root");
@@ -51,9 +52,11 @@ class AuthControllerTest {
         when(request.getRemoteAddr()).thenReturn("10.0.0.1");
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
 
+        SaSession tokenSession = mock(SaSession.class);
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(() -> StpUtil.login(1L)).thenAnswer(inv -> null);
             stp.when(StpUtil::getTokenValue).thenReturn("token-abc");
+            stp.when(StpUtil::getTokenSession).thenReturn(tokenSession);
 
             Result<LoginResponse> result = controller.login(loginReq("root", "123456", "altcha-ok"), request);
 
@@ -64,7 +67,13 @@ class AuthControllerTest {
             assertThat(result.getData().getRealName()).isEqualTo("Root");
             assertThat(result.getData().getRoles()).containsExactly("root");
             assertThat(result.getData().getHomePath()).isEqualTo("/analytics");
+            assertThat(result.getData().getPublicKey()).isNotBlank();
             stp.verify(() -> StpUtil.login(1L));
+            // 私钥与公钥均写入 TokenSession
+            org.mockito.Mockito.verify(tokenSession)
+                    .set(org.mockito.ArgumentMatchers.eq("encryptPrivateKey"), org.mockito.ArgumentMatchers.anyString());
+            org.mockito.Mockito.verify(tokenSession)
+                    .set(org.mockito.ArgumentMatchers.eq("encryptPublicKey"), org.mockito.ArgumentMatchers.anyString());
         }
     }
 

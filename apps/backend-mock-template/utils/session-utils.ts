@@ -6,6 +6,7 @@ import { getHeader } from "h3";
 import { randomUUID } from "node:crypto";
 
 import { ensureUserSeeds, getMockSysUserList, getUserRoleCodes } from "./mock-data";
+import { generateRsaKeyPair } from "./security/crypto";
 
 /** 默认 30 天（秒），对齐 java-admin sa-token.timeout */
 const DEFAULT_TIMEOUT_SECONDS = 2592000;
@@ -19,6 +20,16 @@ interface SessionRecord {
   expiresAt: number;
   /** 是否由 java Sa-Token 内省登记（hybrid 交叉联调） */
   foreign?: boolean;
+  /** 会话专属 RSA 公钥 SPKI base64（登录返回；纯 mock 本地生成） */
+  publicKeyBase64?: string;
+  /** 会话专属 RSA 私钥 PEM（解密用） */
+  privateKeyPem?: string;
+}
+
+export interface CreateSessionResult {
+  accessToken: string;
+  /** 会话专属公钥（SPKI base64） */
+  publicKey: string;
 }
 
 /** token → 会话 */
@@ -170,11 +181,11 @@ function findActiveTokenByUserId(userId: number): string | null {
 }
 
 /**
- * 登录创建会话，返回 accessToken。
- * - is-share=true：复用该用户未过期 token
+ * 登录创建会话，返回 accessToken + 会话专属 publicKey。
+ * - is-share=true：复用该用户未过期 token（及已有会话钥）
  * - is-concurrent=false：踢掉该用户其它会话
  */
-export function createSession(user: Pick<UserInfo, "id" | "username">): string {
+export function createSession(user: Pick<UserInfo, "id" | "username">): CreateSessionResult {
   const userId = Number(user.id);
   const username = user.username;
 
@@ -184,9 +195,18 @@ export function createSession(user: Pick<UserInfo, "id" | "username">): string {
       const record = sessions.get(existing);
       if (record) {
         record.expiresAt = now() + timeoutMs();
+        // 共享 token 时若缺会话钥则补生成
+        if (!record.privateKeyPem || !record.publicKeyBase64) {
+          const pair = generateRsaKeyPair();
+          record.privateKeyPem = pair.privateKeyPem;
+          record.publicKeyBase64 = pair.publicKeyBase64;
+        }
         sessions.set(existing, record);
+        return {
+          accessToken: existing,
+          publicKey: record.publicKeyBase64!,
+        };
       }
-      return existing;
     }
   }
 
@@ -194,13 +214,58 @@ export function createSession(user: Pick<UserInfo, "id" | "username">): string {
     revokeByUserId(userId);
   }
 
+  const pair = generateRsaKeyPair();
   const token = randomUUID();
   sessions.set(token, {
     userId,
     username,
     expiresAt: now() + timeoutMs(),
+    publicKeyBase64: pair.publicKeyBase64,
+    privateKeyPem: pair.privateKeyPem,
   });
-  return token;
+  return {
+    accessToken: token,
+    publicKey: pair.publicKeyBase64,
+  };
+}
+
+/** 读取本地会话私钥 PEM（无则 null） */
+export function getSessionPrivateKeyPem(token: string | null | undefined): string | null {
+  if (!token) return null;
+  const record = sessions.get(token);
+  if (!record || record.expiresAt <= now()) return null;
+  return record.privateKeyPem?.trim() || null;
+}
+
+/**
+ * 写入/更新会话专属密钥（java 拉取或 hybrid adopt 后缓存）。
+ * 若本地尚无会话记录，创建 foreign 占位（仅密钥，RBAC 仍走 mixture fallback）。
+ */
+export function adoptSessionEncryptKeys(
+  token: string,
+  keys: { publicKeyBase64: string; privateKeyPem: string },
+  user?: { id: number; username: string },
+): void {
+  const existing = sessions.get(token);
+  if (existing) {
+    existing.publicKeyBase64 = keys.publicKeyBase64;
+    existing.privateKeyPem = keys.privateKeyPem;
+    existing.expiresAt = now() + timeoutMs();
+    sessions.set(token, existing);
+    return;
+  }
+  const fallbackUser = user ?? {
+    id: findSysUserByUsername(getJavaUserFallback())?.id ?? 0,
+    username: getJavaUserFallback(),
+  };
+  sessions.set(token, {
+    userId: Number(fallbackUser.id),
+    username: fallbackUser.username,
+    expiresAt: now() + timeoutMs(),
+    foreign: true,
+    publicKeyBase64: keys.publicKeyBase64,
+    privateKeyPem: keys.privateKeyPem,
+  });
 }
 
 /** 将已校验的外部 token 登记为本地会话（绑定 mock 用户 id/username） */
@@ -360,7 +425,7 @@ export function revokeAccessToken(event: H3Event<EventHandlerRequest>): void {
   revokeSession(extractBearerToken(event));
 }
 
-/** 兼容旧命名：登录签发 token */
+/** 兼容旧命名：登录签发 token（仅 token 字符串） */
 export function generateAccessToken(user: UserInfo): string {
-  return createSession(user);
+  return createSession(user).accessToken;
 }

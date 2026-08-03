@@ -34,4 +34,11 @@ public class LoginResponse {
 
     @Schema(description = "默认首页路径", example = "/analytics")
     private String homePath;
+
+    /**
+     * 本次登录会话专属 RSA 公钥（X.509 SPKI base64）。
+     * 登录成功后客户端应用此公钥加密 AES 会话密钥；服务端用 TokenSession 私钥解密。
+     */
+    @Schema(description = "会话专属加密公钥（SPKI base64）")
+    private String publicKey;
 }

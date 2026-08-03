@@ -15,9 +15,14 @@ import {
 
 import { getSecurityConfig } from "~/utils/security/config";
 import { ensureJavaKeyPairSynced } from "~/utils/security/java-key-sync";
+import { ensureJavaSessionPrivateKey } from "~/utils/security/java-session-key-sync";
 import { getEncryptKeyPair } from "~/utils/security/keys";
 import { globalNonceStore } from "~/utils/security/nonce-store";
 import { processSecurityRequest } from "~/utils/security/process-request";
+import {
+  extractBearerToken,
+  getSessionPrivateKeyPem,
+} from "~/utils/session-utils";
 
 export interface SecurityContext {
   responseAesKeyBase64?: string;
@@ -58,9 +63,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = getSecurityConfig();
-  // 仅当 SECURITY_JAVA_KEY_PAIR_URL 已配置时才拉 java 密钥；否则本地钥
+  // 仅当 SECURITY_JAVA_KEY_PAIR_URL 已配置时才拉 java 全局密钥；否则本地钥
   await ensureJavaKeyPairSynced();
   const keys = getEncryptKeyPair();
+
+  // 会话专属钥：本地 mock 登录会话 → 可选 SECURITY_JAVA_SESSION_KEY_URL → 回退全局
+  const bearer = extractBearerToken(event);
+  let privateKeyPem =
+    getSessionPrivateKeyPem(bearer) ??
+    (await ensureJavaSessionPrivateKey(bearer)) ??
+    keys.privateKeyPem;
 
   let body = "";
   const contentType = getHeader(event, "content-type");
@@ -96,7 +108,7 @@ export default defineEventHandler(async (event) => {
     },
     {
       config,
-      privateKeyPem: keys.privateKeyPem,
+      privateKeyPem,
       nonceStore: globalNonceStore,
     },
   );

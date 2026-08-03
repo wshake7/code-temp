@@ -87,7 +87,8 @@ public class EncryptFilter extends OncePerRequestFilter {
             return;
         }
 
-        String privateKeyPem = serverKeyPairProvider.getPrivateKeyPem();
+        // 已登录：会话专属私钥；未登录/无会话钥：全局私钥（登录前公钥路径等）
+        String privateKeyPem = SessionEncryptKeys.resolvePrivateKeyPem(request, serverKeyPairProvider);
         String aesKeyBase64;
         try {
             aesKeyBase64 = cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));

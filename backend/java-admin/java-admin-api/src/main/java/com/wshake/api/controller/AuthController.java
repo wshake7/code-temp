@@ -11,6 +11,7 @@ import com.wshake.common.result.ResultCode;
 import com.wshake.service.auth.LoginClientMeta;
 import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;
+import com.wshake.infra.security.SessionEncryptKeys;
 import com.wshake.service.user.AuthService;
 import com.wshake.service.user.SysUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,7 +54,7 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(
             summary = "账号密码 + ALTCHA 登录",
-            description = "校验 ALTCHA 与凭证后签发 Sa-Token；data.accessToken 供后续 Authorization: Bearer")
+            description = "校验 ALTCHA 与凭证后签发 Sa-Token；返回 accessToken 与本次会话专属 publicKey（SPKI base64）")
     @ApiResponses(
             value = {
                 @ApiResponse(responseCode = "200", description = "登录成功"),
@@ -78,8 +79,16 @@ public class AuthController {
         SysUser user = result.user();
         StpUtil.login(user.getId());
         String token = StpUtil.getTokenValue();
+        // 对齐 Go PwdLogin：每 token 一对 RSA，私钥进 TokenSession，公钥回客户端
+        SessionEncryptKeys.KeyPairStrings sessionKeys = SessionEncryptKeys.bindGeneratedKeyPairToCurrentToken();
         return Result.ok(new LoginResponse(
-                token, user.getId(), user.getUsername(), user.getNickname(), result.roles(), result.homePath()));
+                token,
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                result.roles(),
+                result.homePath(),
+                sessionKeys.publicKey()));
     }
 
     /**

@@ -18,6 +18,7 @@ public final class SecurityPathMatcher {
             "/api/encrypt/public/key",
             // 仅 dev profile 注册 DevEncryptController；prod 无此路径
             "/api/encrypt/dev/key-pair",
+            "/api/encrypt/dev/session-key",
             "/api/altcha/**",
             "/doc.html",
             "/doc.html/**",
