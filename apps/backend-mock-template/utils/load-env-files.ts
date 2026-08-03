@@ -9,12 +9,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const DEFAULT_FILES = [
-  ".env",
-  ".env.local",
-  ".env.development",
-  ".env.development.local",
-] as const;
+const DEFAULT_FILES = [".env", ".env.local", ".env.development", ".env.development.local"] as const;
 
 /**
  * @param cwd 项目根（mock 包目录）

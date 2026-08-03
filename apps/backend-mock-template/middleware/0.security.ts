@@ -19,10 +19,7 @@ import { ensureJavaSessionPrivateKey } from "~/utils/security/java-session-key-s
 import { getEncryptKeyPair } from "~/utils/security/keys";
 import { globalNonceStore } from "~/utils/security/nonce-store";
 import { processSecurityRequest } from "~/utils/security/process-request";
-import {
-  extractBearerToken,
-  getSessionPrivateKeyPem,
-} from "~/utils/session-utils";
+import { extractBearerToken, getSessionPrivateKeyPem } from "~/utils/session-utils";
 
 export interface SecurityContext {
   responseAesKeyBase64?: string;

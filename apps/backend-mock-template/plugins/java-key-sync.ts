@@ -5,10 +5,7 @@
 
 import { defineNitroPlugin } from "nitropack/runtime";
 
-import {
-  ensureJavaKeyPairSynced,
-  getJavaKeyPairUrl,
-} from "~/utils/security/java-key-sync";
+import { ensureJavaKeyPairSynced, getJavaKeyPairUrl } from "~/utils/security/java-key-sync";
 
 export default defineNitroPlugin(() => {
   const url = getJavaKeyPairUrl();

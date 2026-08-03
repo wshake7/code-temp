@@ -325,7 +325,6 @@ describe("mock security protocol seam", () => {
     expect(result.body.code).toBe(SecurityResultCode.REQUEST_SIGN_FAILED.code);
   });
 
-
   it("encrypt on: missing encrypted key on login is rejected", () => {
     const result = processSecurityRequest(
       {

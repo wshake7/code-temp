@@ -132,10 +132,7 @@ export default defineEventHandler(async (event) => {
   // 同 type 下不同 platform 允许同名 value
   const conflict = list.find(
     (x) =>
-      x.deleted_at === 0 &&
-      x.type_id === typeId &&
-      x.value === value &&
-      x.platform === platform,
+      x.deleted_at === 0 && x.type_id === typeId && x.value === value && x.platform === platform,
   );
   if (conflict) {
     setResponseStatus(event, 400);

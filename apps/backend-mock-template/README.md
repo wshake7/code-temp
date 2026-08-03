@@ -13,19 +13,19 @@ Vben Admin 数据 mock 服务，没有对接任何的数据库，所有数据都
 
 环境变量（可选，开发默认见 `.env.development`，`pnpm start` / nitro dev 自动加载）：
 
-| 变量                              | 默认               | 说明                                                                 |
-| --------------------------------- | ------------------ | -------------------------------------------------------------------- |
-| `AUTH_TOKEN_TIMEOUT_SECONDS`      | `2592000`（30 天） | 会话超时；每次请求重置                                               |
-| `AUTH_IS_CONCURRENT`              | `true`             | 是否允许多端登录                                                     |
-| `AUTH_IS_SHARE`                   | `false`            | 同账号是否共享同一 token                                             |
-| `AUTH_MODE`                       | `mock`             | `mock`：校验本地 token；`mixture`：不校验 token（交叉联调）          |
-| `AUTH_JAVA_USER_FALLBACK`         | `root`             | `mixture` 下 RBAC 使用的 mock 用户                                   |
-| `AUTH_JAVA_INTROSPECT_URL`        | （空，关闭）       | 仅 `mock` 且显式配置时才对未知 token 调 java 内省                    |
-| `AUTH_JAVA_INTROSPECT_TIMEOUT_MS` | `3000`             | 内省 HTTP 超时（毫秒）                                               |
-| `SECURITY_JAVA_KEY_PAIR_URL`        | （空，不访问）     | 填完整 URL 才从 java 拉**全局**密钥对；未填绝不请求                  |
-| `SECURITY_JAVA_KEY_PAIR_TIMEOUT_MS` | `3000`           | 拉全局密钥 HTTP 超时（毫秒）                                         |
-| `SECURITY_JAVA_SESSION_KEY_URL`     | （空，不访问）     | 填完整 URL 才按 Bearer 从 java 拉**会话专属**密钥；未填绝不请求      |
-| `SECURITY_JAVA_SESSION_KEY_TIMEOUT_MS` | `3000`        | 拉会话密钥 HTTP 超时（毫秒）                                         |
+| 变量                                   | 默认               | 说明                                                            |
+| -------------------------------------- | ------------------ | --------------------------------------------------------------- |
+| `AUTH_TOKEN_TIMEOUT_SECONDS`           | `2592000`（30 天） | 会话超时；每次请求重置                                          |
+| `AUTH_IS_CONCURRENT`                   | `true`             | 是否允许多端登录                                                |
+| `AUTH_IS_SHARE`                        | `false`            | 同账号是否共享同一 token                                        |
+| `AUTH_MODE`                            | `mock`             | `mock`：校验本地 token；`mixture`：不校验 token（交叉联调）     |
+| `AUTH_JAVA_USER_FALLBACK`              | `root`             | `mixture` 下 RBAC 使用的 mock 用户                              |
+| `AUTH_JAVA_INTROSPECT_URL`             | （空，关闭）       | 仅 `mock` 且显式配置时才对未知 token 调 java 内省               |
+| `AUTH_JAVA_INTROSPECT_TIMEOUT_MS`      | `3000`             | 内省 HTTP 超时（毫秒）                                          |
+| `SECURITY_JAVA_KEY_PAIR_URL`           | （空，不访问）     | 填完整 URL 才从 java 拉**全局**密钥对；未填绝不请求             |
+| `SECURITY_JAVA_KEY_PAIR_TIMEOUT_MS`    | `3000`             | 拉全局密钥 HTTP 超时（毫秒）                                    |
+| `SECURITY_JAVA_SESSION_KEY_URL`        | （空，不访问）     | 填完整 URL 才按 Bearer 从 java 拉**会话专属**密钥；未填绝不请求 |
+| `SECURITY_JAVA_SESSION_KEY_TIMEOUT_MS` | `3000`             | 拉会话密钥 HTTP 超时（毫秒）                                    |
 
 修改 `.env` / `.env.development` 后需**重启 mock**。进程重启后会话清空（mock 可接受）。
 
@@ -62,9 +62,9 @@ pnpm -C apps/backend-mock-template test
 
 ### 鉴权：`AUTH_MODE`
 
-| 值        | 行为 |
-| --------- | ---- |
-| `mock`    | 纯 mock：`verifyAccessToken` 校验本地会话；**不**默认请求 java |
+| 值        | 行为                                                                                                                                                                  |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mock`    | 纯 mock：`verifyAccessToken` 校验本地会话；**不**默认请求 java                                                                                                        |
 | `mixture` | 交叉联调：**不校验** token；业务按 `AUTH_JAVA_USER_FALLBACK`（默认 root）做菜单/RBAC。**不会**请求 java `/api/user/info`（避免 Encrypt 缺 `X-Request-Encrypted-Key`） |
 
 交叉联调推荐：

@@ -45,6 +45,8 @@ const LogAuditPage = () => {
   const [panelReady, setPanelReady] = useState(true);
   const readyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visitedTabs, setVisitedTabs] = useState<Set<LogTabKey>>(() => new Set());
+  /** 上一帧 activeKey；用 state 而非 ref，以便渲染期安全检测变化 */
+  const [prevActiveKey, setPrevActiveKey] = useState<LogTabKey | undefined>(undefined);
 
   const allowedTabs = useMemo(
     () => LOG_TAB_DEFS.filter((t) => hasAccessByCodes([t.permissionCode])),
@@ -63,22 +65,27 @@ const LogAuditPage = () => {
     return allowedKeys[0];
   }, [allowedKeys, requestedTab]);
 
+  // 渲染期调整状态：记录已访问 Tab、切换时进入 loading
+  // 参见 React 文档 “Adjusting some state when a prop changes”
+  if (activeKey !== prevActiveKey) {
+    setPrevActiveKey(activeKey);
+    if (activeKey && !visitedTabs.has(activeKey)) {
+      const next = new Set(visitedTabs);
+      next.add(activeKey);
+      setVisitedTabs(next);
+    }
+    // 非首帧切换时进入短暂 loading
+    if (prevActiveKey !== undefined && activeKey && panelReady) {
+      setPanelReady(false);
+    }
+  }
+
   // 渲染期合并当前 Tab，避免首帧 children 为空
   const effectiveVisited = useMemo(() => {
     const next = new Set(visitedTabs);
     if (activeKey) next.add(activeKey);
     return next;
   }, [visitedTabs, activeKey]);
-
-  useEffect(() => {
-    if (!activeKey) return;
-    setVisitedTabs((prev) => {
-      if (prev.has(activeKey)) return prev;
-      const next = new Set(prev);
-      next.add(activeKey);
-      return next;
-    });
-  }, [activeKey]);
 
   // 校正非法 / 无权限的 tab 参数
   useEffect(() => {
@@ -94,14 +101,13 @@ const LogAuditPage = () => {
     );
   }, [activeKey, requestedTab, setSearchParams]);
 
-  // 切换 Tab 时短暂 loading
+  // loading 结束后再展示面板（仅异步 setState，不在 effect 开头同步 setState）
   useEffect(() => {
-    if (!activeKey) return;
+    if (!activeKey || panelReady) return;
     if (readyTimerRef.current) {
       clearTimeout(readyTimerRef.current);
       readyTimerRef.current = null;
     }
-    setPanelReady(false);
     readyTimerRef.current = setTimeout(() => {
       setPanelReady(true);
       readyTimerRef.current = null;
@@ -112,7 +118,7 @@ const LogAuditPage = () => {
         readyTimerRef.current = null;
       }
     };
-  }, [activeKey]);
+  }, [activeKey, panelReady]);
 
   const showLoading = isPending || !panelReady;
 
@@ -120,8 +126,8 @@ const LogAuditPage = () => {
     if (!isLogTabKey(key) || key === activeKey) return;
     setPanelReady(false);
     setVisitedTabs((prev) => {
-      if (prev.has(key)) return prev;
       const next = new Set(prev);
+      if (activeKey) next.add(activeKey);
       next.add(key);
       return next;
     });

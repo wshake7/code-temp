@@ -83,10 +83,7 @@ export async function ensureJavaSessionPrivateKey(
   return pending;
 }
 
-async function fetchJavaSessionKey(
-  url: string,
-  token: string,
-): Promise<RsaKeyPairPem | null> {
+async function fetchJavaSessionKey(url: string, token: string): Promise<RsaKeyPairPem | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), javaSessionKeyTimeoutMs());
   try {
