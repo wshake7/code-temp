@@ -8,7 +8,7 @@ import com.wshake.common.exception.AuthException;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
-import com.wshake.infra.security.SessionEncryptKeys;
+import com.wshake.infra.crypto.SessionEncryptKeys;
 import com.wshake.service.auth.LoginClientMeta;
 import com.wshake.service.auth.LoginResult;
 import com.wshake.service.entity.SysUser;

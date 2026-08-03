@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.common.constant.MdcKeys;
 import com.wshake.common.request.RequestContext;
-import com.wshake.infra.security.SaTokenConfigure;
+import com.wshake.infra.satoken.SaTokenConfigure;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,7 +56,7 @@ public class RequestLogAspect {
                     + "\\s*:\\s*)\"(?:\\\\.|[^\"\\\\])*\"",
             Pattern.CASE_INSENSITIVE);
 
-    /** 由 {@link com.wshake.infra.config.JacksonConfig} 注册的全局 Bean 注入。 */
+    /** 由 {@link com.wshake.infra.jackson.JacksonConfig} 注册的全局 Bean 注入。 */
     private final ObjectMapper objectMapper;
 
     @Pointcut("execution(* com.wshake.api.controller..*(..))")

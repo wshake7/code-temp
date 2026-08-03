@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
-import com.wshake.infra.config.SecurityProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

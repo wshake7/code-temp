@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.wshake.common.result.Result;
-import com.wshake.infra.security.ServerKeyPairProvider;
+import com.wshake.infra.crypto.ServerKeyPairProvider;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 

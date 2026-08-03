@@ -2,8 +2,8 @@ package com.wshake.api.controller;
 
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
-import com.wshake.infra.security.ServerKeyPairProvider;
-import com.wshake.infra.security.SessionEncryptKeys;
+import com.wshake.infra.crypto.ServerKeyPairProvider;
+import com.wshake.infra.crypto.SessionEncryptKeys;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
