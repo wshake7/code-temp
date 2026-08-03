@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Auth + ALTCHA + 三端契约基线
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] login-log 列表分页与筛选可用
-- [ ] 受保护请求写入 api_log（含 user、path、status、cost 等关键字段；敏感信息脱敏策略合理）
-- [ ] api-log 列表分页与筛选可用
-- [ ] 三端日志 API 对齐
-- [ ] HTTP 测试覆盖列表与写入可观察性
+- [x] login-log 列表分页与筛选可用
+- [x] 受保护请求写入 api_log（含 user、path、status、cost 等关键字段；敏感信息脱敏策略合理）
+- [x] api-log 列表分页与筛选可用
+- [x] 三端日志 API 对齐
+- [x] HTTP 测试覆盖列表与写入可观察性

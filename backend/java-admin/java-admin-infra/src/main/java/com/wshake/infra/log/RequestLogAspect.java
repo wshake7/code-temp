@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.common.constant.MdcKeys;
 import com.wshake.common.request.RequestContext;
 import com.wshake.infra.satoken.SaTokenConfigure;
+import com.wshake.service.log.ApiLogWriter;
+import com.wshake.service.log.LogManageModels.ApiLogWriteCommand;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,15 +15,19 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
@@ -30,25 +36,25 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Controller 请求日志切面。
+ * Controller 请求日志切面：SLF4J {@code [HTTP]} 行 + 异步写入 {@code api_log}。
  *
  * <p>成功路径合并为单行 {@code [HTTP]}：HTTP method / URI(+query) / 方法签名 /
- * args 摘要 / 耗时 / 返回值摘要。失败路径同样用 {@code [HTTP]} 前缀 + ERROR 级别
- * （级别本身已标识失败，不再单独加 {@code [ERR]} 标签），并附带堆栈。
+ * args 摘要 / 耗时 / 返回值摘要。失败路径同样用 {@code [HTTP]} 前缀 + ERROR 级别，并附带堆栈。
  *
- * <p>args 序列化时会跳过 Servlet/文件/流等不可 JSON 化参数，并对密码类字段脱敏，
- * 避免出现 {@code [Ljava.lang.Object;@hash} 或明文口令。不缓存原始 HTTP body
- * （对比 ContentCachingFilter：无全量缓冲、无 charset NPE、天然跳过二进制）。
+ * <p>args 序列化时会跳过 Servlet/文件/流等不可 JSON 化参数，并对密码类字段脱敏。
+ * 请求结束后将关键字段异步落入 {@code api_log}（字段对齐 schema；body/header/response 截断 64KB）。
  *
  * @author wshake
  */
 @Slf4j
 @Aspect
 @Component
-@RequiredArgsConstructor
 public class RequestLogAspect {
 
     private static final int MAX_LOG_LENGTH = 500;
+
+    /** schema：request_body / response 应用层截断 64KB */
+    private static final int MAX_STORE_LENGTH = 64 * 1024;
 
     /** 匹配 JSON 中常见敏感字段的字符串值，替换为 "***"。 */
     private static final Pattern SENSITIVE_JSON_FIELD = Pattern.compile(
@@ -56,13 +62,31 @@ public class RequestLogAspect {
                     + "\\s*:\\s*)\"(?:\\\\.|[^\"\\\\])*\"",
             Pattern.CASE_INSENSITIVE);
 
+    private static final Pattern SENSITIVE_HEADER = Pattern.compile(
+            "authorization|cookie|set-cookie|x-request-encrypted-key|x-request-signature|x-sign",
+            Pattern.CASE_INSENSITIVE);
+
     /** 由 {@link com.wshake.infra.jackson.JacksonConfig} 注册的全局 Bean 注入。 */
     private final ObjectMapper objectMapper;
+
+    /** 可空：单测可不注入。 */
+    private final ApiLogWriter apiLogWriter;
+
+    @Autowired
+    public RequestLogAspect(ObjectMapper objectMapper, ApiLogWriter apiLogWriter) {
+        this.objectMapper = objectMapper;
+        this.apiLogWriter = apiLogWriter;
+    }
+
+    /** 单测：仅校验序列化/HTTP 行时可不传 writer。 */
+    public RequestLogAspect(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
 
     @Pointcut("execution(* com.wshake.api.controller..*(..))")
     public void controllerPointcut() {}
 
-    /** 环绕 Controller 方法，记录 HTTP 路径、参数、耗时、返回值摘要及异常。 */
+    /** 环绕 Controller 方法，记录 HTTP 路径、参数、耗时、返回值摘要，并异步写 api_log。 */
     @Around("controllerPointcut()")
     // CHECKSTYLE.OFF: IllegalThrows
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
@@ -82,8 +106,10 @@ public class RequestLogAspect {
             MDC.put(MdcKeys.USER_ID, String.valueOf(userId));
         }
 
+        Object result = null;
+        Throwable error = null;
         try {
-            Object result = pjp.proceed();
+            result = pjp.proceed();
             long cost = System.currentTimeMillis() - start;
             log.info(
                     "[HTTP] {} handler={} cost={}ms args={} result={}",
@@ -94,12 +120,136 @@ public class RequestLogAspect {
                     safeToJson(result));
             return result;
         } catch (Throwable t) {
+            error = t;
             long cost = System.currentTimeMillis() - start;
             // ERROR 级别已标识失败，消息与成功路径同结构，便于检索；最后参数为堆栈
             log.error("[HTTP] {} handler={} cost={}ms args={}", httpLine, handler, cost, argsJson, t);
             throw t;
         } finally {
+            long cost = System.currentTimeMillis() - start;
+            writeApiLogQuietly(userId, argsJson, result, error, cost);
             MDC.remove(MdcKeys.USER_ID);
+        }
+    }
+
+    private void writeApiLogQuietly(Long userId, String argsJson, Object result, Throwable error, long costMs) {
+        if (apiLogWriter == null) {
+            return;
+        }
+        try {
+            HttpServletRequest request = currentRequest();
+            String method = request != null ? request.getMethod() : "";
+            String path = request != null ? request.getRequestURI() : nullToEmpty(RequestContext.requestUriOrNull());
+            String query = request != null && request.getQueryString() != null ? request.getQueryString() : "";
+            String requestUri = path;
+            if (!query.isEmpty()) {
+                requestUri = path + "?" + query;
+            }
+
+            int statusCode = error == null ? 200 : resolveErrorStatus(error);
+            boolean success = statusCode >= 200 && statusCode < 300;
+            String reason = error == null ? "" : truncateForStore(nullToEmpty(error.getMessage()));
+
+            String requestId = RequestContext.requestIdOrNull();
+            if (requestId == null || requestId.isBlank()) {
+                requestId = request != null ? request.getHeader("X-Request-ID") : null;
+            }
+            String clientIp = RequestContext.clientIpOrNull();
+            if ((clientIp == null || clientIp.isBlank()) && request != null) {
+                clientIp = request.getRemoteAddr();
+            }
+            String userAgent = request != null ? nullToEmpty(request.getHeader("User-Agent")) : "";
+            String referer = request != null ? nullToEmpty(request.getHeader("Referer")) : "";
+            String headersJson = request != null ? serializeHeaders(request) : "";
+            String responseJson = error == null ? truncateForStore(safeToJsonForStore(result)) : "";
+
+            apiLogWriter.record(new ApiLogWriteCommand(
+                    method,
+                    path,
+                    resolveModule(path),
+                    statusCode,
+                    success,
+                    reason,
+                    costMs,
+                    nullToEmpty(requestId),
+                    userId,
+                    "",
+                    requestUri,
+                    query,
+                    truncateForStore(argsJson),
+                    headersJson,
+                    referer,
+                    responseJson,
+                    ApiLogWriter.DEFAULT_CLIENT_ID,
+                    "",
+                    nullToEmpty(clientIp),
+                    userAgent));
+        } catch (Exception e) {
+            log.debug("[API_LOG] skip record: {}", e.toString());
+        }
+    }
+
+    /**
+     * 从路径推导 module：{@code /api/system/user/list} → {@code user}；
+     * {@code /api/auth/login} → {@code auth}；{@code /api/menu/all} → {@code menu}。
+     */
+    static String resolveModule(String path) {
+        if (path == null || path.isBlank()) {
+            return "";
+        }
+        String p = path.startsWith("/") ? path.substring(1) : path;
+        String[] parts = p.split("/");
+        // api / system / <module> / ...
+        if (parts.length >= 3 && "api".equals(parts[0]) && "system".equals(parts[1])) {
+            return parts[2];
+        }
+        // api / <module> / ...
+        if (parts.length >= 2 && "api".equals(parts[0])) {
+            return parts[1];
+        }
+        return parts.length > 0 ? parts[0] : "";
+    }
+
+    private static int resolveErrorStatus(Throwable error) {
+        String name = error.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+        String msg = nullToEmpty(error.getMessage()).toLowerCase(Locale.ROOT);
+        if (name.contains("auth") || msg.contains("not login") || msg.contains("未登录")) {
+            return 401;
+        }
+        if (name.contains("forbid") || name.contains("permission") || msg.contains("denied")) {
+            return 403;
+        }
+        if (name.contains("notfound") || name.contains("noresource")) {
+            return 404;
+        }
+        if (name.contains("illegal") || name.contains("valid") || name.contains("badrequest")) {
+            return 400;
+        }
+        return 500;
+    }
+
+    private String serializeHeaders(HttpServletRequest request) {
+        Map<String, String> headers = new LinkedHashMap<>();
+        Enumeration<String> names = request.getHeaderNames();
+        if (names == null) {
+            return "{}";
+        }
+        while (names.hasMoreElements()) {
+            String name = names.nextElement();
+            if (name == null) {
+                continue;
+            }
+            String value = request.getHeader(name);
+            if (SENSITIVE_HEADER.matcher(name).find()) {
+                headers.put(name, "***");
+            } else {
+                headers.put(name, value == null ? "" : value);
+            }
+        }
+        try {
+            return truncateForStore(objectMapper.writeValueAsString(headers));
+        } catch (JsonProcessingException e) {
+            return "{}";
         }
     }
 
@@ -122,11 +272,15 @@ public class RequestLogAspect {
     }
 
     private static String currentHttpLine() {
+        return formatHttpLine(currentRequest());
+    }
+
+    private static HttpServletRequest currentRequest() {
         var attrs = RequestContextHolder.getRequestAttributes();
         if (!(attrs instanceof ServletRequestAttributes servletAttrs)) {
-            return "-";
+            return null;
         }
-        return formatHttpLine(servletAttrs.getRequest());
+        return servletAttrs.getRequest();
     }
 
     /**
@@ -136,13 +290,21 @@ public class RequestLogAspect {
      * @return 截断且脱敏后的字符串
      */
     String safeToJson(Object obj) {
+        return truncate(maskSensitive(rawJson(obj)), MAX_LOG_LENGTH);
+    }
+
+    private String safeToJsonForStore(Object obj) {
+        return truncate(maskSensitive(rawJson(obj)), MAX_STORE_LENGTH);
+    }
+
+    private String rawJson(Object obj) {
         if (obj == null) {
             return "null";
         }
         if (obj instanceof Object[] arr) {
             return formatArgs(arr);
         }
-        return truncate(maskSensitive(writeOrFallback(obj)));
+        return writeOrFallback(obj);
     }
 
     private String formatArgs(Object[] args) {
@@ -159,7 +321,7 @@ public class RequestLogAspect {
         }
 
         try {
-            return truncate(maskSensitive(objectMapper.writeValueAsString(loggable)));
+            return maskSensitive(objectMapper.writeValueAsString(loggable));
         } catch (JsonProcessingException ignored) {
             StringBuilder sb = new StringBuilder(64).append('[');
             for (int i = 0; i < loggable.size(); i++) {
@@ -169,7 +331,7 @@ public class RequestLogAspect {
                 sb.append(writeOrFallback(loggable.get(i)));
             }
             sb.append(']');
-            return truncate(maskSensitive(sb.toString()));
+            return maskSensitive(sb.toString());
         }
     }
 
@@ -202,10 +364,25 @@ public class RequestLogAspect {
         return SENSITIVE_JSON_FIELD.matcher(json).replaceAll("$1\"***\"");
     }
 
-    private static String truncate(String json) {
-        if (json.length() > MAX_LOG_LENGTH) {
-            return json.substring(0, MAX_LOG_LENGTH) + "...(truncated)";
+    private static String truncate(String json, int max) {
+        if (json == null) {
+            return "";
+        }
+        if (json.length() > max) {
+            return json.substring(0, max) + "...(truncated)";
         }
         return json;
+    }
+
+    private static String truncate(String json) {
+        return truncate(json, MAX_LOG_LENGTH);
+    }
+
+    private static String truncateForStore(String json) {
+        return truncate(json, MAX_STORE_LENGTH);
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

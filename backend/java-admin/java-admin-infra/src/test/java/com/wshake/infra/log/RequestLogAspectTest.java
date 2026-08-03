@@ -23,7 +23,8 @@ class RequestLogAspectTest {
 
     @BeforeEach
     void initAspect() {
-        aspect = new RequestLogAspect(new ObjectMapper());
+        // 单测仅覆盖序列化 / HTTP 行，不注入 ApiLogWriter
+        aspect = new RequestLogAspect(new ObjectMapper(), null);
     }
 
     @Test
