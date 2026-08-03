@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 /**
  * 菜单实体（对齐 schema v10 {@code sys_menu}）。
  *
- * <p>本票仅用于查询 BUTTON 权限码；完整 CRUD 见后续 menu 模块。
+ * <p>类型：DIR / MENU / BUTTON；物化路径 {@code tree_path} 由应用层维护。
  *
  * @author wshake
  */
@@ -21,7 +21,7 @@ import lombok.EqualsAndHashCode;
 @EntityProxy
 public class SysMenu extends BaseEntity implements ProxyEntityAvailable<SysMenu, SysMenuProxy> {
 
-    @Column(primaryKey = true)
+    @Column(primaryKey = true, generatedKey = true)
     private Long id;
 
     private Long parentId;

@@ -83,4 +83,24 @@ public class AuthQueryRepository {
                 .distinct()
                 .toList();
     }
+
+    /**
+     * 用户经角色授权得到的菜单 ID（未去祖先；调用方可再 expand）。
+     */
+    public List<Long> findGrantedMenuIdsByUserId(Long userId) {
+        List<Long> roleIds = easyEntityQuery
+                .queryable(SysUserRole.class)
+                .where(ur -> ur.userId().eq(userId))
+                .select(SysUserRoleProxy::roleId)
+                .toList();
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+        return easyEntityQuery
+                .queryable(SysRoleMenu.class)
+                .where(rm -> rm.roleId().in(roleIds))
+                .select(SysRoleMenuProxy::menuId)
+                .distinct()
+                .toList();
+    }
 }
