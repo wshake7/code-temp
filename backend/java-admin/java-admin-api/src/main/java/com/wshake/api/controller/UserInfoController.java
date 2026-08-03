@@ -2,7 +2,6 @@ package com.wshake.api.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.api.vo.UserInfoVO;
-import com.wshake.common.exception.AuthException;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
@@ -21,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 用户信息别名路径：与前端既有 {@code /api/user/info} 对齐。
  *
- * <p>语义同 {@code /api/auth/info}。
+ * <p>语义同 {@code /api/auth/info}。登录校验由 {@code WebConfig} SaInterceptor 统一完成。
  *
  * @author wshake
  */
@@ -41,9 +40,6 @@ public class UserInfoController {
     @Operation(summary = "当前登录用户信息", description = "别名路径，与 /api/auth/info 等价")
     @SecurityRequirement(name = "bearerAuth")
     public Result<UserInfoVO> info() {
-        if (!StpUtil.isLogin()) {
-            throw AuthException.notLogin();
-        }
         Long userId = StpUtil.getLoginIdAsLong();
         SysUser user = sysUserService.findById(userId);
         if (user == null) {

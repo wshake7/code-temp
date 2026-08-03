@@ -96,9 +96,8 @@ class AuthControllerTest {
     }
 
     @Test
-    void codes_whenLogin_returnsCodesFromService() {
+    void codes_returnsCodesFromService() {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
-            stp.when(StpUtil::isLogin).thenReturn(true);
             stp.when(StpUtil::getLoginIdAsLong).thenReturn(1L);
             when(authService.listAccessCodes(1L)).thenReturn(List.of("system:user:list", "system:role:list"));
 
@@ -110,7 +109,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void info_whenLogin_returnsUserInfo() {
+    void info_returnsUserInfo() {
         SysUser user = new SysUser();
         user.setId(1L);
         user.setUsername("root");
@@ -120,7 +119,6 @@ class AuthControllerTest {
         when(authService.toUserSummary(user)).thenReturn(new LoginResult(user, List.of("root"), "/analytics"));
 
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
-            stp.when(StpUtil::isLogin).thenReturn(true);
             stp.when(StpUtil::getLoginIdAsLong).thenReturn(1L);
 
             Result<UserInfoVO> result = controller.info();

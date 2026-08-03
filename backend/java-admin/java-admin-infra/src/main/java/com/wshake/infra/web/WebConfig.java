@@ -15,7 +15,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * <p>拦截器顺序：SaInterceptor（认证）→ LanguageInterceptor（语言上下文/异步偏好）→
  * CasbinInterceptor（授权）。
- * CasbinInterceptor 仅拦截 {@code /api/**}，排除登录接口和文档路径。
+ *
+ * <p><strong>登录校验的唯一入口</strong>是本类注册的 {@code SaInterceptor}（{@code StpUtil.checkLogin()}）。
+ * Controller 不再重复 {@code requireLogin}/{@code isLogin} 门闩；业务侧只在需要时读取 loginId。
+ * CasbinInterceptor 仅做授权（deny-by-default），排除登录/登出等公开路径与文档路径。
  *
  * @author wshake
  */
@@ -33,11 +36,13 @@ public final class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 1. Sa-Token 认证拦截器：非排除路径强制登录
+        // 1. Sa-Token 认证拦截器：非排除路径强制登录（全站 /api 认证单一真相源）
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/login",
+                        // 登出幂等：未登录也返回成功，不强制 token
+                        "/api/auth/logout",
                         "/api/altcha/challenge",
                         "/api/encrypt/public/key",
                         // dev-only：mock 拉密钥对；prod 无此 Controller
@@ -51,6 +56,7 @@ public final class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/login",
+                        "/api/auth/logout",
                         "/api/altcha/challenge",
                         "/api/encrypt/public/key",
                         "/api/encrypt/dev/key-pair",

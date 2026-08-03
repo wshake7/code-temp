@@ -1,6 +1,5 @@
 package com.wshake.api.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.wshake.api.dto.ApisByMenusRequest;
 import com.wshake.api.dto.CreateMenuRequest;
@@ -12,7 +11,6 @@ import com.wshake.api.vo.MenuApiBindItemVO;
 import com.wshake.api.vo.MenuApiBindResultVO;
 import com.wshake.api.vo.MenuBatchResultVO;
 import com.wshake.api.vo.MenuListItemVO;
-import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.TreePageData;
 import com.wshake.service.menu.MenuManageModels.CreateMenuCommand;
@@ -46,6 +44,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 菜单管理 Controller（路径对齐前端 {@code /api/system/menu/*}）。
  *
+ * <p>登录校验由 {@code WebConfig} 的 SaInterceptor 统一完成，本类不再重复 requireLogin。
+ *
  * @author wshake
  */
 @Tag(name = "菜单管理", description = "树形 CRUD/软删/batch/menu-api 绑定/name-path 校验")
@@ -53,7 +53,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/system/menu")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-public final class MenuController {
+public class MenuController {
 
     private final SysMenuService sysMenuService;
     private final Converter converter;
@@ -67,7 +67,6 @@ public final class MenuController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String permissionCode,
             @RequestParam(required = false) Integer status) {
-        requireLogin();
         MenuListPage pageData =
                 sysMenuService.pageMenus(MenuListQuery.of(page, pageSize, name, type, permissionCode, status));
         List<MenuListItemVO> items = converter.convert(pageData.items(), MenuListItemVO.class);
@@ -78,7 +77,6 @@ public final class MenuController {
     @Operation(summary = "全量菜单", description = "供父菜单下拉与前端组树")
     public Result<List<MenuListItemVO>> all(
             @RequestParam(required = false) String type, @RequestParam(required = false) Integer status) {
-        requireLogin();
         String typeFilter = type == null || "全部".equals(type) ? null : type;
         List<MenuListItemVO> items =
                 converter.convert(sysMenuService.listAll(typeFilter, status), MenuListItemVO.class);
@@ -88,7 +86,6 @@ public final class MenuController {
     @PostMapping
     @Operation(summary = "创建菜单")
     public Result<MenuListItemVO> create(@Valid @RequestBody CreateMenuRequest req) {
-        requireLogin();
         CreateMenuCommand cmd = converter.convert(req, CreateMenuCommand.class);
         MenuView view = sysMenuService.create(cmd);
         return Result.ok(converter.convert(view, MenuListItemVO.class));
@@ -97,7 +94,6 @@ public final class MenuController {
     @PutMapping("/{id}")
     @Operation(summary = "更新菜单")
     public Result<MenuListItemVO> update(@PathVariable Long id, @RequestBody JsonNode body) {
-        requireLogin();
         // ParentIdChange / MetadataChange 含 presence 语义，保留手写组装
         UpdateMenuRequest req = parseUpdate(body);
         UpdateMenuCommand cmd = new UpdateMenuCommand(
@@ -121,14 +117,12 @@ public final class MenuController {
     @DeleteMapping("/{id}")
     @Operation(summary = "软删菜单")
     public Result<MenuListItemVO> delete(@PathVariable Long id) {
-        requireLogin();
         return Result.ok(converter.convert(sysMenuService.softDelete(id), MenuListItemVO.class));
     }
 
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<MenuBatchResultVO> batch(@RequestBody MenuBatchRequest req) {
-        requireLogin();
         MenuBatchResult result =
                 sysMenuService.batch(new MenuBatchCommand(req.getAction(), req.getIds()));
         return Result.ok(new MenuBatchResultVO(result.action(), result.affected(), result.ids()));
@@ -137,7 +131,6 @@ public final class MenuController {
     @GetMapping("/{id}/apis")
     @Operation(summary = "读取菜单已绑定 API（含 bound 标记）")
     public Result<List<MenuApiBindItemVO>> menuApis(@PathVariable Long id) {
-        requireLogin();
         List<MenuApiBindItemVO> items =
                 converter.convert(sysMenuService.listMenuApis(id), MenuApiBindItemVO.class);
         return Result.ok(items);
@@ -147,7 +140,6 @@ public final class MenuController {
     @Operation(summary = "全量替换菜单-API 绑定")
     public Result<MenuApiBindResultVO> setMenuApis(
             @PathVariable Long id, @RequestBody MenuApiBindRequest req) {
-        requireLogin();
         MenuApiBindResult result = sysMenuService.setMenuApis(id, req.getApiIds());
         return Result.ok(new MenuApiBindResultVO(result.menuId(), result.apiIds()));
     }
@@ -155,7 +147,6 @@ public final class MenuController {
     @PostMapping("/apis-by-menus")
     @Operation(summary = "按菜单聚合 API IDs")
     public Result<ApisByMenusResultVO> apisByMenus(@RequestBody ApisByMenusRequest req) {
-        requireLogin();
         var result = sysMenuService.apisByMenus(req.getMenuIds());
         return Result.ok(new ApisByMenusResultVO(result.menuIds(), result.apiIds()));
     }
@@ -164,7 +155,6 @@ public final class MenuController {
     @Operation(summary = "菜单名是否已存在", description = "true=冲突")
     public Result<Boolean> nameExists(
             @RequestParam(required = false) String name, @RequestParam(required = false) Long id) {
-        requireLogin();
         return Result.ok(sysMenuService.nameExists(name, id));
     }
 
@@ -172,7 +162,6 @@ public final class MenuController {
     @Operation(summary = "路由 path 是否已存在", description = "true=冲突")
     public Result<Boolean> pathExists(
             @RequestParam(required = false) String path, @RequestParam(required = false) Long id) {
-        requireLogin();
         return Result.ok(sysMenuService.pathExists(path, id));
     }
 
@@ -245,11 +234,5 @@ public final class MenuController {
             return null;
         }
         return n.asText();
-    }
-
-    private static void requireLogin() {
-        if (!StpUtil.isLogin()) {
-            throw AuthException.notLogin();
-        }
     }
 }

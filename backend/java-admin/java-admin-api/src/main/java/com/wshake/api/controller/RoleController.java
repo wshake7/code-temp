@@ -1,6 +1,5 @@
 package com.wshake.api.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.api.dto.CreateRoleRequest;
 import com.wshake.api.dto.RoleApiBindRequest;
 import com.wshake.api.dto.RoleMenuBindRequest;
@@ -10,7 +9,6 @@ import com.wshake.api.vo.RoleApiBindResultVO;
 import com.wshake.api.vo.RoleListItemVO;
 import com.wshake.api.vo.RoleMenuBindItemVO;
 import com.wshake.api.vo.RoleMenuBindResultVO;
-import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.Result;
 import com.wshake.service.role.RoleManageModels.CreateRoleCommand;
@@ -41,6 +39,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 角色管理 Controller（路径对齐前端 {@code /api/system/role/*}）。
  *
+ * <p>登录校验由 {@code WebConfig} 的 SaInterceptor 统一完成，本类不再重复 requireLogin。
+ *
  * @author wshake
  */
 @Tag(name = "角色管理", description = "分页/CRUD/软删/菜单与 API 绑定")
@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/system/role")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-public final class RoleController {
+public class RoleController {
 
     private final SysRoleService sysRoleService;
     private final Converter converter;
@@ -61,7 +61,6 @@ public final class RoleController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer status) {
-        requireLogin();
         PageData<RoleView> pageData =
                 sysRoleService.pageRoles(RoleListQuery.of(page, pageSize, code, name, status));
         List<RoleListItemVO> items = converter.convert(pageData.getItems(), RoleListItemVO.class);
@@ -71,7 +70,6 @@ public final class RoleController {
     @GetMapping("/all")
     @Operation(summary = "全量角色", description = "用户表单角色下拉；可选 status 过滤")
     public Result<List<RoleListItemVO>> all(@RequestParam(required = false) Integer status) {
-        requireLogin();
         List<RoleListItemVO> items = converter.convert(sysRoleService.listAll(status), RoleListItemVO.class);
         return Result.ok(items);
     }
@@ -79,7 +77,6 @@ public final class RoleController {
     @PostMapping
     @Operation(summary = "创建角色")
     public Result<RoleListItemVO> create(@Valid @RequestBody CreateRoleRequest req) {
-        requireLogin();
         CreateRoleCommand cmd = converter.convert(req, CreateRoleCommand.class);
         RoleView view = sysRoleService.create(cmd);
         return Result.ok(converter.convert(view, RoleListItemVO.class));
@@ -88,7 +85,6 @@ public final class RoleController {
     @PutMapping("/{id}")
     @Operation(summary = "更新角色", description = "code 不可改；parentId 省略不改，显式 null 清父")
     public Result<RoleListItemVO> update(@PathVariable Long id, @Valid @RequestBody UpdateRoleRequest req) {
-        requireLogin();
         // ParentIdChange 含 presence 语义，保留手写组装
         ParentIdChange parentChange =
                 req.isParentIdPresent() ? ParentIdChange.of(req.getParentId()) : ParentIdChange.absent();
@@ -100,14 +96,12 @@ public final class RoleController {
     @DeleteMapping("/{id}")
     @Operation(summary = "软删角色", description = "Root/有用户/有子角色时拒绝")
     public Result<RoleListItemVO> delete(@PathVariable Long id) {
-        requireLogin();
         return Result.ok(converter.convert(sysRoleService.softDelete(id), RoleListItemVO.class));
     }
 
     @GetMapping("/{id}/menus")
     @Operation(summary = "角色菜单绑定列表", description = "全量菜单 + bound 标记")
     public Result<List<RoleMenuBindItemVO>> menus(@PathVariable Long id) {
-        requireLogin();
         List<RoleMenuBindItemVO> items =
                 converter.convert(sysRoleService.listMenuBinds(id), RoleMenuBindItemVO.class);
         return Result.ok(items);
@@ -117,7 +111,6 @@ public final class RoleController {
     @Operation(summary = "全量替换角色菜单绑定")
     public Result<RoleMenuBindResultVO> setMenus(
             @PathVariable Long id, @Valid @RequestBody RoleMenuBindRequest req) {
-        requireLogin();
         RoleMenuBindResult result = sysRoleService.replaceMenus(id, req.getMenuIds());
         return Result.ok(new RoleMenuBindResultVO(result.roleId(), result.menuIds()));
     }
@@ -125,7 +118,6 @@ public final class RoleController {
     @GetMapping("/{id}/apis")
     @Operation(summary = "角色 API 绑定列表", description = "全量接口 + bound 标记")
     public Result<List<RoleApiBindItemVO>> apis(@PathVariable Long id) {
-        requireLogin();
         List<RoleApiBindItemVO> items =
                 converter.convert(sysRoleService.listApiBinds(id), RoleApiBindItemVO.class);
         return Result.ok(items);
@@ -135,14 +127,7 @@ public final class RoleController {
     @Operation(summary = "全量替换角色 API 绑定", description = "变更后同步受影响用户的 Casbin 策略")
     public Result<RoleApiBindResultVO> setApis(
             @PathVariable Long id, @Valid @RequestBody RoleApiBindRequest req) {
-        requireLogin();
         RoleApiBindResult result = sysRoleService.replaceApis(id, req.getApiIds());
         return Result.ok(new RoleApiBindResultVO(result.roleId(), result.apiIds()));
-    }
-
-    private static void requireLogin() {
-        if (!StpUtil.isLogin()) {
-            throw AuthException.notLogin();
-        }
     }
 }

@@ -4,7 +4,6 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.api.dto.LoginRequest;
 import com.wshake.api.vo.LoginResponse;
 import com.wshake.api.vo.UserInfoVO;
-import com.wshake.common.exception.AuthException;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
@@ -35,6 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 鉴权 Controller（路径前缀 {@code /api/auth}，无 v1）。
+ *
+ * <p>login/logout 在 {@code WebConfig} SaInterceptor 白名单内；info/codes 由拦截器保证已登录，
+ * 本类直接读取 loginId，不再重复 isLogin 门闩。logout 在未登录时幂等返回成功。
  *
  * @author wshake
  */
@@ -95,16 +97,8 @@ public class AuthController {
      * 登出。
      */
     @PostMapping("/logout")
-    @Operation(summary = "登出", description = "注销当前 Sa-Token")
-    @SecurityRequirement(name = "bearerAuth")
-    @ApiResponses(
-            value = {
-                @ApiResponse(responseCode = "200", description = "登出成功"),
-                @ApiResponse(
-                        responseCode = "401",
-                        description = "未登录(code=2001)",
-                        content = @Content(schema = @Schema(implementation = Result.class)))
-            })
+    @Operation(summary = "登出", description = "注销当前 Sa-Token；未登录也返回成功（幂等）")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "登出成功（含未登录幂等）")})
     public Result<Void> logout() {
         if (StpUtil.isLogin()) {
             StpUtil.logout();
@@ -127,9 +121,7 @@ public class AuthController {
                         content = @Content(schema = @Schema(implementation = Result.class)))
             })
     public Result<UserInfoVO> info() {
-        if (!StpUtil.isLogin()) {
-            throw AuthException.notLogin();
-        }
+        // 登录态由 WebConfig SaInterceptor 保证
         Long userId = StpUtil.getLoginIdAsLong();
         SysUser user = sysUserService.findById(userId);
         if (user == null) {
@@ -152,9 +144,7 @@ public class AuthController {
     @Operation(summary = "当前用户权限码", description = "BUTTON.permission_code 列表，供前端按钮鉴权")
     @SecurityRequirement(name = "bearerAuth")
     public Result<List<String>> codes() {
-        if (!StpUtil.isLogin()) {
-            throw AuthException.notLogin();
-        }
+        // 登录态由 WebConfig SaInterceptor 保证
         Long userId = StpUtil.getLoginIdAsLong();
         return Result.ok(authService.listAccessCodes(userId));
     }
