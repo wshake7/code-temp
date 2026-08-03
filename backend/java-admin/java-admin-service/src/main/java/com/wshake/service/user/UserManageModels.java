@@ -18,17 +18,17 @@ public final class UserManageModels {
 
         public static UserListQuery of(
                 Integer page, Integer pageSize, String username, String nickname, Integer status, Long roleId) {
-            int p = page == null || page < 1 ? 1 : page;
-            int ps = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
-            return new UserListQuery(p, ps, trimToNull(username), trimToNull(nickname), status, roleId);
+            int pageNo = page == null || page < 1 ? 1 : page;
+            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            return new UserListQuery(pageNo, size, trimToNull(username), trimToNull(nickname), status, roleId);
         }
 
-        private static String trimToNull(String s) {
-            if (s == null) {
+        private static String trimToNull(String value) {
+            if (value == null) {
                 return null;
             }
-            String t = s.trim();
-            return t.isEmpty() ? null : t;
+            String trimmed = value.trim();
+            return trimmed.isEmpty() ? null : trimmed;
         }
     }
 

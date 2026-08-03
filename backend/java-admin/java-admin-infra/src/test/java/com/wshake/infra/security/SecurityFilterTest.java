@@ -49,7 +49,7 @@ class SecurityFilterTest {
     private String privateKeyPem;
 
     @BeforeEach
-    void setUp() {
+    void initFilters() {
         securityProperties = new SecurityProperties();
         securityProperties.getTimestamp().setEnabled(true);
         securityProperties.getEncrypt().setEnabled(true);
@@ -220,10 +220,10 @@ class SecurityFilterTest {
         MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/auth/login");
         req.setContentType("application/json");
         req.addHeader(SecurityHeaders.REQUEST_ENCRYPTED_KEY, encryptedAesKey);
-        req.addHeader(SecurityHeaders.REQUEST_SIGNATURE, enc.tagIv);
+        req.addHeader(SecurityHeaders.REQUEST_SIGNATURE, enc.tagIv());
         req.addHeader(SecurityHeaders.REQUEST_ID, aadParams.get(SecurityHeaders.REQUEST_ID));
         req.addHeader(SecurityHeaders.REQUEST_TIMESTAMP, aadParams.get(SecurityHeaders.REQUEST_TIMESTAMP));
-        req.setContent(enc.ciphertext.getBytes(StandardCharsets.UTF_8));
+        req.setContent(enc.ciphertext().getBytes(StandardCharsets.UTF_8));
 
         MockHttpServletResponse resp = new MockHttpServletResponse();
         AtomicReference<String> bodySeenByBusiness = new AtomicReference<>();
@@ -436,7 +436,7 @@ class SecurityFilterTest {
         MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/auth/login");
         req.setContentType("application/json");
         req.addHeader(SecurityHeaders.REQUEST_ENCRYPTED_KEY, encryptedAesKey);
-        req.addHeader(SecurityHeaders.REQUEST_SIGNATURE, sign.tagIv);
+        req.addHeader(SecurityHeaders.REQUEST_SIGNATURE, sign.tagIv());
         req.addHeader(SecurityHeaders.REQUEST_ID, aadParams.get(SecurityHeaders.REQUEST_ID));
         req.addHeader(SecurityHeaders.REQUEST_TIMESTAMP, aadParams.get(SecurityHeaders.REQUEST_TIMESTAMP));
         req.setContent(plainBody.getBytes(StandardCharsets.UTF_8));
@@ -638,9 +638,9 @@ class SecurityFilterTest {
      * 可观察的用户语言仓储：绕过 Easy-Query，仅用于 Filter/Service 行为测试。
      */
     private static final class RecordingUserLanguageRepo extends com.wshake.service.repository.SysUserRepository {
-        final ConcurrentHashMap<Long, String> users = new ConcurrentHashMap<>();
-        final AtomicReference<Long> updatedUserId = new AtomicReference<>();
-        final AtomicReference<String> updatedLanguage = new AtomicReference<>();
+        private final ConcurrentHashMap<Long, String> users = new ConcurrentHashMap<>();
+        private final AtomicReference<Long> updatedUserId = new AtomicReference<>();
+        private final AtomicReference<String> updatedLanguage = new AtomicReference<>();
 
         RecordingUserLanguageRepo() {
             super(null);
@@ -652,10 +652,10 @@ class SecurityFilterTest {
             if (code == null && !users.containsKey(id)) {
                 return null;
             }
-            com.wshake.service.entity.SysUser u = new com.wshake.service.entity.SysUser();
-            u.setId(id);
-            u.setLanguageCode(code);
-            return u;
+            com.wshake.service.entity.SysUser user = new com.wshake.service.entity.SysUser();
+            user.setId(id);
+            user.setLanguageCode(code);
+            return user;
         }
 
         @Override

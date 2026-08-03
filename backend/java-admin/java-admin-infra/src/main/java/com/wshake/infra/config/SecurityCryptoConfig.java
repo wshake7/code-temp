@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
  * @author wshake
  */
 @Configuration(proxyBeanMethods = false)
-public class SecurityCryptoConfig {
+public final class SecurityCryptoConfig {
 
     @Bean
     public CryptoService cryptoService() {

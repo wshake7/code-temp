@@ -6,6 +6,7 @@ import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysRole;
 import com.wshake.service.entity.SysRoleApi;
 import com.wshake.service.entity.SysUserRole;
+import com.wshake.service.entity.proxy.SysRoleApiProxy;
 import com.wshake.service.entity.proxy.SysRoleProxy;
 import com.wshake.service.entity.proxy.SysUserRoleProxy;
 import java.time.LocalDateTime;
@@ -153,7 +154,7 @@ public class SysUserRoleRepository {
         List<Long> apiIds = easyEntityQuery
                 .queryable(SysRoleApi.class)
                 .where(ra -> ra.roleId().in(roleIds))
-                .select(ra -> ra.apiId())
+                .select(SysRoleApiProxy::apiId)
                 .distinct()
                 .toList();
         if (apiIds.isEmpty()) {

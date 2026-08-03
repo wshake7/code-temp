@@ -20,7 +20,7 @@ class RequestContextFilterTest {
     private final RequestContextFilter filter = new RequestContextFilter();
 
     @AfterEach
-    void tearDown() {
+    void clearRequestContext() {
         RequestContext.close();
     }
 

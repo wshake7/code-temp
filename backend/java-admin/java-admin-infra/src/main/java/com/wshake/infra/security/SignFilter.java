@@ -33,7 +33,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 25)
-public class SignFilter extends OncePerRequestFilter {
+public final class SignFilter extends OncePerRequestFilter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -53,24 +53,7 @@ public class SignFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        // Encrypt 优先：开启时由 EncryptFilter 完成 body/AAD 完整性，不重复独立 Sign
-        if (securityProperties.getEncrypt().isEnabled()
-                || !securityProperties.getSign().isEnabled()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || SecurityPathMatcher.isWhitelisted(request)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String contentType = request.getContentType();
-        if (contentType != null && contentType.startsWith("multipart/form-data")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-        if (request.getRequestURI().endsWith("/events")) {
+        if (shouldBypass(request)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -83,19 +66,13 @@ public class SignFilter extends OncePerRequestFilter {
             return;
         }
 
-        String aesKeyBase64;
-        try {
-            String privateKeyPem = SessionEncryptKeys.resolvePrivateKeyPem(request, serverKeyPairProvider);
-            aesKeyBase64 = cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
-        } catch (Exception e) {
-            log.debug("Sign 路径 RSA 解密 AES key 失败: {}", e.getMessage());
-            writeError(response, ResultCode.REQUEST_KEY_FAILED);
+        String aesKeyBase64 = decryptAesKey(encryptedKey, request, response);
+        if (aesKeyBase64 == null) {
             return;
         }
 
         byte[] rawBody = readBodyBytes(request);
         HttpServletRequest requestToUse = new EncryptFilter.CachedBodyRequestWrapper(request, rawBody);
-
         String aad = buildSignAad(requestToUse, rawBody);
         if (!cryptoService.verifySign(sign, aesKeyBase64, aad)) {
             log.debug("Sign 校验失败");
@@ -106,36 +83,70 @@ public class SignFilter extends OncePerRequestFilter {
         filterChain.doFilter(requestToUse, response);
     }
 
+    private boolean shouldBypass(HttpServletRequest request) {
+        // Encrypt 优先：开启时由 EncryptFilter 完成 body/AAD 完整性，不重复独立 Sign
+        if (securityProperties.getEncrypt().isEnabled() || !securityProperties.getSign().isEnabled()) {
+            return true;
+        }
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || SecurityPathMatcher.isWhitelisted(request)) {
+            return true;
+        }
+        String contentType = request.getContentType();
+        if (contentType != null && contentType.startsWith("multipart/form-data")) {
+            return true;
+        }
+        return request.getRequestURI().endsWith("/events");
+    }
+
+    private String decryptAesKey(String encryptedKey, HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        try {
+            String privateKeyPem = SessionEncryptKeys.resolvePrivateKeyPem(request, serverKeyPairProvider);
+            return cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
+        } catch (Exception e) {
+            log.debug("Sign 路径 RSA 解密 AES key 失败: {}", e.getMessage());
+            writeError(response, ResultCode.REQUEST_KEY_FAILED);
+            return null;
+        }
+    }
+
     private String buildSignAad(HttpServletRequest request, byte[] rawBody) {
         Map<String, String> params = new LinkedHashMap<>();
-
-        String requestId = firstHeader(request, SecurityHeaders.REQUEST_ID);
-        if (requestId != null && !requestId.isEmpty()) {
-            params.put(SecurityHeaders.REQUEST_ID, requestId);
+        putIfPresent(params, SecurityHeaders.REQUEST_ID, firstHeader(request, SecurityHeaders.REQUEST_ID));
+        putTimestamp(params, request);
+        putQueryParams(params, request);
+        if (rawBody.length > 0) {
+            params.put(SecurityConstants.SIGN_DATA_AAD_KEY, new String(rawBody, StandardCharsets.UTF_8));
         }
+        return cryptoService.buildAad(params);
+    }
 
+    private static void putIfPresent(Map<String, String> params, String key, String value) {
+        if (value != null && !value.isEmpty()) {
+            params.put(key, value);
+        }
+    }
+
+    private static void putTimestamp(Map<String, String> params, HttpServletRequest request) {
         String timestamp = firstHeader(request, SecurityHeaders.REQUEST_TIMESTAMP, SecurityHeaders.TIMESTAMP_LEGACY);
-        if (timestamp != null && !timestamp.isEmpty()) {
-            String tsName = request.getHeader(SecurityHeaders.REQUEST_TIMESTAMP);
-            if (tsName != null && !tsName.isEmpty()) {
-                params.put(SecurityHeaders.REQUEST_TIMESTAMP, timestamp);
-            } else {
-                params.put(SecurityHeaders.TIMESTAMP_LEGACY, timestamp);
-            }
+        if (timestamp == null || timestamp.isEmpty()) {
+            return;
         }
+        String frontendTimestamp = request.getHeader(SecurityHeaders.REQUEST_TIMESTAMP);
+        if (frontendTimestamp != null && !frontendTimestamp.isEmpty()) {
+            params.put(SecurityHeaders.REQUEST_TIMESTAMP, timestamp);
+        } else {
+            params.put(SecurityHeaders.TIMESTAMP_LEGACY, timestamp);
+        }
+    }
 
+    private static void putQueryParams(Map<String, String> params, HttpServletRequest request) {
         for (Map.Entry<String, String[]> e : request.getParameterMap().entrySet()) {
             String[] values = e.getValue();
             if (values != null && values.length > 0) {
                 params.put(e.getKey(), values[0]);
             }
         }
-
-        if (rawBody.length > 0) {
-            params.put(SecurityConstants.SIGN_DATA_AAD_KEY, new String(rawBody, StandardCharsets.UTF_8));
-        }
-
-        return cryptoService.buildAad(params);
     }
 
     private static String firstHeader(HttpServletRequest request, String... names) {

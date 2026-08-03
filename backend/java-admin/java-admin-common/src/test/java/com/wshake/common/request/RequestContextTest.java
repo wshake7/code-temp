@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class RequestContextTest {
 
     @AfterEach
-    void tearDown() {
+    void clearRequestContext() {
         RequestContext.close();
     }
 

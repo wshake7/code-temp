@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CasbinPolicyPortImpl implements CasbinPolicyPort {
+public final class CasbinPolicyPortImpl implements CasbinPolicyPort {
 
     private final CasbinService casbinService;
 

@@ -26,7 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component("appRequestContextFilter")
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-public class RequestContextFilter extends OncePerRequestFilter {
+public final class RequestContextFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)

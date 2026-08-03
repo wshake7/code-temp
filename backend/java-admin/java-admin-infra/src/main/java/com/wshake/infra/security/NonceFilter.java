@@ -26,7 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 15)
-public class NonceFilter extends OncePerRequestFilter {
+public final class NonceFilter extends OncePerRequestFilter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

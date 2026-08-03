@@ -30,7 +30,7 @@ class LoginLoggerTest {
     private LoginLogger loginLogger;
 
     @BeforeEach
-    void setUp() {
+    void initLoginLogger() {
         // 无 xdb 注入 null searcher：本机/内网仍可用
         IpLocationResolver resolver = new IpLocationResolver(null, null);
         loginLogger = new LoginLogger(sysLoginLogRepository, resolver, Runnable::run);

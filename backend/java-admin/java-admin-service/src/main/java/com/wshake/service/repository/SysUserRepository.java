@@ -4,6 +4,7 @@ import com.easy.query.api.proxy.client.EasyEntityQuery;
 import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.entity.SysUserRole;
+import com.wshake.service.entity.proxy.SysUserRoleProxy;
 import com.wshake.service.user.UserManageModels.UserListQuery;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +75,7 @@ public class SysUserRepository {
                         List<Long> userIds = easyEntityQuery
                                 .queryable(SysUserRole.class)
                                 .where(ur -> ur.roleId().eq(query.roleId()))
-                                .select(ur -> ur.userId())
+                                .select(SysUserRoleProxy::userId)
                                 .toList();
                         if (userIds.isEmpty()) {
                             u.id().eq(-1L);

@@ -36,7 +36,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
-public class EncryptFilter extends OncePerRequestFilter {
+public final class EncryptFilter extends OncePerRequestFilter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -56,96 +56,130 @@ public class EncryptFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        // Encrypt 关闭：明文放行
-        if (!securityProperties.getEncrypt().isEnabled()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // SSE / multipart：不缓冲 body
-        if (request.getRequestURI().endsWith("/events")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-        String contentType = request.getContentType();
-        if (contentType != null && contentType.startsWith("multipart/form-data")) {
+        if (shouldBypass(request)) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String encryptedKey = request.getHeader(SecurityHeaders.REQUEST_ENCRYPTED_KEY);
-        boolean hasEncryptedKey = encryptedKey != null && !encryptedKey.isEmpty();
-
-        if (!hasEncryptedKey) {
-            if (isWhitelisted(request)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-            // 强制加密：缺头拒绝
-            log.debug("Encrypt 已开启且路径不在白名单，缺少 {}", SecurityHeaders.REQUEST_ENCRYPTED_KEY);
-            writeError(response, ResultCode.REQUEST_ERROR);
+        if (encryptedKey == null || encryptedKey.isEmpty()) {
+            handleMissingEncryptedKey(request, response, filterChain);
             return;
         }
 
+        String aesKeyBase64 = decryptAesKey(encryptedKey, request, response);
+        if (aesKeyBase64 == null) {
+            return;
+        }
+
+        HttpServletRequest requestToUse = decryptRequestBodyIfPresent(request, response, aesKeyBase64);
+        if (requestToUse == null) {
+            return;
+        }
+
+        encryptResponseAndContinue(requestToUse, response, filterChain, aesKeyBase64);
+    }
+
+    private boolean shouldBypass(HttpServletRequest request) {
+        if (!securityProperties.getEncrypt().isEnabled()) {
+            return true;
+        }
+        if (request.getRequestURI().endsWith("/events")) {
+            return true;
+        }
+        String contentType = request.getContentType();
+        return contentType != null && contentType.startsWith("multipart/form-data");
+    }
+
+    private void handleMissingEncryptedKey(
+            HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        if (isWhitelisted(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        // 强制加密：缺头拒绝
+        log.debug("Encrypt 已开启且路径不在白名单，缺少 {}", SecurityHeaders.REQUEST_ENCRYPTED_KEY);
+        writeError(response, ResultCode.REQUEST_ERROR);
+    }
+
+    private String decryptAesKey(String encryptedKey, HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
         // 已登录：会话专属私钥；未登录/无会话钥：全局私钥（登录前公钥路径等）
         String privateKeyPem = SessionEncryptKeys.resolvePrivateKeyPem(request, serverKeyPairProvider);
-        String aesKeyBase64;
         try {
-            aesKeyBase64 = cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
+            return cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
         } catch (Exception e) {
             log.debug("RSA 解密 AES key 失败: {}", e.getMessage());
             writeError(response, ResultCode.REQUEST_KEY_FAILED);
-            return;
+            return null;
         }
+    }
 
+    /**
+     * 解密请求体（若有）；失败时已写错误响应并返回 {@code null}。
+     */
+    private HttpServletRequest decryptRequestBodyIfPresent(
+            HttpServletRequest request, HttpServletResponse response, String aesKeyBase64) throws IOException {
         String aad = buildAadFromRequest(request);
-
-        HttpServletRequest requestToUse = request;
         byte[] rawBody = readBodyBytes(request);
-        if (rawBody.length > 0) {
-            String sign = firstHeader(request, SecurityHeaders.REQUEST_SIGNATURE, SecurityHeaders.SIGN_LEGACY);
-            if (sign == null || sign.isEmpty()) {
-                // Encrypt 开启时有 body 必须带签名并 AES-GCM 解密，避免明文 body 绕过
-                log.debug("Encrypt 已开启且请求体非空，缺少 {}", SecurityHeaders.REQUEST_SIGNATURE);
-                writeError(response, ResultCode.REQUEST_ERROR);
-                return;
-            }
-            try {
-                String ciphertextBody = new String(rawBody, StandardCharsets.UTF_8);
-                byte[] decrypted = cryptoService.aesDecryptCiphertextAndTag(ciphertextBody, sign, aesKeyBase64, aad);
-                requestToUse = new CachedBodyRequestWrapper(request, decrypted);
-            } catch (Exception e) {
-                log.debug("请求体解密失败: {}", e.getMessage());
-                writeError(response, ResultCode.REQUEST_KEY_FAILED);
-                return;
-            }
+        if (rawBody.length == 0) {
+            return request;
         }
+        String sign = firstHeader(request, SecurityHeaders.REQUEST_SIGNATURE, SecurityHeaders.SIGN_LEGACY);
+        if (sign == null || sign.isEmpty()) {
+            // Encrypt 开启时有 body 必须带签名并 AES-GCM 解密，避免明文 body 绕过
+            log.debug("Encrypt 已开启且请求体非空，缺少 {}", SecurityHeaders.REQUEST_SIGNATURE);
+            writeError(response, ResultCode.REQUEST_ERROR);
+            return null;
+        }
+        try {
+            String ciphertextBody = new String(rawBody, StandardCharsets.UTF_8);
+            byte[] decrypted = cryptoService.aesDecryptCiphertextAndTag(ciphertextBody, sign, aesKeyBase64, aad);
+            return new CachedBodyRequestWrapper(request, decrypted);
+        } catch (Exception e) {
+            log.debug("请求体解密失败: {}", e.getMessage());
+            writeError(response, ResultCode.REQUEST_KEY_FAILED);
+            return null;
+        }
+    }
 
+    private void encryptResponseAndContinue(
+            HttpServletRequest requestToUse,
+            HttpServletResponse response,
+            FilterChain filterChain,
+            String aesKeyBase64)
+            throws ServletException, IOException {
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
         try {
             filterChain.doFilter(requestToUse, wrappedResponse);
-
-            byte[] responseBody = wrappedResponse.getContentAsByteArray();
-            if (responseBody.length > 0) {
-                try {
-                    String plainResponse = new String(responseBody, StandardCharsets.UTF_8);
-                    CryptoService.EncryptResult result = cryptoService.aesEncrypt(plainResponse, aesKeyBase64, "");
-                    byte[] encryptedResponse = result.combined.getBytes(StandardCharsets.UTF_8);
-
-                    wrappedResponse.resetBuffer();
-                    wrappedResponse.setHeader(SecurityHeaders.RESPONSE_IS_ENCRYPT, "true");
-                    wrappedResponse.setContentType("application/json");
-                    wrappedResponse.setCharacterEncoding("UTF-8");
-                    wrappedResponse.setContentLength(encryptedResponse.length);
-                    wrappedResponse.getOutputStream().write(encryptedResponse);
-                } catch (Exception e) {
-                    log.error("响应加密失败: {}", e.getMessage());
-                    wrappedResponse.resetBuffer();
-                    writeError(wrappedResponse, ResultCode.INTERNAL_ERROR);
-                }
-            }
+            writeEncryptedResponseIfNeeded(wrappedResponse, aesKeyBase64);
         } finally {
             wrappedResponse.copyBodyToResponse();
+        }
+    }
+
+    private void writeEncryptedResponseIfNeeded(ContentCachingResponseWrapper wrappedResponse, String aesKeyBase64)
+            throws IOException {
+        byte[] responseBody = wrappedResponse.getContentAsByteArray();
+        if (responseBody.length == 0) {
+            return;
+        }
+        try {
+            String plainResponse = new String(responseBody, StandardCharsets.UTF_8);
+            CryptoService.EncryptResult result = cryptoService.aesEncrypt(plainResponse, aesKeyBase64, "");
+            byte[] encryptedResponse = result.combined().getBytes(StandardCharsets.UTF_8);
+
+            wrappedResponse.resetBuffer();
+            wrappedResponse.setHeader(SecurityHeaders.RESPONSE_IS_ENCRYPT, "true");
+            wrappedResponse.setContentType("application/json");
+            wrappedResponse.setCharacterEncoding("UTF-8");
+            wrappedResponse.setContentLength(encryptedResponse.length);
+            wrappedResponse.getOutputStream().write(encryptedResponse);
+        } catch (Exception e) {
+            log.error("响应加密失败: {}", e.getMessage());
+            wrappedResponse.resetBuffer();
+            writeError(wrappedResponse, ResultCode.INTERNAL_ERROR);
         }
     }
 
@@ -211,7 +245,7 @@ public class EncryptFilter extends OncePerRequestFilter {
     }
 
     /** 缓存解密后的 body，供下游重复读取。 */
-    static class CachedBodyRequestWrapper extends HttpServletRequestWrapper {
+    static final class CachedBodyRequestWrapper extends HttpServletRequestWrapper {
         private final byte[] body;
 
         CachedBodyRequestWrapper(HttpServletRequest request, byte[] body) {

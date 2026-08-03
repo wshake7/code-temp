@@ -2,8 +2,6 @@ package com.wshake.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -28,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 
 /**
@@ -54,7 +53,7 @@ class UserControllerTest {
     @Test
     void list_whenLogin_returnsItemsTotal() {
         UserView view = sampleView(2L, "alice");
-        when(sysUserService.pageUsers(any(UserListQuery.class)))
+        when(sysUserService.pageUsers(ArgumentMatchers.any(UserListQuery.class)))
                 .thenReturn(PageData.of(List.of(view), 1L));
 
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
@@ -74,7 +73,7 @@ class UserControllerTest {
 
     @Test
     void create_whenLogin_mapsBodyAndReturnsUser() {
-        when(sysUserService.create(any(CreateUserCommand.class))).thenReturn(sampleView(3L, "bob"));
+        when(sysUserService.create(ArgumentMatchers.any(CreateUserCommand.class))).thenReturn(sampleView(3L, "bob"));
 
         CreateUserRequest req = new CreateUserRequest();
         req.setUsername("bob");
@@ -98,7 +97,7 @@ class UserControllerTest {
 
     @Test
     void update_whenLogin_forwardsRoleIds() {
-        when(sysUserService.update(any(UpdateUserCommand.class))).thenReturn(sampleView(2L, "alice"));
+        when(sysUserService.update(ArgumentMatchers.any(UpdateUserCommand.class))).thenReturn(sampleView(2L, "alice"));
         UpdateUserRequest req = new UpdateUserRequest();
         req.setNickname("Alice2");
         req.setRoleIds(List.of(11L));
@@ -127,7 +126,8 @@ class UserControllerTest {
 
     @Test
     void toggleStatus_whenLogin_usesStatusField() {
-        when(sysUserService.toggleStatus(eq(2L), eq(0))).thenReturn(sampleView(2L, "alice"));
+        when(sysUserService.toggleStatus(ArgumentMatchers.eq(2L), ArgumentMatchers.eq(0)))
+                .thenReturn(sampleView(2L, "alice"));
         ToggleUserStatusRequest req = new ToggleUserStatusRequest();
         req.setStatus(0);
 
@@ -141,7 +141,8 @@ class UserControllerTest {
 
     @Test
     void resetPassword_whenLogin_returnsIdOnly() {
-        when(sysUserService.resetPassword(eq(2L), eq("new-pass"))).thenReturn(2L);
+        when(sysUserService.resetPassword(ArgumentMatchers.eq(2L), ArgumentMatchers.eq("new-pass")))
+                .thenReturn(2L);
         ResetPasswordRequest req = new ResetPasswordRequest();
         req.setPassword("new-pass");
 

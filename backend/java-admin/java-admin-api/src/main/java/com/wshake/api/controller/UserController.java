@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/system/user")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-public class UserController {
+public final class UserController {
 
     private final SysUserService sysUserService;
 
@@ -133,23 +133,23 @@ public class UserController {
         }
     }
 
-    private static UserListItemVO toVo(UserView v) {
+    private static UserListItemVO toVo(UserView view) {
         return new UserListItemVO(
-                v.id(),
-                v.username(),
-                v.nickname(),
-                v.email(),
-                v.phone(),
-                v.avatar(),
-                v.languageCode(),
-                v.lastLoginAt(),
-                v.lastLoginIp(),
-                v.remark(),
-                v.isEnabled(),
-                v.deletedAt(),
-                v.createdAt(),
-                v.updatedAt(),
-                v.roleIds(),
-                v.roleNames());
+                view.id(),
+                view.username(),
+                view.nickname(),
+                view.email(),
+                view.phone(),
+                view.avatar(),
+                view.languageCode(),
+                view.lastLoginAt(),
+                view.lastLoginIp(),
+                view.remark(),
+                view.isEnabled(),
+                view.deletedAt(),
+                view.createdAt(),
+                view.updatedAt(),
+                view.roleIds(),
+                view.roleNames());
     }
 }

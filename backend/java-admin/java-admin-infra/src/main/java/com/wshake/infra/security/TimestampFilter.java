@@ -26,7 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
-public class TimestampFilter extends OncePerRequestFilter {
+public final class TimestampFilter extends OncePerRequestFilter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

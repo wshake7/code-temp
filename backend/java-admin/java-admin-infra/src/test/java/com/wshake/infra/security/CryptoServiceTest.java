@@ -29,7 +29,7 @@ class CryptoServiceTest {
     private static final String PLAIN_BODY = "{\"username\":\"admin\"}";
 
     @BeforeAll
-    static void setUp() {
+    static void initKeys() {
         service = new CryptoService();
         KeyPair rsaKeyPair = CryptoService.generateRsaKeyPair();
         privateKey = rsaKeyPair.getPrivate();
@@ -68,7 +68,7 @@ class CryptoServiceTest {
     void aes_combined_roundTripWithAad() {
         String aad = buildAad();
         CryptoService.EncryptResult result = service.aesEncrypt(PLAIN_BODY, aesKeyBase64, aad);
-        byte[] plain = service.aesDecryptCombined(result.combined, aesKeyBase64, aad);
+        byte[] plain = service.aesDecryptCombined(result.combined(), aesKeyBase64, aad);
         assertThat(new String(plain, StandardCharsets.UTF_8)).isEqualTo(PLAIN_BODY);
     }
 
@@ -76,14 +76,14 @@ class CryptoServiceTest {
     void aes_ciphertextAndTag_roundTrip() {
         String aad = buildAad();
         CryptoService.EncryptResult result = service.aesEncrypt(PLAIN_BODY, aesKeyBase64, aad);
-        byte[] plain = service.aesDecryptCiphertextAndTag(result.ciphertext, result.tagIv, aesKeyBase64, aad);
+        byte[] plain = service.aesDecryptCiphertextAndTag(result.ciphertext(), result.tagIv(), aesKeyBase64, aad);
         assertThat(new String(plain, StandardCharsets.UTF_8)).isEqualTo(PLAIN_BODY);
     }
 
     @Test
     void aes_wrongAad_fails() {
         CryptoService.EncryptResult result = service.aesEncrypt(PLAIN_BODY, aesKeyBase64, buildAad());
-        assertThatThrownBy(() -> service.aesDecryptCombined(result.combined, aesKeyBase64, "bad=aad"))
+        assertThatThrownBy(() -> service.aesDecryptCombined(result.combined(), aesKeyBase64, "bad=aad"))
                 .isInstanceOf(CryptoService.CryptoException.class);
     }
 

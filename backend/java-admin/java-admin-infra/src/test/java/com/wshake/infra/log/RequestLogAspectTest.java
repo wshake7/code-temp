@@ -22,7 +22,7 @@ class RequestLogAspectTest {
     private RequestLogAspect aspect;
 
     @BeforeEach
-    void setUp() {
+    void initAspect() {
         aspect = new RequestLogAspect(new ObjectMapper());
     }
 

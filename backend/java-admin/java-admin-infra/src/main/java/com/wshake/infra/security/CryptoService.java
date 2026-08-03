@@ -25,7 +25,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * @author wshake
  */
-public class CryptoService {
+public final class CryptoService {
 
     private static final String RSA_ALGORITHM = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding";
     private static final String AES_ALGORITHM = "AES/GCM/NoPadding";
@@ -109,11 +109,10 @@ public class CryptoService {
             System.arraycopy(sealed, 0, combined, 0, sealed.length);
             System.arraycopy(iv, 0, combined, sealed.length, GCM_IV_LENGTH);
 
-            EncryptResult result = new EncryptResult();
-            result.ciphertext = Base64.getEncoder().encodeToString(ciphertext);
-            result.tagIv = Base64.getEncoder().encodeToString(tagIv);
-            result.combined = Base64.getEncoder().encodeToString(combined);
-            return result;
+            return new EncryptResult(
+                    Base64.getEncoder().encodeToString(ciphertext),
+                    Base64.getEncoder().encodeToString(tagIv),
+                    Base64.getEncoder().encodeToString(combined));
         } catch (CryptoException e) {
             throw e;
         } catch (Exception e) {
@@ -201,11 +200,11 @@ public class CryptoService {
      * 构建 AAD：按 key 排序后 key=value 用 & 连接；空值跳过。
      */
     public String buildAad(Map<String, String> params) {
-        TreeMap<String, String> sorted = new TreeMap<>();
+        Map<String, String> sorted = new TreeMap<>();
         for (Map.Entry<String, String> e : params.entrySet()) {
-            String v = e.getValue();
-            if (v != null && !v.isEmpty()) {
-                sorted.put(e.getKey(), v);
+            String value = e.getValue();
+            if (value != null && !value.isEmpty()) {
+                sorted.put(e.getKey(), value);
             }
         }
         StringBuilder sb = new StringBuilder();
@@ -336,10 +335,6 @@ public class CryptoService {
                 + PEM_PUBLIC_END + "\n";
     }
 
-    public static String toBase64(PublicKey publicKey) {
-        return Base64.getEncoder().encodeToString(publicKey.getEncoded());
-    }
-
     public static String toPem(PrivateKey privateKey) {
         String b64 = Base64.getEncoder().encodeToString(privateKey.getEncoded());
         return PEM_PRIVATE_BEGIN + "\n"
@@ -348,13 +343,14 @@ public class CryptoService {
                 + PEM_PRIVATE_END + "\n";
     }
 
-    public static class EncryptResult {
-        public String ciphertext;
-        public String tagIv;
-        public String combined;
+    public static String toBase64(PublicKey publicKey) {
+        return Base64.getEncoder().encodeToString(publicKey.getEncoded());
     }
 
-    public static class CryptoException extends RuntimeException {
+    /** AES-GCM 加密结果：分片密文、tag+iv、以及合并 payload。 */
+    public record EncryptResult(String ciphertext, String tagIv, String combined) {}
+
+    public static final class CryptoException extends RuntimeException {
         public CryptoException(String message) {
             super(message);
         }

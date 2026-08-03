@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class ServerKeyPairProvider {
+public final class ServerKeyPairProvider {
 
     private final EncryptKeyPairService service;
 

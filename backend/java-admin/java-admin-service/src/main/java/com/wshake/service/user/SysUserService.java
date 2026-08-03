@@ -59,9 +59,9 @@ public class SysUserService {
         Map<Long, String> roleNames = sysUserRoleRepository.findRoleNamesByIds(allRoleIds);
 
         List<UserView> items = new ArrayList<>(rows.size());
-        for (SysUser u : rows) {
-            List<Long> roleIds = roleMap.getOrDefault(u.getId(), List.of());
-            items.add(toView(u, roleIds, roleNames));
+        for (SysUser row : rows) {
+            List<Long> roleIds = roleMap.getOrDefault(row.getId(), List.of());
+            items.add(toView(row, roleIds, roleNames));
         }
         return PageData.of(items, page.getTotal());
     }
@@ -103,6 +103,18 @@ public class SysUserService {
      */
     public UserView update(UpdateUserCommand cmd) {
         SysUser user = requireUser(cmd.id());
+        applyProfileUpdates(user, cmd);
+        sysUserRepository.update(user);
+
+        if (cmd.roleIds() != null) {
+            List<Long> roleIds = validateRoleIds(cmd.roleIds());
+            sysUserRoleRepository.replaceUserRoles(user.getId(), roleIds);
+            syncCasbinForUser(user.getId());
+        }
+        return loadView(user.getId());
+    }
+
+    private static void applyProfileUpdates(SysUser user, UpdateUserCommand cmd) {
         if (cmd.nickname() != null) {
             String nickname = cmd.nickname().trim();
             if (nickname.isEmpty()) {
@@ -128,14 +140,6 @@ public class SysUserService {
         if (cmd.remark() != null) {
             user.setRemark(cmd.remark().trim());
         }
-        sysUserRepository.update(user);
-
-        if (cmd.roleIds() != null) {
-            List<Long> roleIds = validateRoleIds(cmd.roleIds());
-            sysUserRoleRepository.replaceUserRoles(user.getId(), roleIds);
-            syncCasbinForUser(user.getId());
-        }
-        return loadView(user.getId());
     }
 
     /**
@@ -227,7 +231,7 @@ public class SysUserService {
         return filtered;
     }
 
-    private static UserView toView(SysUser u, List<Long> roleIds, Map<Long, String> roleNameMap) {
+    private static UserView toView(SysUser user, List<Long> roleIds, Map<Long, String> roleNameMap) {
         List<Long> ids = roleIds == null ? List.of() : List.copyOf(roleIds);
         List<String> names = new ArrayList<>();
         for (Long rid : ids) {
@@ -237,20 +241,20 @@ public class SysUserService {
             }
         }
         return new UserView(
-                u.getId(),
-                u.getUsername(),
-                u.getNickname(),
-                nullToEmpty(u.getEmail()),
-                nullToEmpty(u.getPhone()),
-                nullToEmpty(u.getAvatar()),
-                u.getLanguageCode(),
-                u.getLastLoginAt(),
-                nullToEmpty(u.getLastLoginIp()),
-                nullToEmpty(u.getRemark()),
-                u.getIsEnabled() == null ? 0 : u.getIsEnabled(),
-                u.getDeletedAt() == null ? 0L : u.getDeletedAt(),
-                u.getCreatedAt(),
-                u.getUpdatedAt(),
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                nullToEmpty(user.getEmail()),
+                nullToEmpty(user.getPhone()),
+                nullToEmpty(user.getAvatar()),
+                user.getLanguageCode(),
+                user.getLastLoginAt(),
+                nullToEmpty(user.getLastLoginIp()),
+                nullToEmpty(user.getRemark()),
+                user.getIsEnabled() == null ? 0 : user.getIsEnabled(),
+                user.getDeletedAt() == null ? 0L : user.getDeletedAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
                 ids,
                 names);
     }
@@ -262,15 +266,15 @@ public class SysUserService {
         return value.trim();
     }
 
-    private static String nullToEmpty(String s) {
-        return s == null ? "" : s;
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
-    private static String blankToNull(String s) {
-        if (s == null) {
+    private static String blankToNull(String value) {
+        if (value == null) {
             return null;
         }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

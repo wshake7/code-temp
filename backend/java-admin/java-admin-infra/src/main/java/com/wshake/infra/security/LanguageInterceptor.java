@@ -23,7 +23,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 @Slf4j
 @Component
-public class LanguageInterceptor implements HandlerInterceptor {
+public final class LanguageInterceptor implements HandlerInterceptor {
 
     private final SecurityProperties securityProperties;
     private final UserLanguageSyncService userLanguageSyncService;

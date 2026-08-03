@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  * @author wshake
  */
 @Component
-public class RedisNonceStore implements NonceStore {
+public final class RedisNonceStore implements NonceStore {
 
     private final StringRedisTemplate redis;
 

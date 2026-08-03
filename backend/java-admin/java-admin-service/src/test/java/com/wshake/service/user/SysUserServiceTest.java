@@ -2,11 +2,6 @@ package com.wshake.service.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -30,6 +25,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
@@ -43,7 +39,7 @@ class SysUserServiceTest {
     private SysUserService service;
 
     @BeforeEach
-    void setUp() {
+    void initService() {
         service = new SysUserService(userRepo, roleRepo, casbin);
     }
 
@@ -52,12 +48,12 @@ class SysUserServiceTest {
         when(userRepo.existsByUsername("alice")).thenReturn(false);
         when(roleRepo.filterExistingRoleIds(List.of(10L))).thenReturn(List.of(10L));
         doAnswer(inv -> {
-                    SysUser u = inv.getArgument(0);
-                    u.setId(100L);
+                    SysUser user = inv.getArgument(0);
+                    user.setId(100L);
                     return null;
                 })
                 .when(userRepo)
-                .insert(any(SysUser.class));
+                .insert(ArgumentMatchers.any(SysUser.class));
         when(roleRepo.userHasRootRole(100L)).thenReturn(false);
         when(roleRepo.findApiPoliciesByUserId(100L))
                 .thenReturn(List.of(new ApiPolicy("/api/system/user/list", "GET")));
@@ -78,9 +74,9 @@ class SysUserServiceTest {
         verify(roleRepo).replaceUserRoles(100L, List.of(10L));
         verify(casbin)
                 .replaceUserPolicies(
-                        eq("100"),
-                        eq(List.of(new ApiPolicy("/api/system/user/list", "GET"))),
-                        eq(false));
+                        ArgumentMatchers.eq("100"),
+                        ArgumentMatchers.eq(List.of(new ApiPolicy("/api/system/user/list", "GET"))),
+                        ArgumentMatchers.eq(false));
     }
 
     @Test
@@ -90,26 +86,28 @@ class SysUserServiceTest {
                         "alice", "x", "A", null, null, null, null, 1, null, List.of())))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("已存在");
-        verify(userRepo, never()).insert(any());
+        verify(userRepo, never()).insert(ArgumentMatchers.any());
     }
 
     @Test
     void update_withoutRoleIds_doesNotSyncCasbin() {
         when(userRepo.findById(2L)).thenReturn(user(2L, "alice", "hash"));
-        when(userRepo.update(any())).thenReturn(1L);
+        when(userRepo.update(ArgumentMatchers.any())).thenReturn(1L);
         when(roleRepo.findRoleIdsByUserId(2L)).thenReturn(List.of(10L));
         when(roleRepo.findRoleNamesByIds(List.of(10L))).thenReturn(Map.of(10L, "Admin"));
 
         service.update(new UpdateUserCommand(2L, "Alice2", null, null, null, null, null, null, null));
 
-        verify(roleRepo, never()).replaceUserRoles(any(), anyList());
-        verify(casbin, never()).replaceUserPolicies(anyString(), anyList(), anyBoolean());
+        verify(roleRepo, never()).replaceUserRoles(ArgumentMatchers.any(), ArgumentMatchers.anyList());
+        verify(casbin, never())
+                .replaceUserPolicies(
+                        ArgumentMatchers.anyString(), ArgumentMatchers.anyList(), ArgumentMatchers.anyBoolean());
     }
 
     @Test
     void update_withRoleIds_replacesAndSyncs_rootKeepsWildcard() {
         when(userRepo.findById(1L)).thenReturn(user(1L, "root", "hash"));
-        when(userRepo.update(any())).thenReturn(1L);
+        when(userRepo.update(ArgumentMatchers.any())).thenReturn(1L);
         when(roleRepo.filterExistingRoleIds(List.of(1L))).thenReturn(List.of(1L));
         when(roleRepo.userHasRootRole(1L)).thenReturn(true);
         when(roleRepo.findRoleIdsByUserId(1L)).thenReturn(List.of(1L));
@@ -118,8 +116,10 @@ class SysUserServiceTest {
         service.update(new UpdateUserCommand(1L, null, null, null, null, null, null, null, List.of(1L)));
 
         verify(roleRepo).replaceUserRoles(1L, List.of(1L));
-        verify(casbin).replaceUserPolicies(eq("1"), eq(List.of()), eq(true));
-        verify(roleRepo, never()).findApiPoliciesByUserId(any());
+        verify(casbin)
+                .replaceUserPolicies(
+                        ArgumentMatchers.eq("1"), ArgumentMatchers.eq(List.of()), ArgumentMatchers.eq(true));
+        verify(roleRepo, never()).findApiPoliciesByUserId(ArgumentMatchers.any());
     }
 
     @Test
@@ -140,24 +140,24 @@ class SysUserServiceTest {
     @Test
     void resetPassword_encodesAndDoesNotReturnHash() {
         when(userRepo.findById(2L)).thenReturn(user(2L, "alice", "old"));
-        when(userRepo.updatePasswordHash(eq(2L), anyString())).thenReturn(1L);
+        when(userRepo.updatePasswordHash(ArgumentMatchers.eq(2L), ArgumentMatchers.anyString())).thenReturn(1L);
 
         Long id = service.resetPassword(2L, "new-pass");
         assertThat(id).isEqualTo(2L);
 
         ArgumentCaptor<String> hashCap = ArgumentCaptor.forClass(String.class);
-        verify(userRepo).updatePasswordHash(eq(2L), hashCap.capture());
+        verify(userRepo).updatePasswordHash(ArgumentMatchers.eq(2L), hashCap.capture());
         assertThat(hashCap.getValue()).isNotEqualTo("new-pass");
         assertThat(new BCryptPasswordEncoder().matches("new-pass", hashCap.getValue())).isTrue();
     }
 
     @Test
     void pageUsers_mapsRoleNames() {
-        SysUser u = user(2L, "alice", "hash");
+        SysUser user = user(2L, "alice", "hash");
         EasyPageResult<SysUser> page = new EasyPageResult<>() {
             @Override
             public List<SysUser> getData() {
-                return List.of(u);
+                return List.of(user);
             }
 
             @Override
@@ -165,7 +165,7 @@ class SysUserServiceTest {
                 return 1L;
             }
         };
-        when(userRepo.page(any(UserListQuery.class))).thenReturn(page);
+        when(userRepo.page(ArgumentMatchers.any(UserListQuery.class))).thenReturn(page);
         when(roleRepo.findRoleIdsByUserIds(List.of(2L))).thenReturn(Map.of(2L, List.of(10L)));
         when(roleRepo.findRoleNamesByIds(List.of(10L))).thenReturn(Map.of(10L, "Admin"));
 
@@ -182,18 +182,18 @@ class SysUserServiceTest {
     }
 
     private static SysUser user(Long id, String username, String hash) {
-        SysUser u = new SysUser();
-        u.setId(id);
-        u.setUsername(username);
-        u.setPasswordHash(hash);
-        u.setNickname("Nick");
-        u.setEmail("");
-        u.setPhone("");
-        u.setAvatar("");
-        u.setLastLoginIp("");
-        u.setRemark("");
-        u.setIsEnabled(1);
-        u.setDeletedAt(0L);
-        return u;
+        SysUser user = new SysUser();
+        user.setId(id);
+        user.setUsername(username);
+        user.setPasswordHash(hash);
+        user.setNickname("Nick");
+        user.setEmail("");
+        user.setPhone("");
+        user.setAvatar("");
+        user.setLastLoginIp("");
+        user.setRemark("");
+        user.setIsEnabled(1);
+        user.setDeletedAt(0L);
+        return user;
     }
 }

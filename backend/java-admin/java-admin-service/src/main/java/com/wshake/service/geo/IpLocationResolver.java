@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class IpLocationResolver {
+public final class IpLocationResolver {
 
     private static final String XDB_V4 = "ip2region/ip2region_v4.xdb";
     private static final String XDB_V6 = "ip2region/ip2region_v6.xdb";
@@ -95,16 +95,16 @@ public class IpLocationResolver {
     }
 
     private static boolean isIpv4Mapped(Inet6Address addr) {
-        byte[] b = addr.getAddress();
-        if (b.length != 16) {
+        byte[] bytes = addr.getAddress();
+        if (bytes.length != 16) {
             return false;
         }
         for (int i = 0; i < 10; i++) {
-            if (b[i] != 0) {
+            if (bytes[i] != 0) {
                 return false;
             }
         }
-        return (b[10] & 0xFF) == 0xFF && (b[11] & 0xFF) == 0xFF;
+        return (bytes[10] & 0xFF) == 0xFF && (bytes[11] & 0xFF) == 0xFF;
     }
 
     private static Searcher loadSearcher(Version version, String classpath) {
@@ -176,10 +176,7 @@ public class IpLocationResolver {
     }
 
     static Optional<String> classifyLocalOrPrivate(String ip) {
-        if ("127.0.0.1".equals(ip)
-                || "::1".equals(ip)
-                || "0:0:0:0:0:0:0:1".equals(ip)
-                || "0000:0000:0000:0000:0000:0000:0000:0001".equalsIgnoreCase(ip)) {
+        if (isLoopbackLiteral(ip)) {
             return Optional.of("本机");
         }
         try {
@@ -187,27 +184,40 @@ public class IpLocationResolver {
             if (addr.isLoopbackAddress()) {
                 return Optional.of("本机");
             }
-            if (addr.isAnyLocalAddress() || addr.isLinkLocalAddress() || addr.isSiteLocalAddress()) {
+            if (isPrivateOrLocalAddress(addr)) {
                 return Optional.of("内网");
-            }
-            // ULA fc00::/7
-            if (addr instanceof Inet6Address) {
-                byte first = addr.getAddress()[0];
-                if ((first & 0xFE) == 0xFC) {
-                    return Optional.of("内网");
-                }
             }
         } catch (Exception ignored) {
-            // 回退到简单 IPv4 私网判断
-            if (isPrivateIpv4(ip)) {
-                return Optional.of("内网");
-            }
-            String lower = ip.toLowerCase();
-            if (lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80:")) {
+            // 回退到简单字符串启发式
+            if (isPrivateIpv4(ip) || isPrivateIpv6Literal(ip)) {
                 return Optional.of("内网");
             }
         }
         return Optional.empty();
+    }
+
+    private static boolean isLoopbackLiteral(String ip) {
+        return "127.0.0.1".equals(ip)
+                || "::1".equals(ip)
+                || "0:0:0:0:0:0:0:1".equals(ip)
+                || "0000:0000:0000:0000:0000:0000:0000:0001".equalsIgnoreCase(ip);
+    }
+
+    private static boolean isPrivateOrLocalAddress(InetAddress addr) {
+        if (addr.isAnyLocalAddress() || addr.isLinkLocalAddress() || addr.isSiteLocalAddress()) {
+            return true;
+        }
+        // ULA fc00::/7
+        if (addr instanceof Inet6Address) {
+            byte first = addr.getAddress()[0];
+            return (first & 0xFE) == 0xFC;
+        }
+        return false;
+    }
+
+    private static boolean isPrivateIpv6Literal(String ip) {
+        String lower = ip.toLowerCase();
+        return lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80:");
     }
 
     private static boolean isPrivateIpv4(String ip) {
@@ -215,23 +225,23 @@ public class IpLocationResolver {
         if (parts.length != 4) {
             return false;
         }
-        int a;
-        int b;
+        int firstOctet;
+        int secondOctet;
         try {
-            a = Integer.parseInt(parts[0]);
-            b = Integer.parseInt(parts[1]);
+            firstOctet = Integer.parseInt(parts[0]);
+            secondOctet = Integer.parseInt(parts[1]);
         } catch (NumberFormatException ex) {
             return false;
         }
-        if (a == 10) {
+        if (firstOctet == 10) {
             return true;
         }
-        if (a == 172 && b >= 16 && b <= 31) {
+        if (firstOctet == 172 && secondOctet >= 16 && secondOctet <= 31) {
             return true;
         }
-        if (a == 192 && b == 168) {
+        if (firstOctet == 192 && secondOctet == 168) {
             return true;
         }
-        return a == 169 && b == 254;
+        return firstOctet == 169 && secondOctet == 254;
     }
 }

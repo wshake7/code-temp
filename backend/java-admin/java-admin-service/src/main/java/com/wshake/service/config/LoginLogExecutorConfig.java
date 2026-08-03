@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
  * @author wshake
  */
 @Configuration
-public class LoginLogExecutorConfig {
+public final class LoginLogExecutorConfig {
 
     @Bean(name = "loginLogExecutor")
     public Executor loginLogExecutor() {
