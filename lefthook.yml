@@ -31,6 +31,14 @@ pre-commit:
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
       run: mvn -B -q -f backend/java-admin/pom.xml rewrite:run spotless:apply
       stage_fixed: true
+    check:java-style:
+      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
+      run: mvn -B -f backend/java-admin/pom.xml checkstyle:check
+    check:java-method-ref:
+      # 对齐 IDEA “Lambda can be replaced with method reference”；failOnDryRunResults=true
+      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
+      run: mvn -B -f backend/java-admin/pom.xml rewrite:dryRun
+      stage_fixed: true
 
 post-merge:
   parallel: true
@@ -49,13 +57,6 @@ pre-push:
       root: "apps/react-admin/"
       glob: "apps/react-admin/**/*.{ts,tsx}"
       run: pnpm eslint {push_files}
-    check:java-style:
-      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -f backend/java-admin/pom.xml checkstyle:check
-    check:java-method-ref:
-      # 对齐 IDEA “Lambda can be replaced with method reference”；failOnDryRunResults=true
-      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -f backend/java-admin/pom.xml rewrite:dryRun
     check:java-types:
       # WARN 不阻断,ERROR 阻断;`mvn verify` 也跑 compile 做安全网。
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
