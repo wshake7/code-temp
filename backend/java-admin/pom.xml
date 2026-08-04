@@ -35,7 +35,8 @@
         <easy-query.version>3.2.12</easy-query.version>
         <sa-token.version>1.45.0</sa-token.version>
         <redisson.version>4.5.0</redisson.version>  <!-- 4.x 含 RedissonAutoConfigurationV4 适配 SB 4 -->
-        <knife4j.version>4.5.0</knife4j.version>
+        <!-- knife4j-next 社区 fork 版本（com.baizhukui 命名空间；Boot 4 专用 starter） -->
+        <knife4j.version>5.2.2</knife4j.version>
         <mysql.version>9.2.0</mysql.version>
         <lombok.version>1.18.38</lombok.version>
         <!-- 10.x/11.x ensureSupported 仅到 MySQL 8.1，连 8.4 会 WARN；12.x 起声明支持到 9.4 -->
@@ -145,18 +146,20 @@
                 <version>${redisson.version}</version>
             </dependency>
 
-            <!-- Knife4j（Spring Boot 4 用 Jakarta starter） -->
+            <!-- Knife4j-next（Spring Boot 4 专用 starter；community fork，com.baizhukui 命名空间） -->
             <dependency>
-                <groupId>com.github.xiaoymin</groupId>
-                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <groupId>com.baizhukui</groupId>
+                <artifactId>knife4j-openapi3-boot4-spring-boot-starter</artifactId>
                 <version>${knife4j.version}</version>
             </dependency>
 
-            <!-- Swagger / OpenAPI v3 注解(纯注解 JAR,供 common 在 Result 上加 @Schema 使用) -->
+            <!-- Swagger / OpenAPI v3 注解(纯注解 JAR,供 common 在 Result 上加 @Schema 使用)。
+                 版本须与 knife4j-next 5.2.2 传递的 swagger-core/models 2.2.47 对齐,
+                 否则 springdoc 处理 @Schema 时会因缺 Schema$SchemaResolution 抛 NoClassDefFoundError。 -->
             <dependency>
                 <groupId>io.swagger.core.v3</groupId>
                 <artifactId>swagger-annotations-jakarta</artifactId>
-                <version>2.2.19</version>
+                <version>2.2.47</version>
             </dependency>
 
             <!-- ip2region xdb 查询（登录日志 / API 日志地理位置） -->

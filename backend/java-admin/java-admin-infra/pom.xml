@@ -12,7 +12,7 @@
 
     <artifactId>java-admin-infra</artifactId>
     <name>java-admin-infra</name>
-    <description>基础设施：Sa-Token/Redisson/Knife4j/Easy-Query 数据源/Web 配置/Logback/全局异常/Nacos</description>
+    <description>基础设施：Sa-Token/Redisson/Knife4j-next/Easy-Query 数据源/Web 配置/Logback/全局异常/Nacos</description>
 
     <dependencies>
         <dependency>
@@ -76,10 +76,10 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Knife4j -->
+        <!-- Knife4j-next -->
         <dependency>
-            <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <groupId>com.baizhukui</groupId>
+            <artifactId>knife4j-openapi3-boot4-spring-boot-starter</artifactId>
         </dependency>
 
         <!-- Flyway -->
