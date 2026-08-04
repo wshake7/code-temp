@@ -443,5 +443,28 @@ INSERT INTO sys_menu_api (menu_id, api_id, created_by) VALUES
 INSERT INTO casbin_rule (ptype, v0, v1, v2, v3, v4, v5)
 VALUES ('p', '1', '/*', '*', NULL, NULL, NULL);
 
+-- ============================================================
+-- Section 12: temporal_task_config（与 dev 对齐；prod 默认不跑 V2）
+-- log_count_tick：Workflow 内每 10s Activity 将进程内 count+1 并打日志
+-- ============================================================
+
+INSERT INTO temporal_task_config (
+    code, name, workflow_type, task_queue, cron_expr, retry_policy, timeout_seconds,
+    remark, is_enabled, deleted_at, created_by, updated_by
+) VALUES (
+    'log_count_tick',
+    '日志计数+1(每10s)',
+    'LogCountTickWorkflow',
+    'demo',
+    '0/10 * * * * ?',
+    JSON_OBJECT('maxAttempts', 1, 'initialInterval', '5s', 'backoff', 1.0),
+    NULL,
+    'dev 测试：触发后 Workflow 循环 sleep 10s，Activity 将 count+1 并 log',
+    1,
+    0,
+    0,
+    0
+);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
