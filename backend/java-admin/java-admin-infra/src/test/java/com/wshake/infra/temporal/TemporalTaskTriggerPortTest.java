@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.wshake.common.exception.BizException;
+import com.wshake.infra.temporal.workflow.JobDispatchModels;
 import com.wshake.service.port.TaskTriggerPort.TriggerRequest;
 import com.wshake.service.port.TaskTriggerPort.TriggerResult;
 import io.temporal.api.common.v1.WorkflowExecution;
@@ -38,8 +39,8 @@ class TemporalTaskTriggerPortTest {
     }
 
     @Test
-    void start_usesUntypedStubAndReturnsExecutionIds() {
-        when(workflowClient.newUntypedWorkflowStub(eq("LogCountTickWorkflow"), any(WorkflowOptions.class)))
+    void start_usesDispatchWorkflowAndReturnsExecutionIds() {
+        when(workflowClient.newUntypedWorkflowStub(eq("JobDispatchWorkflow"), any(WorkflowOptions.class)))
                 .thenReturn(workflowStub);
         when(workflowStub.start(any()))
                 .thenReturn(WorkflowExecution.newBuilder()
@@ -61,11 +62,12 @@ class TemporalTaskTriggerPortTest {
         assertThat(result.runId()).isEqualTo("run-abc");
 
         ArgumentCaptor<WorkflowOptions> optionsCap = ArgumentCaptor.forClass(WorkflowOptions.class);
-        verify(workflowClient).newUntypedWorkflowStub(eq("LogCountTickWorkflow"), optionsCap.capture());
+        verify(workflowClient).newUntypedWorkflowStub(eq("JobDispatchWorkflow"), optionsCap.capture());
         WorkflowOptions options = optionsCap.getValue();
         assertThat(options.getTaskQueue()).isEqualTo("demo");
         assertThat(options.getWorkflowId()).startsWith("wf-log_count_tick-");
-        assertThat(options.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofHours(1));
+        // 父 WF 超时放宽：max(3600+60, 7200)=7200
+        assertThat(options.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofSeconds(7200));
         assertThat(options.getRetryOptions()).isNotNull();
         assertThat(options.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
         assertThat(options.getRetryOptions().getInitialInterval()).isEqualTo(Duration.ofSeconds(30));
@@ -73,9 +75,12 @@ class TemporalTaskTriggerPortTest {
 
         ArgumentCaptor<Object> inputCap = ArgumentCaptor.forClass(Object.class);
         verify(workflowStub).start(inputCap.capture());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> input = (Map<String, Object>) inputCap.getValue();
-        assertThat(input).containsEntry("trigger", "manual");
+        assertThat(inputCap.getValue()).isInstanceOf(JobDispatchModels.DispatchInput.class);
+        JobDispatchModels.DispatchInput dispatch = (JobDispatchModels.DispatchInput) inputCap.getValue();
+        assertThat(dispatch.workflowType()).isEqualTo("LogCountTickWorkflow");
+        assertThat(dispatch.taskQueue()).isEqualTo("demo");
+        assertThat(dispatch.configCode()).isEqualTo("log_count_tick");
+        assertThat(dispatch.input()).containsEntry("trigger", "manual");
     }
 
     @Test
@@ -87,7 +92,7 @@ class TemporalTaskTriggerPortTest {
 
     @Test
     void start_wrapsClientFailure() {
-        when(workflowClient.newUntypedWorkflowStub(eq("LogCountTickWorkflow"), any(WorkflowOptions.class)))
+        when(workflowClient.newUntypedWorkflowStub(eq("JobDispatchWorkflow"), any(WorkflowOptions.class)))
                 .thenReturn(workflowStub);
         when(workflowStub.start(any())).thenThrow(new RuntimeException("connection refused"));
 

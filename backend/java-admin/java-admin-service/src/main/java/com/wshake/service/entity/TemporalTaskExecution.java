@@ -11,7 +11,8 @@ import lombok.Data;
 /**
  * Temporal 执行记录镜像（对齐 schema {@code temporal_task_execution}）。
  *
- * <p>记录型表：只增不改，无软删 / 无 updated_at，故不继承 {@link BaseEntity}。
+ * <p>启动时 insert {@code RUNNING}，结束后 update 终态（status / result / failure / closedAt）；
+ * 无软删、无 {@code updated_at}，故不继承 {@link BaseEntity}。
  *
  * @author wshake
  */

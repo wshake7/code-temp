@@ -12,12 +12,10 @@ import static org.mockito.Mockito.when;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.service.entity.TemporalTaskConfig;
-import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.port.TaskTriggerPort;
 import com.wshake.service.port.TaskTriggerPort.TriggerResult;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
-import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import com.wshake.service.task.TaskManageModels.CreateTaskConfigCommand;
 import com.wshake.service.task.TaskManageModels.TaskBatchCommand;
 import com.wshake.service.task.TaskManageModels.TaskBatchResult;
@@ -34,14 +32,13 @@ import org.mockito.ArgumentCaptor;
 class TaskConfigServiceTest {
 
     private final TemporalTaskConfigRepository configRepository = mock(TemporalTaskConfigRepository.class);
-    private final TemporalTaskExecutionRepository executionRepository = mock(TemporalTaskExecutionRepository.class);
     private final TaskTriggerPort taskTriggerPort = mock(TaskTriggerPort.class);
     private final TaskSchedulePort taskSchedulePort = mock(TaskSchedulePort.class);
     private TaskConfigService service;
 
     @BeforeEach
     void setUp() {
-        service = new TaskConfigService(configRepository, executionRepository, taskTriggerPort, taskSchedulePort);
+        service = new TaskConfigService(configRepository, taskTriggerPort, taskSchedulePort);
     }
 
     @Test
@@ -176,31 +173,20 @@ class TaskConfigServiceTest {
     }
 
     @Test
-    void trigger_writesRunningExecution() {
+    void trigger_startsDispatch_withoutLocalInsert() {
         TemporalTaskConfig config = activeConfig(1L, "log_count_tick", 1);
         when(configRepository.findById(1L)).thenReturn(config);
         when(taskTriggerPort.start(any())).thenReturn(new TriggerResult("wf-1", "run-1"));
-        when(executionRepository.findById(any())).thenAnswer(inv -> {
-            TemporalTaskExecution e = new TemporalTaskExecution();
-            e.setId(99L);
-            e.setConfigId(1L);
-            e.setWorkflowId("wf-1");
-            e.setRunId("run-1");
-            e.setWorkflowType("LogCountTickWorkflow");
-            e.setTaskQueue("demo");
-            e.setStatus("RUNNING");
-            return e;
-        });
 
         TaskTriggerResult result = service.trigger(1L);
 
         assertThat(result.config().code()).isEqualTo("log_count_tick");
         assertThat(result.execution().status()).isEqualTo("RUNNING");
-        ArgumentCaptor<TemporalTaskExecution> cap = ArgumentCaptor.forClass(TemporalTaskExecution.class);
-        verify(executionRepository).insert(cap.capture());
-        assertThat(cap.getValue().getWorkflowId()).isEqualTo("wf-1");
-        assertThat(cap.getValue().getStatus()).isEqualTo("RUNNING");
-        assertThat(cap.getValue().getInputSummary()).contains("manual");
+        assertThat(result.execution().id()).isNull();
+        assertThat(result.execution().workflowId()).isEqualTo("wf-1");
+        assertThat(result.execution().runId()).isEqualTo("run-1");
+        assertThat(result.execution().inputSummary()).containsEntry("trigger", "manual");
+        verify(taskTriggerPort).start(any());
         verify(taskSchedulePort, never()).apply(any());
     }
 
@@ -211,24 +197,14 @@ class TaskConfigServiceTest {
         when(configRepository.listByIds(List.of(1L, 2L))).thenReturn(List.of(enabled, disabled));
         when(configRepository.findById(1L)).thenReturn(enabled);
         when(taskTriggerPort.start(any())).thenReturn(new TriggerResult("wf-x", "run-x"));
-        when(executionRepository.findById(any())).thenAnswer(inv -> {
-            TemporalTaskExecution e = new TemporalTaskExecution();
-            e.setId(50L);
-            e.setConfigId(1L);
-            e.setStatus("RUNNING");
-            e.setWorkflowId("wf-x");
-            e.setRunId("run-x");
-            e.setWorkflowType("LogCountTickWorkflow");
-            e.setTaskQueue("demo");
-            return e;
-        });
 
         TaskBatchResult result = service.batch(new TaskBatchCommand("trigger", List.of(1L, 2L)));
 
         assertThat(result.affected()).isEqualTo(1);
         assertThat(result.ids()).containsExactly(1L);
         assertThat(result.skippedDisabled()).containsExactly(2L);
-        assertThat(result.executionIds()).containsExactly(50L);
+        // 异步落库：同步响应尚无 execution id
+        assertThat(result.executionIds()).isEmpty();
         verify(taskTriggerPort).start(any());
     }
 

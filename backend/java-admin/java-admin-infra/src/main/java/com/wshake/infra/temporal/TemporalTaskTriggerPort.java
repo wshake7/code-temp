@@ -2,7 +2,9 @@ package com.wshake.infra.temporal;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
+import com.wshake.infra.temporal.workflow.JobDispatchModels;
 import com.wshake.service.port.TaskTriggerPort;
+import com.wshake.service.task.TemporalWorkflowType;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -21,7 +23,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 基于 Temporal {@link WorkflowClient} 的任务触发实现。
  *
- * <p>使用 untyped stub，按配置中的 {@code workflowType}/{@code taskQueue} 启动；
+ * <p>启动 {@link TemporalWorkflowType#JOB_DISPATCH} 包装 Workflow（而非直接启动业务类型）；
  * 由 {@link TemporalTaskTriggerConfiguration} 在 Temporal 连接属性启用时注册。
  *
  * @author wshake
@@ -44,15 +46,18 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
         if (request == null) {
             throw BizException.of(ResultCode.PARAM_INVALID, "trigger request is required");
         }
-        String workflowType = requireNonBlank(request.workflowType(), "workflowType");
+        String businessWorkflowType = requireNonBlank(request.workflowType(), "workflowType");
         String taskQueue = requireNonBlank(request.taskQueue(), "taskQueue");
         String workflowId = buildWorkflowId(request.code());
 
+        // 超时/重试挂在 Dispatch 父 WF；子业务侧在 JobDispatchWorkflow 内再套一份
         WorkflowOptions.Builder options =
                 WorkflowOptions.newBuilder().setWorkflowId(workflowId).setTaskQueue(taskQueue);
 
         if (request.timeoutSeconds() != null && request.timeoutSeconds() > 0) {
-            options.setWorkflowExecutionTimeout(Duration.ofSeconds(request.timeoutSeconds()));
+            // 父 WF 需覆盖 child + activity，略放宽
+            long parentSeconds = Math.max(request.timeoutSeconds() + 60L, request.timeoutSeconds() * 2L);
+            options.setWorkflowExecutionTimeout(Duration.ofSeconds(parentSeconds));
         }
 
         RetryOptions retryOptions = toRetryOptions(request.retryPolicy());
@@ -60,13 +65,25 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
             options.setRetryOptions(retryOptions);
         }
 
-        Map<String, Object> input = request.input() == null ? Map.of() : request.input();
+        Map<String, Object> businessInput = request.input() == null ? Map.of() : request.input();
+        JobDispatchModels.DispatchInput dispatchInput = new JobDispatchModels.DispatchInput(
+                request.configId(),
+                request.code(),
+                businessWorkflowType,
+                taskQueue,
+                request.code(),
+                request.timeoutSeconds(),
+                request.retryPolicy(),
+                businessInput,
+                0);
+
         try {
-            WorkflowStub stub = workflowClient.newUntypedWorkflowStub(workflowType, options.build());
-            WorkflowExecution execution = stub.start(input);
+            WorkflowStub stub =
+                    workflowClient.newUntypedWorkflowStub(TemporalWorkflowType.JOB_DISPATCH, options.build());
+            WorkflowExecution execution = stub.start(dispatchInput);
             log.info(
-                    "Temporal workflow started: type={} queue={} workflowId={} runId={}",
-                    workflowType,
+                    "Temporal dispatch started: businessType={} queue={} workflowId={} runId={}",
+                    businessWorkflowType,
                     taskQueue,
                     execution.getWorkflowId(),
                     execution.getRunId());
@@ -86,12 +103,12 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
     }
 
     /**
-     * 将配置侧 JSON 对象映射为 Temporal {@link RetryOptions}。
+     * 将配置侧 JSON 对象映射为 Temporal {@link RetryOptions}（供 trigger / schedule / dispatch 复用）。
      *
      * <p>兼容 mock/seed 字段：{@code maxAttempts}、{@code initialInterval}（如 {@code 30s}）、
      * {@code backoff}。
      */
-    static RetryOptions toRetryOptions(Map<String, Object> retryPolicy) {
+    public static RetryOptions toRetryOptions(Map<String, Object> retryPolicy) {
         if (retryPolicy == null || retryPolicy.isEmpty()) {
             return null;
         }

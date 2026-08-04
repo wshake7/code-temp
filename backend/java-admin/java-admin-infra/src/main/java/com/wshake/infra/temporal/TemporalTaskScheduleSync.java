@@ -2,10 +2,12 @@ package com.wshake.infra.temporal;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
+import com.wshake.infra.temporal.workflow.JobDispatchModels;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
 import com.wshake.service.task.TaskJsonSupport;
+import com.wshake.service.task.TemporalWorkflowType;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.client.WorkflowOptions;
@@ -199,10 +201,11 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                 handle.unpause("enabled in DB on startup sync");
             }
             log.info(
-                    "Temporal schedule updated: scheduleId={} code={} {} workflowType={}",
+                    "Temporal schedule updated: scheduleId={} code={} {} dispatch={} businessType={}",
                     scheduleId,
                     config.getCode(),
                     cadence,
+                    TemporalWorkflowType.JOB_DISPATCH,
                     config.getWorkflowType());
             return;
         }
@@ -214,10 +217,11 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                     schedule,
                     ScheduleOptions.newBuilder().setTriggerImmediately(true).build());
             log.info(
-                    "Temporal schedule created: scheduleId={} code={} {} workflowType={}",
+                    "Temporal schedule created: scheduleId={} code={} {} dispatch={} businessType={}",
                     scheduleId,
                     config.getCode(),
                     cadence,
+                    TemporalWorkflowType.JOB_DISPATCH,
                     config.getWorkflowType());
         } catch (ScheduleAlreadyRunningException ex) {
             // 并发启动竞态：改 update
@@ -245,7 +249,7 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
     }
 
     private Schedule buildSchedule(TemporalTaskConfig config, String cron, boolean paused) {
-        String workflowType = requireNonBlank(config.getWorkflowType(), "workflowType");
+        String businessWorkflowType = requireNonBlank(config.getWorkflowType(), "workflowType");
         String taskQueue = requireNonBlank(config.getTaskQueue(), "taskQueue");
         String code = config.getCode().trim();
 
@@ -255,7 +259,8 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                 WorkflowOptions.newBuilder().setWorkflowId("sched-" + code).setTaskQueue(taskQueue);
 
         if (config.getTimeoutSeconds() != null && config.getTimeoutSeconds() > 0) {
-            options.setWorkflowExecutionTimeout(Duration.ofSeconds(config.getTimeoutSeconds()));
+            long parentSeconds = Math.max(config.getTimeoutSeconds() + 60L, config.getTimeoutSeconds() * 2L);
+            options.setWorkflowExecutionTimeout(Duration.ofSeconds(parentSeconds));
         }
 
         Map<String, Object> retryPolicy = TaskJsonSupport.parseObject(config.getRetryPolicy(), "retryPolicy");
@@ -264,17 +269,29 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
             options.setRetryOptions(retryOptions);
         }
 
-        Map<String, Object> input = new LinkedHashMap<>();
-        input.put("trigger", "schedule");
-        input.put("configCode", code);
+        Map<String, Object> businessInput = new LinkedHashMap<>();
+        businessInput.put("trigger", "schedule");
+        businessInput.put("configCode", code);
         if (config.getId() != null) {
-            input.put("configId", config.getId());
+            businessInput.put("configId", config.getId());
         }
 
+        JobDispatchModels.DispatchInput dispatchInput = new JobDispatchModels.DispatchInput(
+                config.getId(),
+                code,
+                businessWorkflowType,
+                taskQueue,
+                code,
+                config.getTimeoutSeconds(),
+                retryPolicy,
+                businessInput,
+                0);
+
+        // 统一走 JobDispatchWorkflow，由 Activity 落库执行记录（对齐 Go temporaljob）
         ScheduleActionStartWorkflow action = ScheduleActionStartWorkflow.newBuilder()
-                .setWorkflowType(workflowType)
+                .setWorkflowType(TemporalWorkflowType.JOB_DISPATCH)
                 .setOptions(options.build())
-                .setArguments(input)
+                .setArguments(dispatchInput)
                 .build();
 
         ScheduleSpec.Builder specBuilder = ScheduleSpec.newBuilder();

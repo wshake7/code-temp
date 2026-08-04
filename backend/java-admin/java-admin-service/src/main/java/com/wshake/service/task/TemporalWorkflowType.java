@@ -14,10 +14,17 @@ import java.util.List;
  */
 public final class TemporalWorkflowType {
 
-    /** 日志计数 tick（dev 测试 / 当前唯一已注册 Workflow）。 */
+    /** 日志计数 tick（dev 测试 / 当前唯一已注册业务 Workflow）。 */
     public static final String LOG_COUNT_TICK = "LogCountTickWorkflow";
 
-    /** 全部合法 workflow type。 */
+    /**
+     * 内部派发包装 Workflow：启动子业务 WF 并落库执行记录。
+     *
+     * <p><b>不进入</b> {@link #ALL}，任务配置 create/update 不可选用。
+     */
+    public static final String JOB_DISPATCH = "JobDispatchWorkflow";
+
+    /** 全部合法业务 workflow type（任务配置门禁）。 */
     public static final List<String> ALL = List.of(LOG_COUNT_TICK);
 
     private TemporalWorkflowType() {}

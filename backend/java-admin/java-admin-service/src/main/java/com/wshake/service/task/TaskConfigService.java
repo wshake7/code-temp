@@ -5,13 +5,11 @@ import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
 import com.wshake.service.entity.TemporalTaskConfig;
-import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.port.TaskTriggerPort;
 import com.wshake.service.port.TaskTriggerPort.TriggerRequest;
 import com.wshake.service.port.TaskTriggerPort.TriggerResult;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
-import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import com.wshake.service.task.TaskManageModels.CreateTaskConfigCommand;
 import com.wshake.service.task.TaskManageModels.TaskBatchCommand;
 import com.wshake.service.task.TaskManageModels.TaskBatchResult;
@@ -48,7 +46,6 @@ public class TaskConfigService {
     private static final Pattern CODE_RE = Pattern.compile(TaskManageModels.CODE_PATTERN);
 
     private final TemporalTaskConfigRepository configRepository;
-    private final TemporalTaskExecutionRepository executionRepository;
     private final TaskTriggerPort taskTriggerPort;
     private final TaskSchedulePort taskSchedulePort;
 
@@ -213,7 +210,10 @@ public class TaskConfigService {
             List<Long> triggered = new ArrayList<>();
             for (TemporalTaskConfig t : enabled) {
                 TaskExecutionView exec = doTrigger(t);
-                executionIds.add(exec.id());
+                // 记录由 Dispatch Activity 异步写入；同步响应可能尚无 DB id
+                if (exec.id() != null) {
+                    executionIds.add(exec.id());
+                }
                 triggered.add(t.getId());
             }
             List<Long> skipped = targets.stream()
@@ -249,10 +249,19 @@ public class TaskConfigService {
         return new TaskTriggerResult(configView, execution);
     }
 
+    /**
+     * 启动 JobDispatchWorkflow；执行记录由 Dispatch 内 Activity 异步写入（child 的 workflowId/runId）。
+     *
+     * <p>本方法立即返回的 {@link TaskExecutionView} 仅含派发父 WF 标识与配置快照，
+     * {@code id} 为 null（列表接口刷新后可见完整记录）。
+     */
     private TaskExecutionView doTrigger(TemporalTaskConfig config) {
         Map<String, Object> input = new LinkedHashMap<>();
         input.put("trigger", "manual");
         input.put("configCode", config.getCode());
+        if (config.getId() != null) {
+            input.put("configId", config.getId());
+        }
 
         TriggerResult started = taskTriggerPort.start(new TriggerRequest(
                 config.getId(),
@@ -265,23 +274,22 @@ public class TaskConfigService {
                 input));
 
         LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
-        TemporalTaskExecution exec = new TemporalTaskExecution();
-        exec.setConfigId(config.getId());
-        exec.setWorkflowId(started.workflowId());
-        exec.setRunId(started.runId());
-        exec.setWorkflowType(config.getWorkflowType());
-        exec.setTaskQueue(config.getTaskQueue());
-        exec.setStatus("RUNNING");
-        exec.setStartedAt(now);
-        exec.setClosedAt(null);
-        exec.setInputSummary(TaskJsonSupport.toJson(input, "inputSummary"));
-        exec.setResultSummary(null);
-        exec.setFailureReason(null);
-        exec.setCreatedAt(now);
-        executionRepository.insert(exec);
-
-        TemporalTaskExecution saved = executionRepository.findById(exec.getId());
-        return toExecutionView(saved != null ? saved : exec, config.getName());
+        // 执行记录由 JobDispatch CreateExecution Activity 落库；此处不写 DB
+        return new TaskExecutionView(
+                null,
+                config.getId(),
+                config.getName(),
+                started.workflowId(),
+                started.runId(),
+                config.getWorkflowType(),
+                config.getTaskQueue(),
+                "RUNNING",
+                now,
+                null,
+                input,
+                null,
+                null,
+                now);
     }
 
     private TemporalTaskConfig requireConfig(Long id) {
@@ -384,23 +392,5 @@ public class TaskConfigService {
                 t.getUpdatedAt(),
                 t.getCreatedBy() == null ? 0L : t.getCreatedBy(),
                 t.getUpdatedBy() == null ? 0L : t.getUpdatedBy());
-    }
-
-    private TaskExecutionView toExecutionView(TemporalTaskExecution e, String configName) {
-        return new TaskExecutionView(
-                e.getId(),
-                e.getConfigId(),
-                configName,
-                e.getWorkflowId(),
-                e.getRunId(),
-                e.getWorkflowType(),
-                e.getTaskQueue(),
-                e.getStatus(),
-                e.getStartedAt(),
-                e.getClosedAt(),
-                TaskJsonSupport.parseObject(e.getInputSummary(), "inputSummary"),
-                TaskJsonSupport.parseObject(e.getResultSummary(), "resultSummary"),
-                e.getFailureReason(),
-                e.getCreatedAt());
     }
 }
