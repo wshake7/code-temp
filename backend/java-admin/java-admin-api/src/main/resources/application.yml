@@ -41,8 +41,8 @@ spring:
   # Temporal（io.temporal:temporal-spring-boot-starter）
   # 文档：https://docs.temporal.io/develop/java/integrations/spring-boot-integration
   # 自动配置条件：connection.target 非空 OR test-server.enabled=true
-  # 默认 target 为空 → 不连 Server，TaskTriggerPort 走 LocalTaskTriggerPort
-  # 本地联调：TEMPORAL_TARGET=127.0.0.1:4723 TEMPORAL_START_WORKERS=true
+  # 基线默认 target 为空；application-dev.yml 覆盖为 127.0.0.1:4723（本地 compose）
+  # 关闭：TEMPORAL_TARGET= ；启动后 TemporalTaskScheduleSyncRunner 同步 DB→Schedule
   temporal:
     connection:
       # 空字符串 → 禁用自动配置；compose 宿主机 4723→容器 7233
@@ -126,4 +126,4 @@ logging:
   level:
     root: INFO
     com.wshake: INFO
-#    com.easy.query: WARN
+    com.easy.query: WARN

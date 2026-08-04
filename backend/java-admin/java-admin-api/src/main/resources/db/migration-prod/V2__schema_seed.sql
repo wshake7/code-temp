@@ -445,6 +445,7 @@ VALUES ('p', '1', '/*', '*', NULL, NULL, NULL);
 
 -- ============================================================
 -- Section 12: temporal_task_config（与 dev 对齐；prod 默认不跑 V2）
+-- cron_expr 启动时同步为 Temporal Schedule（scheduleId=task-{code}）
 -- log_count_tick：Workflow 内每 10s Activity 将进程内 count+1 并打日志
 -- ============================================================
 

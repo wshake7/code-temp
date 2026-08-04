@@ -68,6 +68,18 @@ public class TemporalTaskConfigRepository {
                 .toList();
     }
 
+    /**
+     * 启动同步用：全部未软删配置（含禁用、无 cron）。
+     *
+     * <p>@LogicDelete 自动过滤软删行；同步侧据 is_enabled + cron_expr 决定 upsert / pause。
+     */
+    public List<TemporalTaskConfig> listAllActive() {
+        return easyEntityQuery
+                .queryable(TemporalTaskConfig.class)
+                .orderBy(t -> t.id().asc())
+                .toList();
+    }
+
     /** 按 id 批量解析名称（仅未软删配置，@LogicDelete 自动过滤）。 */
     public Map<Long, String> mapNameByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {

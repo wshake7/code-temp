@@ -445,9 +445,9 @@ VALUES ('p', '1', '/*', '*', NULL, NULL, NULL);
 
 -- ============================================================
 -- Section 12: temporal_task_config（dev 测试任务）
--- log_count_tick：Workflow 内每 10s Activity 将进程内 count+1 并打日志
--- cron_expr 为配置元数据（当前未同步 Temporal Schedule）；实际节拍由 Workflow.sleep 实现
--- 联调：TEMPORAL_TARGET=127.0.0.1:4723 TEMPORAL_START_WORKERS=true 后手动 trigger
+-- log_count_tick：单次 Workflow = Activity 将 count+1 并 log；节拍由 Schedule 按 cron/interval 驱动
+-- 启动时 TemporalTaskScheduleSync 同步为 Schedule（scheduleId=task-{code}；秒级 cron 转 Interval）
+-- 联调：dev 默认连 127.0.0.1:4723 + start-workers；日志搜 log_count_tick count=
 -- ============================================================
 
 INSERT INTO temporal_task_config (
