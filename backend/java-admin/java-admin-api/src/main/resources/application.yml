@@ -55,6 +55,14 @@ spring:
       workflow-packages:
         - com.wshake.infra.temporal.workflow
       register-activity-beans: true
+    # Worker 优雅停机等待秒数（SmartLifecycle 在 gRPC Channel 关闭前 awaitTermination）
+    # 需 ≤ spring.lifecycle.timeout-per-shutdown-phase（默认 30s）
+    worker:
+      shutdown-await-seconds: ${TEMPORAL_WORKER_SHUTDOWN_AWAIT_SECONDS:30}
+
+  # SmartLifecycle 停机超时：覆盖 Temporal Worker await，避免相位超时后仍关 Channel
+  lifecycle:
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE:45s}
 
   # Nacos 启用开关（被 NacosConfigToggleProperties @ConfigurationProperties 绑定）
   # 默认 false：dev profile 不连 Nacos，prod 用 env 变量打开

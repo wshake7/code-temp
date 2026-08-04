@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Configuration;
  * 使用属性表达式而非 {@code @ConditionalOnBean(WorkflowClient)}，避免 user-config
  * 先于 auto-config 求值导致永远回退本地实现。
  *
+ * <p>Worker 优雅停机见 {@link TemporalWorkerGracefulShutdownConfiguration}。
+ *
  * @author wshake
  * @see <a href="https://docs.temporal.io/develop/java/integrations/spring-boot-integration">Spring Boot integration</a>
  */
