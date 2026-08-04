@@ -4,6 +4,7 @@ import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.infra.casbin.CasbinInterceptor;
 import com.wshake.infra.language.LanguageInterceptor;
+import com.wshake.infra.security.SecurityProperties;
 import org.casbin.jcasbin.main.Enforcer;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -20,6 +21,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Controller 不再重复 {@code requireLogin}/{@code isLogin} 门闩；业务侧只在需要时读取 loginId。
  * CasbinInterceptor 仅做授权（deny-by-default），排除登录/登出等公开路径与文档路径。
  *
+ * <p>认证/授权拦截器排除路径在 {@code application.yaml} 的 {@code app.security.auth-exclude-paths} /
+ * {@code app.security.casbin-exclude-paths} 中配置，未配置时使用 {@link SecurityProperties} 默认值。
+ *
  * @author wshake
  */
 // final + 无 @Bean 互调：必须用 lite 模式，否则 CGLIB 无法增强 final 类
@@ -28,10 +32,15 @@ public final class WebConfig implements WebMvcConfigurer {
 
     private final Enforcer casbinEnforcer;
     private final LanguageInterceptor languageInterceptor;
+    private final SecurityProperties securityProperties;
 
-    public WebConfig(Enforcer casbinEnforcer, LanguageInterceptor languageInterceptor) {
+    public WebConfig(
+            Enforcer casbinEnforcer,
+            LanguageInterceptor languageInterceptor,
+            SecurityProperties securityProperties) {
         this.casbinEnforcer = casbinEnforcer;
         this.languageInterceptor = languageInterceptor;
+        this.securityProperties = securityProperties;
     }
 
     @Override
@@ -39,16 +48,7 @@ public final class WebConfig implements WebMvcConfigurer {
         // 1. Sa-Token 认证拦截器：非排除路径强制登录（全站 /api 认证单一真相源）
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
                 .addPathPatterns("/api/**")
-                .excludePathPatterns(
-                        "/api/auth/login",
-                        // 登出幂等：未登录也返回成功，不强制 token
-                        "/api/auth/logout",
-                        "/api/altcha/challenge",
-                        "/api/encrypt/public/key",
-                        // 进页/未登录拉取后端翻译
-                        "/api/public/i18n/**",
-                        // dev-only：mock 拉密钥对；prod 无此 Controller
-                        "/api/encrypt/dev/key-pair");
+                .excludePathPatterns(securityProperties.getAuthExcludePaths());
 
         // 2. Language：须在 Sa 之后，才能对已登录用户异步收敛 languageCode
         registry.addInterceptor(languageInterceptor).addPathPatterns("/api/**");
@@ -56,19 +56,7 @@ public final class WebConfig implements WebMvcConfigurer {
         // 3. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
         registry.addInterceptor(new CasbinInterceptor(casbinEnforcer))
                 .addPathPatterns("/api/**")
-                .excludePathPatterns(
-                        "/api/auth/login",
-                        "/api/auth/logout",
-                        "/api/altcha/challenge",
-                        "/api/encrypt/public/key",
-                        "/api/public/i18n/**",
-                        "/api/encrypt/dev/key-pair",
-                        "/doc.html",
-                        "/doc.html/**",
-                        "/swagger-ui/**",
-                        "/v3/api-docs/**",
-                        "/favicon.ico",
-                        "/error");
+                .excludePathPatterns(securityProperties.getCasbinExcludePaths());
     }
 
     @Override

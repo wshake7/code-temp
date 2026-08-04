@@ -18,6 +18,7 @@ import com.wshake.infra.language.UserLanguageSyncService;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -203,6 +204,20 @@ class SecurityFilterTest {
         encryptFilter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
 
         assertThat(chainCalled).isTrue();
+    }
+
+    @Test
+    void encrypt_docStaticResourcePath_allowsPlaintext() throws Exception {
+        // doc.html 加载的静态资源（webjars / swagger-resources / csrf）须在白名单内
+        for (String path : List.of("/webjars/knife4j-openapi3-ui/app.js", "/swagger-resources", "/csrf")) {
+            MockHttpServletRequest req = new MockHttpServletRequest("GET", path);
+            MockHttpServletResponse resp = new MockHttpServletResponse();
+            AtomicBoolean chainCalled = new AtomicBoolean(false);
+
+            encryptFilter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
+
+            assertThat(chainCalled).as("Encrypt 应放行白名单路径 %s", path).isTrue();
+        }
     }
 
     @Test
@@ -406,6 +421,21 @@ class SecurityFilterTest {
         assertThat(chainCalled).isFalse();
         JsonNode body = MAPPER.readTree(resp.getContentAsString());
         assertThat(body.get("code").asInt()).isEqualTo(ResultCode.REQUEST_ERROR.getCode());
+    }
+
+    @Test
+    void sign_encryptOff_docStaticResourcePath_allowed() throws Exception {
+        securityProperties.getEncrypt().setEnabled(false);
+        securityProperties.getSign().setEnabled(true);
+
+        // doc.html 加载的静态资源须放行（缺签名但不报 Sign 错误）
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/webjars/knife4j-openapi3-ui/app.js");
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+        AtomicBoolean chainCalled = new AtomicBoolean(false);
+
+        signFilter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
+
+        assertThat(chainCalled).isTrue();
     }
 
     @Test

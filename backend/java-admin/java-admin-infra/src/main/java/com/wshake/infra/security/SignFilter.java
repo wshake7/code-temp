@@ -92,7 +92,8 @@ public final class SignFilter extends OncePerRequestFilter {
                 || !securityProperties.getSign().isEnabled()) {
             return true;
         }
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || SecurityPathMatcher.isWhitelisted(request)) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())
+                || SecurityPathMatcher.isWhitelisted(request, securityProperties.getWhitelist())) {
             return true;
         }
         String contentType = request.getContentType();

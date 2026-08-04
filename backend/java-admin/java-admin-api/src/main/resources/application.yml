@@ -116,6 +116,52 @@ app:
       enabled: ${SECURITY_SIGN_ENABLED:true}
     language:
       enabled: ${SECURITY_LANGUAGE_ENABLED:true}
+    # Encrypt/Sign 安全中间件白名单（免强制加密与独立签名校验）
+    # 含 /webjars/** /swagger-resources/** /csrf，否则 doc.html 加载的静态资源会被拦截
+    whitelist:
+      - /.well-known/**
+      - /api/encrypt/public/key
+      - /api/encrypt/dev/key-pair
+      - /api/encrypt/dev/session-key
+      - /api/altcha/**
+      - /api/public/i18n/**
+      - /doc.html
+      - /doc.html/**
+      - /swagger-ui/**
+      - /swagger-resources/**
+      - /v3/api-docs/**
+      - /webjars/**
+      - /favicon.ico
+      - /csrf
+      - /error
+      - /actuator/**
+      - /api/health/**
+    # Sa-Token 认证拦截器排除路径
+    auth-exclude-paths:
+      - /api/auth/login
+      - /api/auth/logout
+      - /api/altcha/challenge
+      - /api/encrypt/public/key
+      - /api/public/i18n/**
+      - /api/encrypt/dev/key-pair
+    # jcasbin 授权拦截器排除路径（认证排除 + 文档/静态资源）
+    casbin-exclude-paths:
+      - /.well-known/**
+      - /api/auth/login
+      - /api/auth/logout
+      - /api/altcha/challenge
+      - /api/encrypt/public/key
+      - /api/public/i18n/**
+      - /api/encrypt/dev/key-pair
+      - /doc.html
+      - /doc.html/**
+      - /swagger-ui/**
+      - /swagger-resources/**
+      - /v3/api-docs/**
+      - /webjars/**
+      - /favicon.ico
+      - /csrf
+      - /error
 
 # Easy-Query 3.x（SQL-springboot4-starter 适配 SB 4）
 # name-conversion: underlined → entity 字段 userId 自动映射列 user_id

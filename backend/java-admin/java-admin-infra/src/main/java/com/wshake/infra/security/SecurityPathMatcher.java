@@ -13,7 +13,13 @@ public final class SecurityPathMatcher {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    /** 免强制加密与独立 Sign 校验的路径（公钥、ALTCHA、公开 i18n、文档、健康检查等）。 */
+    /**
+     * 免强制加密与独立 Sign 校验的路径（公钥、ALTCHA、公开 i18n、文档、健康检查等）。
+     *
+     * <p>含 {@code /webjars/**}、{@code /swagger-resources/**}、{@code /csrf}，
+     * 否则打开 {@code /doc.html} 时其加载的静态资源会被 Sign/Encrypt 拦截。
+     * 同时作为 {@link com.wshake.infra.security.SecurityProperties} 白名单默认值。
+     */
     public static final List<String> SECURITY_WHITELIST = List.of(
             "/api/encrypt/public/key",
             // 仅 dev profile 注册 DevEncryptController；prod 无此路径
@@ -25,8 +31,11 @@ public final class SecurityPathMatcher {
             "/doc.html",
             "/doc.html/**",
             "/swagger-ui/**",
+            "/swagger-resources/**",
             "/v3/api-docs/**",
+            "/webjars/**",
             "/favicon.ico",
+            "/csrf",
             "/error",
             "/actuator/**",
             "/api/health/**");

@@ -182,7 +182,7 @@ public final class EncryptFilter extends OncePerRequestFilter {
     }
 
     private boolean isWhitelisted(HttpServletRequest request) {
-        return SecurityPathMatcher.isWhitelisted(request);
+        return SecurityPathMatcher.isWhitelisted(request, securityProperties.getWhitelist());
     }
 
     private String buildAadFromRequest(HttpServletRequest request) {
