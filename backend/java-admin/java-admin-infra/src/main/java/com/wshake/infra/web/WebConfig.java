@@ -35,9 +35,7 @@ public final class WebConfig implements WebMvcConfigurer {
     private final SecurityProperties securityProperties;
 
     public WebConfig(
-            Enforcer casbinEnforcer,
-            LanguageInterceptor languageInterceptor,
-            SecurityProperties securityProperties) {
+            Enforcer casbinEnforcer, LanguageInterceptor languageInterceptor, SecurityProperties securityProperties) {
         this.casbinEnforcer = casbinEnforcer;
         this.languageInterceptor = languageInterceptor;
         this.securityProperties = securityProperties;

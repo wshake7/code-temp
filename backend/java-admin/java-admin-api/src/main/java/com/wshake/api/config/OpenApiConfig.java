@@ -42,7 +42,8 @@ public class OpenApiConfig {
                                         .bearerFormat("JWT")
                                         .in(SecurityScheme.In.HEADER)
                                         .name("Authorization")))
-                .externalDocs(
-                        new ExternalDocumentation().description("Knife4j-next 文档页").url("/doc.html"));
+                .externalDocs(new ExternalDocumentation()
+                        .description("Knife4j-next 文档页")
+                        .url("/doc.html"));
     }
 }

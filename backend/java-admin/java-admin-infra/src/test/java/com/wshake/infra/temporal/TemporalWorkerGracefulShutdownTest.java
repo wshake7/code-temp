@@ -40,8 +40,7 @@ class TemporalWorkerGracefulShutdownTest {
         when(stubs.isTerminated()).thenReturn(true);
         when(stubs.awaitTermination(anyLong(), eq(TimeUnit.SECONDS))).thenReturn(true);
 
-        TemporalWorkerGracefulShutdown lifecycle =
-                new TemporalWorkerGracefulShutdown(factory, stubs, 5L);
+        TemporalWorkerGracefulShutdown lifecycle = new TemporalWorkerGracefulShutdown(factory, stubs, 5L);
         lifecycle.start();
         assertThat(lifecycle.isRunning()).isTrue();
 
@@ -78,24 +77,20 @@ class TemporalWorkerGracefulShutdownTest {
         GenericApplicationContext ctx = new GenericApplicationContext();
         RootBeanDefinition factoryBd = new RootBeanDefinition(Object.class);
         factoryBd.setDestroyMethodName("shutdown");
-        ctx.registerBeanDefinition(
-                TemporalWorkerGracefulShutdownConfiguration.WORKER_FACTORY_BEAN, factoryBd);
+        ctx.registerBeanDefinition(TemporalWorkerGracefulShutdownConfiguration.WORKER_FACTORY_BEAN, factoryBd);
 
         RootBeanDefinition stubsBd = new RootBeanDefinition(Object.class);
         stubsBd.setDestroyMethodName("(inferred)");
-        ctx.registerBeanDefinition(
-                TemporalWorkerGracefulShutdownConfiguration.SERVICE_STUBS_BEAN, stubsBd);
+        ctx.registerBeanDefinition(TemporalWorkerGracefulShutdownConfiguration.SERVICE_STUBS_BEAN, stubsBd);
 
         BeanFactoryPostProcessor pp =
                 TemporalWorkerGracefulShutdownConfiguration.temporalClientDestroyMethodCustomizer();
         pp.postProcessBeanFactory(ctx.getBeanFactory());
 
-        assertThat(ctx.getBeanDefinition(
-                        TemporalWorkerGracefulShutdownConfiguration.WORKER_FACTORY_BEAN)
+        assertThat(ctx.getBeanDefinition(TemporalWorkerGracefulShutdownConfiguration.WORKER_FACTORY_BEAN)
                         .getDestroyMethodName())
                 .isEmpty();
-        assertThat(ctx.getBeanDefinition(
-                        TemporalWorkerGracefulShutdownConfiguration.SERVICE_STUBS_BEAN)
+        assertThat(ctx.getBeanDefinition(TemporalWorkerGracefulShutdownConfiguration.SERVICE_STUBS_BEAN)
                         .getDestroyMethodName())
                 .isEmpty();
         ctx.close();
@@ -105,7 +100,8 @@ class TemporalWorkerGracefulShutdownTest {
     void configuration_registersLifecycleWhenFactoryPresent() {
         runner.run(ctx -> {
             assertThat(ctx).hasSingleBean(TemporalWorkerGracefulShutdown.class);
-            assertThat(ctx.getBean(TemporalWorkerGracefulShutdown.class).isRunning()).isTrue();
+            assertThat(ctx.getBean(TemporalWorkerGracefulShutdown.class).isRunning())
+                    .isTrue();
             // BFPP 应清空 destroyMethod
             assertThat(ctx.getBeanFactory()
                             .getBeanDefinition("temporalWorkerFactory")

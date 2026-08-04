@@ -56,9 +56,7 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
     }
 
     public TemporalWorkerGracefulShutdown(
-            @Nullable WorkerFactory workerFactory,
-            @Nullable WorkflowServiceStubs serviceStubs,
-            long awaitSeconds) {
+            @Nullable WorkerFactory workerFactory, @Nullable WorkflowServiceStubs serviceStubs, long awaitSeconds) {
         this.workerFactory = workerFactory;
         this.serviceStubs = serviceStubs;
         this.awaitSeconds = awaitSeconds > 0 ? awaitSeconds : DEFAULT_AWAIT_SECONDS;
@@ -133,9 +131,7 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
         }
         awaitWorkerFactory();
         if (!workerFactory.isTerminated()) {
-            log.warn(
-                    "Temporal WorkerFactory not terminated within {}s, calling shutdownNow",
-                    awaitSeconds);
+            log.warn("Temporal WorkerFactory not terminated within {}s, calling shutdownNow", awaitSeconds);
             workerFactory.shutdownNow();
             awaitWorkerFactory();
         }
@@ -165,9 +161,7 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
         serviceStubs.shutdown();
         awaitServiceStubs();
         if (!serviceStubs.isTerminated()) {
-            log.warn(
-                    "Temporal WorkflowServiceStubs not terminated within {}s, calling shutdownNow",
-                    awaitSeconds);
+            log.warn("Temporal WorkflowServiceStubs not terminated within {}s, calling shutdownNow", awaitSeconds);
             serviceStubs.shutdownNow();
             awaitServiceStubs();
         }

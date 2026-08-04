@@ -29,8 +29,7 @@ import org.springframework.context.annotation.Configuration;
         "${spring.temporal.test-server.enabled:false} || '${spring.temporal.connection.target:}'.length() > 0")
 public class TemporalWorkerGracefulShutdownConfiguration {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(TemporalWorkerGracefulShutdownConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(TemporalWorkerGracefulShutdownConfiguration.class);
 
     static final String WORKER_FACTORY_BEAN = "temporalWorkerFactory";
     static final String SERVICE_STUBS_BEAN = "temporalWorkflowServiceStubs";
@@ -78,9 +77,7 @@ public class TemporalWorkerGracefulShutdownConfiguration {
             @Autowired(required = false) WorkflowServiceStubs workflowServiceStubs,
             @Value("${spring.temporal.worker.shutdown-await-seconds:30}") long awaitSeconds) {
         if (workerFactory == null) {
-            log.info(
-                    "WorkerFactory not available; TemporalWorkerGracefulShutdown is noop "
-                            + "(no workers to stop)");
+            log.info("WorkerFactory not available; TemporalWorkerGracefulShutdown is noop " + "(no workers to stop)");
             return TemporalWorkerGracefulShutdown.noop();
         }
         return new TemporalWorkerGracefulShutdown(workerFactory, workflowServiceStubs, awaitSeconds);
