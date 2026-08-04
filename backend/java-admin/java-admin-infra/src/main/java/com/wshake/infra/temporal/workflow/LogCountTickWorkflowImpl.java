@@ -1,5 +1,6 @@
 package com.wshake.infra.temporal.workflow;
 
+import com.wshake.service.task.TemporalTaskQueue;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
@@ -11,14 +12,12 @@ import java.util.Map;
  *
  * <p>节拍由 Temporal Schedule（DB {@code cron_expr} / interval）驱动，不再在 Workflow 内
  * {@code sleep} 死循环，避免与 Schedule 叠多实例或固定 workflowId 挡住后续调度。
+ * Worker 注册队列见 {@link TemporalTaskQueue#DEMO}。
  *
  * @author wshake
  */
-@WorkflowImpl(taskQueues = LogCountTickWorkflowImpl.TASK_QUEUE)
+@WorkflowImpl(taskQueues = TemporalTaskQueue.DEMO)
 public class LogCountTickWorkflowImpl implements LogCountTickWorkflow {
-
-    /** 与 seed log_count_tick.task_queue 对齐。 */
-    public static final String TASK_QUEUE = "demo";
 
     private final LogCountTickActivities activities = Workflow.newActivityStub(
             LogCountTickActivities.class,

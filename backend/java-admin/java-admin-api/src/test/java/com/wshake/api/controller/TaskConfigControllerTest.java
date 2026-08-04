@@ -44,13 +44,13 @@ class TaskConfigControllerTest {
     @Test
     void list_returnsItemsTotal() {
         when(taskConfigService.page(ArgumentMatchers.any(TaskConfigListQuery.class)))
-                .thenReturn(PageData.of(List.of(sampleConfig(1L, "report_daily")), 1L));
+                .thenReturn(PageData.of(List.of(sampleConfig(1L, "log_count_tick")), 1L));
 
         Result<PageData<TaskConfigVO>> result = controller.list(1, 20, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(1L);
-        assertThat(result.getData().getItems().get(0).getCode()).isEqualTo("report_daily");
+        assertThat(result.getData().getItems().get(0).getCode()).isEqualTo("log_count_tick");
     }
 
     @Test
@@ -75,7 +75,7 @@ class TaskConfigControllerTest {
     @Test
     void update_usesFieldPresence() {
         when(taskConfigService.update(ArgumentMatchers.any(UpdateTaskConfigCommand.class)))
-                .thenReturn(sampleConfig(2L, "report_daily"));
+                .thenReturn(sampleConfig(2L, "log_count_tick"));
         ObjectNode body = objectMapper.createObjectNode();
         body.put("isEnabled", 0);
 
@@ -95,7 +95,7 @@ class TaskConfigControllerTest {
     @Test
     void update_canClearCronExprWithNull() {
         when(taskConfigService.update(ArgumentMatchers.any(UpdateTaskConfigCommand.class)))
-                .thenReturn(sampleConfig(2L, "report_daily"));
+                .thenReturn(sampleConfig(2L, "log_count_tick"));
         ObjectNode body = objectMapper.createObjectNode();
         body.putNull("cronExpr");
 
@@ -125,11 +125,11 @@ class TaskConfigControllerTest {
     @Test
     void trigger_returnsConfigAndExecution() {
         when(taskConfigService.trigger(1L))
-                .thenReturn(new TaskTriggerResult(sampleConfig(1L, "report_daily"), sampleExecution(9L, 1L)));
+                .thenReturn(new TaskTriggerResult(sampleConfig(1L, "log_count_tick"), sampleExecution(9L, 1L)));
 
         Result<TaskTriggerResultVO> result = controller.trigger(1L);
 
-        assertThat(result.getData().getConfig().getCode()).isEqualTo("report_daily");
+        assertThat(result.getData().getConfig().getCode()).isEqualTo("log_count_tick");
         assertThat(result.getData().getExecution().getId()).isEqualTo(9L);
     }
 
@@ -139,8 +139,8 @@ class TaskConfigControllerTest {
                 id,
                 code,
                 "名称",
-                "ReportDailyWorkflow",
-                "reports",
+                "LogCountTickWorkflow",
+                "demo",
                 "0 0 2 * * ?",
                 Map.of("maxAttempts", 3),
                 3600,
@@ -161,8 +161,8 @@ class TaskConfigControllerTest {
                 "名称",
                 "wf-report-1",
                 "run-1",
-                "ReportDailyWorkflow",
-                "reports",
+                "LogCountTickWorkflow",
+                "demo",
                 "RUNNING",
                 now,
                 null,

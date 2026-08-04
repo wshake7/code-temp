@@ -6,6 +6,7 @@ import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.entity.TemporalTaskExecution;
+import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.port.TaskTriggerPort;
 import com.wshake.service.port.TaskTriggerPort.TriggerRequest;
 import com.wshake.service.port.TaskTriggerPort.TriggerResult;
@@ -34,7 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 任务配置 Service：分页/CRUD/软删/batch/手动触发。
  *
- * <p>触发经 {@link TaskTriggerPort} 解耦执行后端；默认本地实现写镜像执行记录。
+ * <p>workflowType / taskQueue 必须登记在 {@link TemporalWorkflowType} /
+ * {@link TemporalTaskQueue}。写库后经 {@link TaskSchedulePort} 即时同步 Temporal Schedule。
+ * 手动触发走 {@link TaskTriggerPort}。Temporal 为必要依赖。
  *
  * @author wshake
  */
@@ -47,6 +50,7 @@ public class TaskConfigService {
     private final TemporalTaskConfigRepository configRepository;
     private final TemporalTaskExecutionRepository executionRepository;
     private final TaskTriggerPort taskTriggerPort;
+    private final TaskSchedulePort taskSchedulePort;
 
     public PageData<TaskConfigView> page(TaskConfigListQuery query) {
         EasyPageResult<TemporalTaskConfig> page = configRepository.page(
@@ -66,8 +70,8 @@ public class TaskConfigService {
         if (name.length() > 128) {
             throw BizException.of(ResultCode.PARAM_INVALID, "name must be ≤ 128 chars");
         }
-        String workflowType = requireNonBlank(cmd.workflowType(), "workflowType");
-        String taskQueue = requireNonBlank(cmd.taskQueue(), "taskQueue");
+        String workflowType = TemporalWorkflowType.requireCode(cmd.workflowType());
+        String taskQueue = TemporalTaskQueue.requireCode(cmd.taskQueue());
         if (configRepository.existsByCode(code, null)) {
             throw BizException.of(ResultCode.PARAM_INVALID, "code " + code + " already exists");
         }
@@ -83,7 +87,9 @@ public class TaskConfigService {
         row.setRemark(TaskManageModels.nullToEmpty(cmd.remark()).trim());
         row.setIsEnabled(TaskManageModels.normalize01(cmd.isEnabled(), 1));
         configRepository.insert(row);
-        return toConfigView(requireConfig(row.getId()));
+        TemporalTaskConfig saved = requireConfig(row.getId());
+        taskSchedulePort.apply(saved);
+        return toConfigView(saved);
     }
 
     @Transactional
@@ -108,18 +114,10 @@ public class TaskConfigService {
             row.setName(name);
         }
         if (cmd.workflowTypePresent()) {
-            String v = cmd.workflowType() == null ? "" : cmd.workflowType().trim();
-            if (v.isEmpty()) {
-                throw BizException.of(ResultCode.PARAM_INVALID, "workflowType cannot be empty");
-            }
-            row.setWorkflowType(v);
+            row.setWorkflowType(TemporalWorkflowType.requireCode(cmd.workflowType()));
         }
         if (cmd.taskQueuePresent()) {
-            String v = cmd.taskQueue() == null ? "" : cmd.taskQueue().trim();
-            if (v.isEmpty()) {
-                throw BizException.of(ResultCode.PARAM_INVALID, "taskQueue cannot be empty");
-            }
-            row.setTaskQueue(v);
+            row.setTaskQueue(TemporalTaskQueue.requireCode(cmd.taskQueue()));
         }
         if (cmd.cronExprPresent()) {
             row.setCronExpr(normalizeCron(cmd.cronExpr()));
@@ -138,11 +136,13 @@ public class TaskConfigService {
         }
 
         configRepository.update(row);
-        return toConfigView(requireConfig(row.getId()));
+        TemporalTaskConfig saved = requireConfig(row.getId());
+        taskSchedulePort.apply(saved);
+        return toConfigView(saved);
     }
 
     /**
-     * 软删任务配置；允许已有 execution（config_id 可悬空）。
+     * 软删任务配置；允许已有 execution（config_id 可悬空）；并 pause 对应 Schedule。
      */
     @Transactional
     public TaskConfigView softDelete(Long id) {
@@ -152,6 +152,10 @@ public class TaskConfigService {
         if (n == 0) {
             throw BizException.of(ResultCode.PARAM_INVALID, "task-config " + id + " not found");
         }
+        // 软删后按「禁用」语义 pause Schedule
+        TemporalTaskConfig paused = copyForSchedule(row);
+        paused.setIsEnabled(0);
+        taskSchedulePort.apply(paused);
         long deletedAt = System.currentTimeMillis();
         return new TaskConfigView(
                 snapshot.id(),
@@ -190,6 +194,9 @@ public class TaskConfigService {
             List<Long> deleted = new ArrayList<>();
             for (TemporalTaskConfig t : targets) {
                 configRepository.softDeleteById(t.getId());
+                TemporalTaskConfig paused = copyForSchedule(t);
+                paused.setIsEnabled(0);
+                taskSchedulePort.apply(paused);
                 deleted.add(t.getId());
             }
             return new TaskBatchResult(action, deleted.size(), deleted, List.of(), List.of());
@@ -220,6 +227,9 @@ public class TaskConfigService {
         List<Long> affected = new ArrayList<>();
         for (TemporalTaskConfig t : targets) {
             configRepository.updateIsEnabled(t.getId(), enabled);
+            TemporalTaskConfig snapshot = copyForSchedule(t);
+            snapshot.setIsEnabled(enabled);
+            taskSchedulePort.apply(snapshot);
             affected.add(t.getId());
         }
         return new TaskBatchResult(action, affected.size(), affected, List.of(), List.of());
@@ -338,6 +348,23 @@ public class TaskConfigService {
             }
         }
         return List.copyOf(set);
+    }
+
+    /**
+     * 浅拷贝调度相关字段，避免在内存中改写 repository 缓存对象语义。
+     */
+    private static TemporalTaskConfig copyForSchedule(TemporalTaskConfig src) {
+        TemporalTaskConfig c = new TemporalTaskConfig();
+        c.setId(src.getId());
+        c.setCode(src.getCode());
+        c.setName(src.getName());
+        c.setWorkflowType(src.getWorkflowType());
+        c.setTaskQueue(src.getTaskQueue());
+        c.setCronExpr(src.getCronExpr());
+        c.setRetryPolicy(src.getRetryPolicy());
+        c.setTimeoutSeconds(src.getTimeoutSeconds());
+        c.setIsEnabled(src.getIsEnabled());
+        return c;
     }
 
     private TaskConfigView toConfigView(TemporalTaskConfig t) {

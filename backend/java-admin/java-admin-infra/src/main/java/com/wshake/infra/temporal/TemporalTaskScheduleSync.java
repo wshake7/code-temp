@@ -1,6 +1,9 @@
 package com.wshake.infra.temporal;
 
+import com.wshake.common.exception.BizException;
+import com.wshake.common.result.ResultCode;
 import com.wshake.service.entity.TemporalTaskConfig;
+import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
 import com.wshake.service.task.TaskJsonSupport;
 import io.grpc.Status;
@@ -31,18 +34,21 @@ import org.slf4j.LoggerFactory;
 /**
  * 将 DB {@code temporal_task_config} 幂等同步到 Temporal Schedule。
  *
+ * <p>实现 {@link TaskSchedulePort}：后台 CRUD 写库后调用 {@link #apply} 即时同步；
+ * 启动时 {@link #syncAll} 做全量对账。
+ *
  * <p>规则：
  * <ul>
  *   <li>启用且 cron 非空 → create 或 update Schedule，并确保 unpaused
  *   <li>禁用或无 cron → 若 Schedule 已存在则 pause（DB 为配置源）
- *   <li>单条失败记日志，不中断整批
+ *   <li>全量同步时单条失败记日志，不中断整批；CRUD 单条 {@link #apply} 失败抛业务异常
  * </ul>
  *
  * <p>ScheduleId 固定为 {@code task-{code}}，多实例启动重复 sync 安全。
  *
  * @author wshake
  */
-public class TemporalTaskScheduleSync {
+public class TemporalTaskScheduleSync implements TaskSchedulePort {
 
     private static final Logger log = LoggerFactory.getLogger(TemporalTaskScheduleSync.class);
 
@@ -51,8 +57,7 @@ public class TemporalTaskScheduleSync {
     /**
      * 秒级节拍 cron（如 0/10 或 star/10 六段、五段）。高频调度改用 Interval，比 cron 更可靠。
      */
-    private static final Pattern SECOND_INTERVAL_CRON =
-            Pattern.compile("^(?:0|\\*)/(\\d+)(?:\\s+\\*){4,5}$");
+    private static final Pattern SECOND_INTERVAL_CRON = Pattern.compile("^(?:0|\\*)/(\\d+)(?:\\s+\\*){4,5}$");
 
     private final ScheduleClient scheduleClient;
     private final TemporalTaskConfigRepository configRepository;
@@ -104,6 +109,27 @@ public class TemporalTaskScheduleSync {
     }
 
     /**
+     * CRUD 即时同步：失败抛 {@link BizException}，由调用方感知。
+     */
+    @Override
+    public void apply(TemporalTaskConfig config) {
+        try {
+            SyncAction action = syncOne(config);
+            log.info(
+                    "Temporal schedule applied from CRUD: code={} action={}",
+                    config == null ? null : config.getCode(),
+                    action);
+        } catch (BizException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            String code = config == null ? "?" : config.getCode();
+            throw BizException.of(
+                    ResultCode.REMOTE_CALL_FAILED,
+                    "Temporal schedule sync failed for code=" + code + ": " + ex.getMessage());
+        }
+    }
+
+    /**
      * 同步单条配置。
      *
      * @return 执行动作（供单测断言）
@@ -122,7 +148,7 @@ public class TemporalTaskScheduleSync {
             return SyncAction.UPSERTED;
         }
 
-        // 禁用 / 无 cron：暂停已有 Schedule；不存在则跳过
+        // 禁用 / 无 cron / 软删：暂停已有 Schedule；不存在则跳过
         if (pauseIfExists(scheduleId, disabledNote(enabled, hasCron))) {
             return SyncAction.PAUSED;
         }
@@ -232,8 +258,7 @@ public class TemporalTaskScheduleSync {
             options.setWorkflowExecutionTimeout(Duration.ofSeconds(config.getTimeoutSeconds()));
         }
 
-        Map<String, Object> retryPolicy =
-                TaskJsonSupport.parseObject(config.getRetryPolicy(), "retryPolicy");
+        Map<String, Object> retryPolicy = TaskJsonSupport.parseObject(config.getRetryPolicy(), "retryPolicy");
         RetryOptions retryOptions = TemporalTaskTriggerPort.toRetryOptions(retryPolicy);
         if (retryOptions != null) {
             options.setRetryOptions(retryOptions);
@@ -300,8 +325,7 @@ public class TemporalTaskScheduleSync {
     static boolean isNotFound(Throwable error) {
         Throwable cursor = error;
         while (cursor != null) {
-            if (cursor instanceof StatusRuntimeException sre
-                    && sre.getStatus().getCode() == Status.Code.NOT_FOUND) {
+            if (cursor instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.NOT_FOUND) {
                 return true;
             }
             if (cursor instanceof ScheduleException) {

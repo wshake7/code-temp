@@ -39,32 +39,32 @@ class TemporalTaskTriggerPortTest {
 
     @Test
     void start_usesUntypedStubAndReturnsExecutionIds() {
-        when(workflowClient.newUntypedWorkflowStub(eq("ReportDailyWorkflow"), any(WorkflowOptions.class)))
+        when(workflowClient.newUntypedWorkflowStub(eq("LogCountTickWorkflow"), any(WorkflowOptions.class)))
                 .thenReturn(workflowStub);
         when(workflowStub.start(any()))
                 .thenReturn(WorkflowExecution.newBuilder()
-                        .setWorkflowId("wf-report_daily-1")
+                        .setWorkflowId("wf-log_count_tick-1")
                         .setRunId("run-abc")
                         .build());
 
         TriggerResult result = port.start(new TriggerRequest(
                 1L,
-                "report_daily",
-                "ReportDailyWorkflow",
-                "reports",
+                "log_count_tick",
+                "LogCountTickWorkflow",
+                "demo",
                 null,
                 Map.of("maxAttempts", 3, "initialInterval", "30s", "backoff", 2.0),
                 3600,
-                Map.of("trigger", "manual", "configCode", "report_daily")));
+                Map.of("trigger", "manual", "configCode", "log_count_tick")));
 
-        assertThat(result.workflowId()).isEqualTo("wf-report_daily-1");
+        assertThat(result.workflowId()).isEqualTo("wf-log_count_tick-1");
         assertThat(result.runId()).isEqualTo("run-abc");
 
         ArgumentCaptor<WorkflowOptions> optionsCap = ArgumentCaptor.forClass(WorkflowOptions.class);
-        verify(workflowClient).newUntypedWorkflowStub(eq("ReportDailyWorkflow"), optionsCap.capture());
+        verify(workflowClient).newUntypedWorkflowStub(eq("LogCountTickWorkflow"), optionsCap.capture());
         WorkflowOptions options = optionsCap.getValue();
-        assertThat(options.getTaskQueue()).isEqualTo("reports");
-        assertThat(options.getWorkflowId()).startsWith("wf-report_daily-");
+        assertThat(options.getTaskQueue()).isEqualTo("demo");
+        assertThat(options.getWorkflowId()).startsWith("wf-log_count_tick-");
         assertThat(options.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofHours(1));
         assertThat(options.getRetryOptions()).isNotNull();
         assertThat(options.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
@@ -87,12 +87,12 @@ class TemporalTaskTriggerPortTest {
 
     @Test
     void start_wrapsClientFailure() {
-        when(workflowClient.newUntypedWorkflowStub(eq("ReportDailyWorkflow"), any(WorkflowOptions.class)))
+        when(workflowClient.newUntypedWorkflowStub(eq("LogCountTickWorkflow"), any(WorkflowOptions.class)))
                 .thenReturn(workflowStub);
         when(workflowStub.start(any())).thenThrow(new RuntimeException("connection refused"));
 
         assertThatThrownBy(() -> port.start(new TriggerRequest(
-                        1L, "report_daily", "ReportDailyWorkflow", "reports", null, null, null, Map.of())))
+                        1L, "log_count_tick", "LogCountTickWorkflow", "demo", null, null, null, Map.of())))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("Temporal start failed");
     }

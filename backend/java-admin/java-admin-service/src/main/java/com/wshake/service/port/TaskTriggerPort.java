@@ -3,9 +3,9 @@ package com.wshake.service.port;
 import java.util.Map;
 
 /**
- * 任务触发端口：将「配置 + 入参」提交给执行后端（本地模拟 / Temporal SDK 等）。
+ * 任务触发端口：将「配置 + 入参」提交给 Temporal（由 infra 的 TemporalTaskTriggerPort 实现）。
  *
- * <p>业务层只依赖本接口，不直接耦合 Temporal Client，便于单测与替换实现。
+ * <p>业务层只依赖本接口，不直接耦合 Temporal Client，便于单测 mock。
  *
  * @author wshake
  */

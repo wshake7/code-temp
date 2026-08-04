@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.wshake.common.exception.BizException;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.entity.TemporalTaskExecution;
+import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.port.TaskTriggerPort;
 import com.wshake.service.port.TaskTriggerPort.TriggerResult;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
@@ -27,44 +29,95 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 /**
- * {@link TaskConfigService} 校验与触发逻辑单测。
+ * {@link TaskConfigService} 校验、枚举门禁、调度同步与触发逻辑单测。
  */
 class TaskConfigServiceTest {
 
     private final TemporalTaskConfigRepository configRepository = mock(TemporalTaskConfigRepository.class);
     private final TemporalTaskExecutionRepository executionRepository = mock(TemporalTaskExecutionRepository.class);
     private final TaskTriggerPort taskTriggerPort = mock(TaskTriggerPort.class);
+    private final TaskSchedulePort taskSchedulePort = mock(TaskSchedulePort.class);
     private TaskConfigService service;
 
     @BeforeEach
     void setUp() {
-        service = new TaskConfigService(configRepository, executionRepository, taskTriggerPort);
+        service = new TaskConfigService(configRepository, executionRepository, taskTriggerPort, taskSchedulePort);
     }
 
     @Test
     void create_rejectsInvalidCode() {
         CreateTaskConfigCommand cmd =
-                new CreateTaskConfigCommand("Bad-Code", "n", "Wf", "q", null, null, null, null, 1);
+                new CreateTaskConfigCommand("Bad-Code", "n", "LogCountTickWorkflow", "demo", null, null, null, null, 1);
 
         assertThatThrownBy(() -> service.create(cmd))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("code must match");
+        verify(taskSchedulePort, never()).apply(any());
+    }
+
+    @Test
+    void create_rejectsUnknownWorkflowType() {
+        CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(
+                "log_count_tick", "日志计数", "UnknownWorkflow", "demo", null, null, null, null, 1);
+
+        assertThatThrownBy(() -> service.create(cmd))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("unknown workflowType");
+        verify(configRepository, never()).insert(any());
+        verify(taskSchedulePort, never()).apply(any());
+    }
+
+    @Test
+    void create_rejectsUnknownTaskQueue() {
+        CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(
+                "log_count_tick", "日志计数", "LogCountTickWorkflow", "unknown_queue", null, null, null, null, 1);
+
+        assertThatThrownBy(() -> service.create(cmd))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("unknown taskQueue");
+        verify(configRepository, never()).insert(any());
+        verify(taskSchedulePort, never()).apply(any());
     }
 
     @Test
     void create_rejectsDuplicateCode() {
-        when(configRepository.existsByCode("report_daily", null)).thenReturn(true);
+        when(configRepository.existsByCode("log_count_tick", null)).thenReturn(true);
         CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(
-                "report_daily", "日报", "ReportDailyWorkflow", "reports", null, null, null, null, 1);
+                "log_count_tick", "日志计数", "LogCountTickWorkflow", "demo", null, null, null, null, 1);
 
         assertThatThrownBy(() -> service.create(cmd))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("already exists");
+        verify(taskSchedulePort, never()).apply(any());
     }
 
     @Test
-    void update_partialIsEnabledOnly() {
-        TemporalTaskConfig row = activeConfig(1L, "report_daily", 1);
+    void create_persistsAndAppliesSchedule() {
+        when(configRepository.existsByCode("log_count_tick", null)).thenReturn(false);
+        doAnswer(inv -> {
+                    TemporalTaskConfig c = inv.getArgument(0);
+                    c.setId(10L);
+                    return null;
+                })
+                .when(configRepository)
+                .insert(any(TemporalTaskConfig.class));
+        when(configRepository.findById(10L)).thenReturn(activeConfig(10L, "log_count_tick", 1));
+
+        CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(
+                "log_count_tick", "日志计数", "LogCountTickWorkflow", "demo", "0 0 2 * * ?", null, 3600, null, 1);
+
+        var view = service.create(cmd);
+
+        assertThat(view.code()).isEqualTo("log_count_tick");
+        assertThat(view.workflowType()).isEqualTo("LogCountTickWorkflow");
+        assertThat(view.taskQueue()).isEqualTo("demo");
+        verify(configRepository).insert(any(TemporalTaskConfig.class));
+        verify(taskSchedulePort).apply(any(TemporalTaskConfig.class));
+    }
+
+    @Test
+    void update_partialIsEnabledOnly_appliesSchedule() {
+        TemporalTaskConfig row = activeConfig(1L, "log_count_tick", 1);
         when(configRepository.findById(1L)).thenReturn(row);
         when(configRepository.update(row)).thenReturn(1L);
 
@@ -75,13 +128,46 @@ class TaskConfigServiceTest {
         service.update(cmd);
 
         assertThat(row.getIsEnabled()).isEqualTo(0);
-        assertThat(row.getName()).isEqualTo("日报");
         verify(configRepository).update(row);
+        verify(taskSchedulePort).apply(any(TemporalTaskConfig.class));
+    }
+
+    @Test
+    void update_rejectsUnknownWorkflowType() {
+        TemporalTaskConfig row = activeConfig(1L, "log_count_tick", 1);
+        when(configRepository.findById(1L)).thenReturn(row);
+
+        UpdateTaskConfigCommand cmd = new UpdateTaskConfigCommand(
+                1L,
+                null,
+                false,
+                null,
+                false,
+                "NotAWorkflow",
+                true,
+                null,
+                false,
+                null,
+                false,
+                null,
+                false,
+                null,
+                false,
+                null,
+                false,
+                null,
+                false);
+
+        assertThatThrownBy(() -> service.update(cmd))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("unknown workflowType");
+        verify(configRepository, never()).update(any());
+        verify(taskSchedulePort, never()).apply(any());
     }
 
     @Test
     void trigger_rejectsDisabled() {
-        when(configRepository.findById(1L)).thenReturn(activeConfig(1L, "report_daily", 0));
+        when(configRepository.findById(1L)).thenReturn(activeConfig(1L, "log_count_tick", 0));
 
         assertThatThrownBy(() -> service.trigger(1L))
                 .isInstanceOf(BizException.class)
@@ -91,7 +177,7 @@ class TaskConfigServiceTest {
 
     @Test
     void trigger_writesRunningExecution() {
-        TemporalTaskConfig config = activeConfig(1L, "report_daily", 1);
+        TemporalTaskConfig config = activeConfig(1L, "log_count_tick", 1);
         when(configRepository.findById(1L)).thenReturn(config);
         when(taskTriggerPort.start(any())).thenReturn(new TriggerResult("wf-1", "run-1"));
         when(executionRepository.findById(any())).thenAnswer(inv -> {
@@ -100,21 +186,22 @@ class TaskConfigServiceTest {
             e.setConfigId(1L);
             e.setWorkflowId("wf-1");
             e.setRunId("run-1");
-            e.setWorkflowType("ReportDailyWorkflow");
-            e.setTaskQueue("reports");
+            e.setWorkflowType("LogCountTickWorkflow");
+            e.setTaskQueue("demo");
             e.setStatus("RUNNING");
             return e;
         });
 
         TaskTriggerResult result = service.trigger(1L);
 
-        assertThat(result.config().code()).isEqualTo("report_daily");
+        assertThat(result.config().code()).isEqualTo("log_count_tick");
         assertThat(result.execution().status()).isEqualTo("RUNNING");
         ArgumentCaptor<TemporalTaskExecution> cap = ArgumentCaptor.forClass(TemporalTaskExecution.class);
         verify(executionRepository).insert(cap.capture());
         assertThat(cap.getValue().getWorkflowId()).isEqualTo("wf-1");
         assertThat(cap.getValue().getStatus()).isEqualTo("RUNNING");
         assertThat(cap.getValue().getInputSummary()).contains("manual");
+        verify(taskSchedulePort, never()).apply(any());
     }
 
     @Test
@@ -131,8 +218,8 @@ class TaskConfigServiceTest {
             e.setStatus("RUNNING");
             e.setWorkflowId("wf-x");
             e.setRunId("run-x");
-            e.setWorkflowType("ReportDailyWorkflow");
-            e.setTaskQueue("reports");
+            e.setWorkflowType("LogCountTickWorkflow");
+            e.setTaskQueue("demo");
             return e;
         });
 
@@ -146,23 +233,41 @@ class TaskConfigServiceTest {
     }
 
     @Test
-    void softDelete_allowsExistingExecutions() {
-        when(configRepository.findById(3L)).thenReturn(activeConfig(3L, "data_archive", 1));
+    void batch_disable_appliesSchedule() {
+        TemporalTaskConfig t = activeConfig(1L, "log_count_tick", 1);
+        when(configRepository.listByIds(List.of(1L))).thenReturn(List.of(t));
+
+        TaskBatchResult result = service.batch(new TaskBatchCommand("disable", List.of(1L)));
+
+        assertThat(result.affected()).isEqualTo(1);
+        verify(configRepository).updateIsEnabled(1L, 0);
+        ArgumentCaptor<TemporalTaskConfig> cap = ArgumentCaptor.forClass(TemporalTaskConfig.class);
+        verify(taskSchedulePort).apply(cap.capture());
+        assertThat(cap.getValue().getIsEnabled()).isEqualTo(0);
+    }
+
+    @Test
+    void softDelete_allowsExistingExecutions_andPausesSchedule() {
+        when(configRepository.findById(3L)).thenReturn(activeConfig(3L, "log_count_tick", 1));
         when(configRepository.softDeleteById(3L)).thenReturn(1L);
 
         var view = service.softDelete(3L);
 
         assertThat(view.deletedAt()).isGreaterThan(0L);
         verify(configRepository).softDeleteById(eq(3L));
+        ArgumentCaptor<TemporalTaskConfig> cap = ArgumentCaptor.forClass(TemporalTaskConfig.class);
+        verify(taskSchedulePort).apply(cap.capture());
+        assertThat(cap.getValue().getIsEnabled()).isEqualTo(0);
+        assertThat(cap.getValue().getCode()).isEqualTo("log_count_tick");
     }
 
     private static TemporalTaskConfig activeConfig(Long id, String code, int enabled) {
         TemporalTaskConfig c = new TemporalTaskConfig();
         c.setId(id);
         c.setCode(code);
-        c.setName("日报");
-        c.setWorkflowType("ReportDailyWorkflow");
-        c.setTaskQueue("reports");
+        c.setName("日志计数");
+        c.setWorkflowType("LogCountTickWorkflow");
+        c.setTaskQueue("demo");
         c.setCronExpr("0 0 2 * * ?");
         c.setRetryPolicy("{\"maxAttempts\":3}");
         c.setTimeoutSeconds(3600);

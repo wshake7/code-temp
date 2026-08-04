@@ -46,7 +46,18 @@ class TemporalTaskScheduleSyncTest {
 
     @Test
     void scheduleId_usesTaskPrefix() {
-        assertThat(TemporalTaskScheduleSync.scheduleId("report_daily")).isEqualTo("task-report_daily");
+        assertThat(TemporalTaskScheduleSync.scheduleId("log_count_tick")).isEqualTo("task-log_count_tick");
+    }
+
+    @Test
+    void apply_enabledWithCron_upserts() {
+        TemporalTaskConfig config = enabledConfig("log_count_tick", "0 0 2 * * ?");
+        notFoundOnDescribe();
+
+        sync.apply(config);
+
+        verify(scheduleClient)
+                .createSchedule(eq("task-log_count_tick"), any(Schedule.class), any(ScheduleOptions.class));
     }
 
     @Test
@@ -77,8 +88,7 @@ class TemporalTaskScheduleSyncTest {
 
         ArgumentCaptor<Schedule> scheduleCap = ArgumentCaptor.forClass(Schedule.class);
         ArgumentCaptor<ScheduleOptions> optionsCap = ArgumentCaptor.forClass(ScheduleOptions.class);
-        verify(scheduleClient)
-                .createSchedule(eq("task-log_count_tick"), scheduleCap.capture(), optionsCap.capture());
+        verify(scheduleClient).createSchedule(eq("task-log_count_tick"), scheduleCap.capture(), optionsCap.capture());
         assertThat(scheduleCap.getValue().getSpec().getIntervals()).isNotNull().hasSize(1);
         assertThat(scheduleCap.getValue().getSpec().getIntervals().get(0).getEvery())
                 .isEqualTo(java.time.Duration.ofSeconds(10));
@@ -93,28 +103,28 @@ class TemporalTaskScheduleSyncTest {
 
     @Test
     void syncOne_enabledWithCron_createsWhenMissing() {
-        TemporalTaskConfig config = enabledConfig("report_daily", "0 0 2 * * ?");
+        TemporalTaskConfig config = enabledConfig("log_count_tick", "0 0 2 * * ?");
         notFoundOnDescribe();
 
         assertThat(sync.syncOne(config)).isEqualTo(SyncAction.UPSERTED);
 
         ArgumentCaptor<Schedule> scheduleCap = ArgumentCaptor.forClass(Schedule.class);
         verify(scheduleClient)
-                .createSchedule(eq("task-report_daily"), scheduleCap.capture(), any(ScheduleOptions.class));
+                .createSchedule(eq("task-log_count_tick"), scheduleCap.capture(), any(ScheduleOptions.class));
         Schedule schedule = scheduleCap.getValue();
         assertThat(schedule.getSpec().getCronExpressions()).containsExactly("0 0 2 * * *");
         assertThat(schedule.getAction()).isInstanceOf(ScheduleActionStartWorkflow.class);
         ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) schedule.getAction();
-        assertThat(action.getWorkflowType()).isEqualTo("ReportDailyWorkflow");
-        assertThat(action.getOptions().getTaskQueue()).isEqualTo("reports");
-        assertThat(action.getOptions().getWorkflowId()).isEqualTo("sched-report_daily");
+        assertThat(action.getWorkflowType()).isEqualTo("LogCountTickWorkflow");
+        assertThat(action.getOptions().getTaskQueue()).isEqualTo("demo");
+        assertThat(action.getOptions().getWorkflowId()).isEqualTo("sched-log_count_tick");
         assertThat(schedule.getSpec().getIntervals()).isNullOrEmpty();
         verify(handle, never()).update(any());
     }
 
     @Test
     void syncOne_enabledWithCron_updatesAndUnpausesWhenExists() {
-        TemporalTaskConfig config = enabledConfig("report_daily", "0 0 2 * * ?");
+        TemporalTaskConfig config = enabledConfig("log_count_tick", "0 0 2 * * ?");
         // 避免 nested when：先构造返回值再 stub
         ScheduleDescription paused = description(true);
         when(handle.describe()).thenReturn(paused);
@@ -128,7 +138,7 @@ class TemporalTaskScheduleSyncTest {
 
     @Test
     void syncOne_disabled_pausesExisting() {
-        TemporalTaskConfig config = enabledConfig("report_daily", "0 0 2 * * ?");
+        TemporalTaskConfig config = enabledConfig("log_count_tick", "0 0 2 * * ?");
         config.setIsEnabled(0);
         ScheduleDescription active = description(false);
         when(handle.describe()).thenReturn(active);
@@ -141,7 +151,7 @@ class TemporalTaskScheduleSyncTest {
 
     @Test
     void syncOne_disabled_skipsWhenScheduleMissing() {
-        TemporalTaskConfig config = enabledConfig("report_daily", "0 0 2 * * ?");
+        TemporalTaskConfig config = enabledConfig("log_count_tick", "0 0 2 * * ?");
         config.setIsEnabled(0);
         notFoundOnDescribe();
 
@@ -185,7 +195,8 @@ class TemporalTaskScheduleSyncTest {
     @Test
     void isNotFound_detectsGrpcStatus() {
         assertThat(TemporalTaskScheduleSync.isNotFound(notFound())).isTrue();
-        assertThat(TemporalTaskScheduleSync.isNotFound(new RuntimeException("other"))).isFalse();
+        assertThat(TemporalTaskScheduleSync.isNotFound(new RuntimeException("other")))
+                .isFalse();
     }
 
     private void notFoundOnDescribe() {
@@ -221,8 +232,8 @@ class TemporalTaskScheduleSyncTest {
         c.setId(1L);
         c.setCode(code);
         c.setName(code);
-        c.setWorkflowType("ReportDailyWorkflow");
-        c.setTaskQueue("reports");
+        c.setWorkflowType("LogCountTickWorkflow");
+        c.setTaskQueue("demo");
         c.setCronExpr(cron);
         c.setRetryPolicy("{\"maxAttempts\":2}");
         c.setTimeoutSeconds(3600);

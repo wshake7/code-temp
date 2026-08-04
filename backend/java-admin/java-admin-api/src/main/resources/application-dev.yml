@@ -30,8 +30,7 @@ spring:
   flyway:
     locations: classpath:db/migration
 
-  # dev 默认连本地 compose Temporal（宿主机 4723→容器 7233）
-  # 未起 Temporal 时设 TEMPORAL_TARGET= 可关闭；启动后会同步 DB 任务为 Schedule
+  # Temporal 必要依赖：dev 连本地 compose（宿主机 4723→容器 7233）
   temporal:
     connection:
       target: ${TEMPORAL_TARGET:127.0.0.1:4723}

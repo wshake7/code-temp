@@ -38,15 +38,13 @@ spring:
             group: DEFAULT_GROUP
             refresh-enabled: true
 
-  # Temporal（io.temporal:temporal-spring-boot-starter）
+  # Temporal（io.temporal:temporal-spring-boot-starter）—— 必要依赖，无本地 mock 回退
   # 文档：https://docs.temporal.io/develop/java/integrations/spring-boot-integration
   # 自动配置条件：connection.target 非空 OR test-server.enabled=true
-  # 基线默认 target 为空；application-dev.yml 覆盖为 127.0.0.1:4723（本地 compose）
-  # 关闭：TEMPORAL_TARGET= ；启动后 TemporalTaskScheduleSyncRunner 同步 DB→Schedule
+  # 默认连本地 compose（宿主机 4723→容器 7233）；启动后全量对账 + CRUD 即时同步 Schedule
   temporal:
     connection:
-      # 空字符串 → 禁用自动配置；compose 宿主机 4723→容器 7233
-      target: ${TEMPORAL_TARGET:}
+      target: ${TEMPORAL_TARGET:127.0.0.1:4723}
     namespace: ${TEMPORAL_NAMESPACE:default}
     # true 时启动 Worker（需 auto-discovery 或显式 workers 配置）
     start-workers: ${TEMPORAL_START_WORKERS:false}
