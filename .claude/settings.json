@@ -9,10 +9,6 @@
     "playwright",
     "codebase-memory-mcp"
   ],
-  "enabledPlugins": {
-    "claude-hud@claude-hud": true,
-    "ponytail@ponytail": true
-  },
   "hooks": {
     "SessionStart": [
       {
@@ -37,7 +33,6 @@
         ]
       },
       {
-        // "matcher": "Write|Edit|Bash",
         "matcher": "Write|Edit",
         "hooks": [
           {
@@ -48,5 +43,6 @@
         ]
       }
     ]
-  }
+  },
+  "enabledPlugins": {}
 }
