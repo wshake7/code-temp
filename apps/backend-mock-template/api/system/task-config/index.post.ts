@@ -66,10 +66,7 @@ export default defineEventHandler(async (event) => {
   const normalizedWorkflowType = requireAllowedWorkflowType(workflowType);
   if (!normalizedWorkflowType) {
     setResponseStatus(event, 400);
-    return useResponseError(
-      "BadRequest",
-      `unknown workflowType: ${workflowType}`,
-    );
+    return useResponseError("BadRequest", `unknown workflowType: ${workflowType}`);
   }
   if (!taskQueue) {
     setResponseStatus(event, 400);

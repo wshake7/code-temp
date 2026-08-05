@@ -46,9 +46,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 最新优先：按 created_at（PENDING 无 started_at）
-  filtered.sort(
-    (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id,
-  );
+  filtered.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id);
 
   const rows = filtered.map((r) => ({
     ...toTaskCamelRow(r),

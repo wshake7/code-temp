@@ -80,12 +80,7 @@ export const ALLOWED_WORKFLOW_TYPES = [
  * 允许的 taskQueue（下拉 + create/update 门禁）。
  * 含 mock 演示种子值，并兼容 Java 侧 TemporalTaskQueue.ALL。
  */
-export const ALLOWED_TASK_QUEUES = [
-  "demo",
-  "reports",
-  "finance",
-  "maintenance",
-] as const;
+export const ALLOWED_TASK_QUEUES = ["demo", "reports", "finance", "maintenance"] as const;
 
 export type TaskSelectOption = { label: string; value: string };
 
@@ -101,9 +96,7 @@ export function listTaskQueueOptions(): TaskSelectOption[] {
 export function requireAllowedWorkflowType(raw: string): string | null {
   const trimmed = String(raw ?? "").trim();
   if (!trimmed) return null;
-  const hit = ALLOWED_WORKFLOW_TYPES.find(
-    (v) => v.toLowerCase() === trimmed.toLowerCase(),
-  );
+  const hit = ALLOWED_WORKFLOW_TYPES.find((v) => v.toLowerCase() === trimmed.toLowerCase());
   return hit ?? null;
 }
 
@@ -111,9 +104,7 @@ export function requireAllowedWorkflowType(raw: string): string | null {
 export function requireAllowedTaskQueue(raw: string): string | null {
   const trimmed = String(raw ?? "").trim();
   if (!trimmed) return null;
-  const hit = ALLOWED_TASK_QUEUES.find(
-    (v) => v.toLowerCase() === trimmed.toLowerCase(),
-  );
+  const hit = ALLOWED_TASK_QUEUES.find((v) => v.toLowerCase() === trimmed.toLowerCase());
   return hit ?? null;
 }
 
