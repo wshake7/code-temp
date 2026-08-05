@@ -464,21 +464,21 @@
 
 ### 8.2 `temporal_task_execution` — 任务执行（摘要镜像）
 
-| 字段             | 类型            | 必填 | 默认           | 说明                               |
-| ---------------- | --------------- | ---- | -------------- | ---------------------------------- |
-| `id`             | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                               |
-| `config_id`      | BIGINT UNSIGNED | 否   | NULL           | 软外键（不建 FK）                  |
-| `workflow_id`    | VARCHAR(128)    | 是   | -              | Temporal 原生                      |
-| `run_id`         | VARCHAR(128)    | 是   | -              | Temporal 原生                      |
-| `workflow_type`  | VARCHAR(128)    | 是   | -              |                                    |
-| `task_queue`     | VARCHAR(128)    | 是   | -              |                                    |
-| `status`         | VARCHAR(32)     | 是   | -              | RUNNING / COMPLETED / FAILED / ... |
-| `started_at`     | TIMESTAMP       | 是   | -              | 启动时间                           |
-| `closed_at`      | TIMESTAMP       | 否   | NULL           | 关闭时间（NULL=仍在运行）          |
-| `input_summary`  | JSON            | 否   | NULL           |                                    |
-| `result_summary` | JSON            | 否   | NULL           |                                    |
-| `failure_reason` | VARCHAR(1024)   | 否   | NULL           |                                    |
-| `created_at`     | TIMESTAMP       | 是   | NOW()          |                                    |
+| 字段             | 类型            | 必填 | 默认           | 说明                                         |
+| ---------------- | --------------- | ---- | -------------- | -------------------------------------------- |
+| `id`             | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                         |
+| `config_id`      | BIGINT UNSIGNED | 否   | NULL           | 软外键（不建 FK）                            |
+| `workflow_id`    | VARCHAR(128)    | 是   | -              | Temporal 原生                                |
+| `run_id`         | VARCHAR(128)    | 是   | -              | Temporal 原生                                |
+| `workflow_type`  | VARCHAR(128)    | 是   | -              |                                              |
+| `task_queue`     | VARCHAR(128)    | 是   | -              |                                              |
+| `status`         | VARCHAR(32)     | 是   | -              | PENDING / RUNNING / COMPLETED / FAILED / ... |
+| `started_at`     | TIMESTAMP       | 是   | -              | 启动时间                                     |
+| `closed_at`      | TIMESTAMP       | 否   | NULL           | 关闭时间（NULL=仍在运行）                    |
+| `input_summary`  | JSON            | 否   | NULL           |                                              |
+| `result_summary` | JSON            | 否   | NULL           |                                              |
+| `failure_reason` | VARCHAR(1024)   | 否   | NULL           |                                              |
+| `created_at`     | TIMESTAMP       | 是   | NOW()          |                                              |
 
 **索引**：`PRIMARY(id)` / `UNIQUE(workflow_id, run_id)` / `idx_config_id_started_at` / `idx_status_started_at`
 

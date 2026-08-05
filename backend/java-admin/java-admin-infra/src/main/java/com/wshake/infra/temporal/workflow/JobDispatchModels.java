@@ -36,11 +36,11 @@ public final class JobDispatchModels {
             int retryCount) {}
 
     /**
-     * 创建执行记录入参。
+     * 创建执行记录入参（先落 PENDING；child 未启动时 runId 可为占位）。
      *
      * @param configId            配置 id
-     * @param temporalWorkflowId  子 WF workflowId
-     * @param temporalRunId       子 WF runId
+     * @param temporalWorkflowId  子 WF workflowId（可先用计划 id）
+     * @param temporalRunId       子 WF runId（未启动时可用占位，如 {@code pending}）
      * @param workflowType        业务类型
      * @param taskQueue           队列
      * @param input               业务入参摘要
@@ -55,6 +55,15 @@ public final class JobDispatchModels {
 
     /** 创建执行记录结果。 */
     public record CreateExecutionResult(Long id) {}
+
+    /**
+     * 将执行记录标记为 RUNNING。
+     *
+     * @param id                  记录主键
+     * @param temporalWorkflowId  子 WF 真实 workflowId
+     * @param temporalRunId       子 WF 真实 runId
+     */
+    public record MarkRunningInput(Long id, String temporalWorkflowId, String temporalRunId) {}
 
     /**
      * 完成执行记录入参。

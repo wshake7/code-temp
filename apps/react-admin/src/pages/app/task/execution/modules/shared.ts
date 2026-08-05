@@ -5,6 +5,8 @@ export function statusColor(status: string): string {
       return 'success';
     case 'RUNNING':
       return 'processing';
+    case 'PENDING':
+      return 'default';
     case 'CONTINUED_AS_NEW':
       return 'blue';
     case 'FAILED':

@@ -854,6 +854,7 @@ export interface ApiLogListQuery {
 
 /** Temporal 工作流执行状态（与 mock 枚举一致） */
 export type TaskExecutionStatus =
+  | 'PENDING'
   | 'RUNNING'
   | 'COMPLETED'
   | 'FAILED'

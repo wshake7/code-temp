@@ -98,6 +98,7 @@
   "viewDetail": "Detail",
   "executionDetail": "Execution Detail",
   "triggerDisabledHint": "Disabled tasks cannot be triggered",
+  "statusPENDING": "Pending",
   "statusRUNNING": "Running",
   "statusCOMPLETED": "Completed",
   "statusFAILED": "Failed",

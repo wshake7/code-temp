@@ -5,6 +5,7 @@ import com.wshake.infra.temporal.workflow.JobDispatchModels.CompleteExecutionInp
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionResult;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.DispatchInput;
+import com.wshake.infra.temporal.workflow.JobDispatchModels.MarkRunningInput;
 import com.wshake.service.task.TemporalTaskQueue;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.api.common.v1.WorkflowExecution;
@@ -23,13 +24,16 @@ import java.util.Map;
 /**
  * {@link JobDispatchWorkflow} 实现。
  *
- * <p>顺序：untyped child start → CreateExecution → wait child → CompleteExecution。
+ * <p>顺序：CreateExecution(PENDING) → untyped child start → MarkRunning → wait child → CompleteExecution。
  * 业务失败时先 complete 再 rethrow，使派发 WF 与业务结果一致。
  *
  * @author wshake
  */
 @WorkflowImpl(taskQueues = TemporalTaskQueue.DEMO)
 public class JobDispatchWorkflowImpl implements JobDispatchWorkflow {
+
+    /** child 未启动时的 runId 占位；MarkRunning 时替换为真实值。 */
+    static final String PENDING_RUN_ID = "pending";
 
     private final JobDispatchActivities activities = Workflow.newActivityStub(
             JobDispatchActivities.class,
@@ -51,6 +55,10 @@ public class JobDispatchWorkflowImpl implements JobDispatchWorkflow {
         String taskQueue = requireNonBlank(input.taskQueue(), "taskQueue");
         String childWorkflowId = buildChildWorkflowId(input);
 
+        // 先落 PENDING，使手动触发后列表可见等待态
+        CreateExecutionResult created = activities.createExecution(new CreateExecutionInput(
+                input.configId(), childWorkflowId, PENDING_RUN_ID, workflowType, taskQueue, input.input()));
+
         ChildWorkflowOptions.Builder childOptions =
                 ChildWorkflowOptions.newBuilder().setWorkflowId(childWorkflowId).setTaskQueue(taskQueue);
         if (input.timeoutSeconds() != null && input.timeoutSeconds() > 0) {
@@ -65,16 +73,10 @@ public class JobDispatchWorkflowImpl implements JobDispatchWorkflow {
         Object childArg = input.input() == null ? Map.of() : input.input();
         Promise<Object> childResultPromise = child.executeAsync(Object.class, childArg);
 
-        WorkflowExecution execution = child.getExecution().get();
-        CreateExecutionResult created = activities.createExecution(new CreateExecutionInput(
-                input.configId(),
-                execution.getWorkflowId(),
-                execution.getRunId(),
-                workflowType,
-                taskQueue,
-                input.input()));
-
         try {
+            WorkflowExecution execution = child.getExecution().get();
+            activities.markRunning(new MarkRunningInput(created.id(), execution.getWorkflowId(), execution.getRunId()));
+
             Object childResult = childResultPromise.get();
             activities.completeExecution(new CompleteExecutionInput(created.id(), "COMPLETED", childResult, null));
         } catch (Exception ex) {

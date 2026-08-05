@@ -11,6 +11,7 @@ import TaskExecutionDetailDrawer from './modules/detail-drawer';
 import { formatDuration, statusColor, statusLabelKey } from './modules/shared';
 
 const STATUS_OPTIONS: TaskExecutionStatus[] = [
+  'PENDING',
   'RUNNING',
   'COMPLETED',
   'FAILED',

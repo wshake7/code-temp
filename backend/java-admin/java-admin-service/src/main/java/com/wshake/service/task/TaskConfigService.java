@@ -274,7 +274,8 @@ public class TaskConfigService {
                 input));
 
         LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
-        // 执行记录由 JobDispatch CreateExecution Activity 落库；此处不写 DB
+        // 执行记录由 JobDispatch CreateExecution Activity 落库；此处不写 DB。
+        // 立即返回 PENDING：child 实际启动后 Activity 会推进为 RUNNING。
         return new TaskExecutionView(
                 null,
                 config.getId(),
@@ -283,7 +284,7 @@ public class TaskConfigService {
                 started.runId(),
                 config.getWorkflowType(),
                 config.getTaskQueue(),
-                "RUNNING",
+                "PENDING",
                 now,
                 null,
                 input,

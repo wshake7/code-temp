@@ -181,7 +181,7 @@ class TaskConfigServiceTest {
         TaskTriggerResult result = service.trigger(1L);
 
         assertThat(result.config().code()).isEqualTo("log_count_tick");
-        assertThat(result.execution().status()).isEqualTo("RUNNING");
+        assertThat(result.execution().status()).isEqualTo("PENDING");
         assertThat(result.execution().id()).isNull();
         assertThat(result.execution().workflowId()).isEqualTo("wf-1");
         assertThat(result.execution().runId()).isEqualTo("run-1");

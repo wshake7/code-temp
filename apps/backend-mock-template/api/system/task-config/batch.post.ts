@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     }
     const executionIds: number[] = [];
     for (const t of enabled) {
-      const exec = appendMockTaskExecution(t, { status: "RUNNING" });
+      const exec = appendMockTaskExecution(t, { status: "PENDING" });
       executionIds.push(exec.id);
     }
     return useResponseSuccess({

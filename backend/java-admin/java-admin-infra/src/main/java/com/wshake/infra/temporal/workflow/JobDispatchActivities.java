@@ -3,6 +3,7 @@ package com.wshake.infra.temporal.workflow;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CompleteExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionResult;
+import com.wshake.infra.temporal.workflow.JobDispatchModels.MarkRunningInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
@@ -14,9 +15,13 @@ import io.temporal.activity.ActivityMethod;
 @ActivityInterface
 public interface JobDispatchActivities {
 
-    /** 子 Workflow 启动后写入 RUNNING 记录。 */
+    /** 派发开始时写入 PENDING 记录（等待 child 实际启动）。 */
     @ActivityMethod
     CreateExecutionResult createExecution(CreateExecutionInput input);
+
+    /** 子 Workflow 实际启动后推进为 RUNNING。 */
+    @ActivityMethod
+    void markRunning(MarkRunningInput input);
 
     /** 子 Workflow 结束后更新终态。 */
     @ActivityMethod

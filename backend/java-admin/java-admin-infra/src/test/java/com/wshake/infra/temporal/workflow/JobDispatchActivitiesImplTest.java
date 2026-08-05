@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CompleteExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionResult;
+import com.wshake.infra.temporal.workflow.JobDispatchModels.MarkRunningInput;
 import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ class JobDispatchActivitiesImplTest {
     }
 
     @Test
-    void createExecution_insertsRunningRow() {
+    void createExecution_insertsPendingRow() {
         org.mockito.Mockito.doAnswer(inv -> {
                     TemporalTaskExecution row = inv.getArgument(0);
                     row.setId(42L);
@@ -43,7 +44,7 @@ class JobDispatchActivitiesImplTest {
                 .insert(any());
 
         CreateExecutionResult result = activities.createExecution(new CreateExecutionInput(
-                1L, "child-wf-1", "run-1", "LogCountTickWorkflow", "demo", Map.of("trigger", "manual")));
+                1L, "child-wf-1", "pending", "LogCountTickWorkflow", "demo", Map.of("trigger", "manual")));
 
         assertThat(result.id()).isEqualTo(42L);
         ArgumentCaptor<TemporalTaskExecution> cap = ArgumentCaptor.forClass(TemporalTaskExecution.class);
@@ -51,8 +52,8 @@ class JobDispatchActivitiesImplTest {
         TemporalTaskExecution row = cap.getValue();
         assertThat(row.getConfigId()).isEqualTo(1L);
         assertThat(row.getWorkflowId()).isEqualTo("child-wf-1");
-        assertThat(row.getRunId()).isEqualTo("run-1");
-        assertThat(row.getStatus()).isEqualTo("RUNNING");
+        assertThat(row.getRunId()).isEqualTo("pending");
+        assertThat(row.getStatus()).isEqualTo("PENDING");
         assertThat(row.getInputSummary()).contains("manual");
         assertThat(row.getClosedAt()).isNull();
     }
@@ -62,6 +63,22 @@ class JobDispatchActivitiesImplTest {
         assertThatThrownBy(() -> activities.createExecution(new CreateExecutionInput(1L, " ", "run", "t", "q", null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("temporalWorkflowId");
+    }
+
+    @Test
+    void markRunning_updatesStatusAndIds() {
+        when(repository.markRunning(eq(42L), eq("child-wf-1"), eq("run-real"))).thenReturn(1L);
+
+        activities.markRunning(new MarkRunningInput(42L, "child-wf-1", "run-real"));
+
+        verify(repository).markRunning(eq(42L), eq("child-wf-1"), eq("run-real"));
+    }
+
+    @Test
+    void markRunning_rejectsBlankRunId() {
+        assertThatThrownBy(() -> activities.markRunning(new MarkRunningInput(1L, "wf", " ")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("temporalRunId");
     }
 
     @Test

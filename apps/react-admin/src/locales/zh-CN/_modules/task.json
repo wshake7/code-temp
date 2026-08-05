@@ -98,6 +98,7 @@
   "viewDetail": "详情",
   "executionDetail": "执行记录详情",
   "triggerDisabledHint": "禁用的任务无法触发",
+  "statusPENDING": "等待中",
   "statusRUNNING": "运行中",
   "statusCOMPLETED": "已完成",
   "statusFAILED": "失败",

@@ -13,6 +13,7 @@ import { isoNow } from "./shared";
 // ============================================================
 
 export type TaskExecutionStatus =
+  | "PENDING"
   | "RUNNING"
   | "COMPLETED"
   | "FAILED"
@@ -300,8 +301,8 @@ export function appendMockTaskExecution(
   const now = isoNow();
   const stamp = now.replace(/[-:TZ.]/g, "").slice(0, 14);
   const id = nextTaskExecutionId();
-  const status = opts?.status ?? "RUNNING";
-  const closed = status === "RUNNING" ? null : now;
+  const status = opts?.status ?? "PENDING";
+  const closed = status === "PENDING" || status === "RUNNING" ? null : now;
   const row: TemporalTaskExecution = {
     id,
     config_id: config.id,

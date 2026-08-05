@@ -27,6 +27,11 @@ public class LogCountTickActivitiesImpl implements LogCountTickActivities {
     @Override
     public long incrementAndLog() {
         long value = COUNT.incrementAndGet();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         log.info("log_count_tick count={}", value);
         return value;
     }

@@ -52,6 +52,23 @@ public class TemporalTaskExecutionRepository {
     }
 
     /**
+     * 将 PENDING 记录推进为 RUNNING，并写入 child 真实 workflowId/runId。
+     *
+     * @return 影响行数
+     */
+    public long markRunning(Long id, String workflowId, String runId) {
+        return easyEntityQuery
+                .updatable(TemporalTaskExecution.class)
+                .setColumns(t -> {
+                    t.status().set("RUNNING");
+                    t.workflowId().set(workflowId);
+                    t.runId().set(runId);
+                })
+                .where(t -> t.id().eq(id))
+                .executeRows();
+    }
+
+    /**
      * 将执行记录更新为终态。
      *
      * @return 影响行数

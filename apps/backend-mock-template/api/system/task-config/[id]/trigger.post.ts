@@ -31,7 +31,8 @@ export default defineEventHandler(async (event) => {
     return useResponseError("BadRequest", "disabled task cannot be triggered");
   }
 
-  const execution = appendMockTaskExecution(config, { status: "RUNNING" });
+  // 对齐真实后端：触发后先 PENDING，job 实际运行后再 RUNNING
+  const execution = appendMockTaskExecution(config, { status: "PENDING" });
   return useResponseSuccess({
     config: toTaskCamelRow(config),
     execution: toTaskCamelRow(execution),

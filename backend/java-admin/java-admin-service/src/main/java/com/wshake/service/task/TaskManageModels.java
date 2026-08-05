@@ -19,8 +19,8 @@ public final class TaskManageModels {
     /** 任务编码：小写字母开头，后续可含数字与下划线，最长 64。 */
     public static final String CODE_PATTERN = "^[a-z][a-z0-9_]{0,63}$";
 
-    public static final Set<String> EXECUTION_STATUSES =
-            Set.of("RUNNING", "COMPLETED", "FAILED", "CANCELLED", "TERMINATED", "TIMED_OUT", "CONTINUED_AS_NEW");
+    public static final Set<String> EXECUTION_STATUSES = Set.of(
+            "PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED", "TERMINATED", "TIMED_OUT", "CONTINUED_AS_NEW");
 
     public static final Set<String> BATCH_ACTIONS = Set.of("enable", "disable", "delete", "trigger");
 

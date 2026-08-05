@@ -733,7 +733,7 @@ CREATE TABLE temporal_task_execution (
     workflow_type   VARCHAR(128)    NOT NULL,
     task_queue      VARCHAR(128)    NOT NULL,
     status          VARCHAR(32)     NOT NULL
-                                    COMMENT 'RUNNING/COMPLETED/FAILED/CANCELLED/TERMINATED/TIMED_OUT/CONTINUED_AS_NEW',
+                                    COMMENT 'PENDING/RUNNING/COMPLETED/FAILED/CANCELLED/TERMINATED/TIMED_OUT/CONTINUED_AS_NEW',
     started_at      TIMESTAMP       NOT NULL  COMMENT '启动时间',
     closed_at       TIMESTAMP       NULL DEFAULT NULL  COMMENT '关闭时间(NULL=仍在运行)',
     input_summary   JSON            DEFAULT NULL  COMMENT '输入摘要(避免存大对象)',

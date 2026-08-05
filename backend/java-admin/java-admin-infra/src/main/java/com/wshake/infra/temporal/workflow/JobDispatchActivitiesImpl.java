@@ -3,6 +3,7 @@ package com.wshake.infra.temporal.workflow;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CompleteExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionInput;
 import com.wshake.infra.temporal.workflow.JobDispatchModels.CreateExecutionResult;
+import com.wshake.infra.temporal.workflow.JobDispatchModels.MarkRunningInput;
 import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import com.wshake.service.task.TaskJsonSupport;
@@ -51,7 +52,7 @@ public class JobDispatchActivitiesImpl implements JobDispatchActivities {
         row.setRunId(input.temporalRunId().trim());
         row.setWorkflowType(nullToEmpty(input.workflowType()));
         row.setTaskQueue(nullToEmpty(input.taskQueue()));
-        row.setStatus("RUNNING");
+        row.setStatus("PENDING");
         row.setStartedAt(now);
         row.setClosedAt(null);
         row.setInputSummary(TaskJsonSupport.toJson(input.input(), "inputSummary"));
@@ -60,12 +61,35 @@ public class JobDispatchActivitiesImpl implements JobDispatchActivities {
         row.setCreatedAt(now);
         executionRepository.insert(row);
         log.info(
-                "execution created: id={} workflowId={} runId={} configId={}",
+                "execution pending: id={} workflowId={} runId={} configId={}",
                 row.getId(),
                 row.getWorkflowId(),
                 row.getRunId(),
                 row.getConfigId());
         return new CreateExecutionResult(row.getId());
+    }
+
+    @Override
+    public void markRunning(MarkRunningInput input) {
+        if (input == null || input.id() == null) {
+            throw new IllegalArgumentException("markRunning id is required");
+        }
+        if (input.temporalWorkflowId() == null || input.temporalWorkflowId().isBlank()) {
+            throw new IllegalArgumentException("temporalWorkflowId is required");
+        }
+        if (input.temporalRunId() == null || input.temporalRunId().isBlank()) {
+            throw new IllegalArgumentException("temporalRunId is required");
+        }
+        long n = executionRepository.markRunning(
+                input.id(),
+                input.temporalWorkflowId().trim(),
+                input.temporalRunId().trim());
+        log.info(
+                "execution running: id={} workflowId={} runId={} rows={}",
+                input.id(),
+                input.temporalWorkflowId(),
+                input.temporalRunId(),
+                n);
     }
 
     @Override
