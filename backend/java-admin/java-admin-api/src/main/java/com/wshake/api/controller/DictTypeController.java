@@ -87,8 +87,10 @@ public class DictTypeController {
     @PutMapping("/{id}")
     @Operation(summary = "更新字典类型")
     public Result<DictTypeVO> update(@PathVariable Long id, @Valid @RequestBody UpdateDictTypeRequest req) {
+        // id 来自路径，映射体只覆盖可改字段
+        UpdateDictTypeCommand body = converter.convert(req, UpdateDictTypeCommand.class);
         UpdateDictTypeCommand cmd =
-                new UpdateDictTypeCommand(id, req.getCode(), req.getName(), req.getRemark(), req.getIsEnabled());
+                new UpdateDictTypeCommand(id, body.code(), body.name(), body.remark(), body.isEnabled());
         return Result.ok(converter.convert(dictTypeService.update(cmd), DictTypeVO.class));
     }
 
@@ -101,7 +103,7 @@ public class DictTypeController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<DictBatchResultVO> batch(@RequestBody DictBatchRequest req) {
-        DictBatchResult result = dictTypeService.batch(new DictBatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new DictBatchResultVO(result.action(), result.affected(), result.ids()));
+        DictBatchResult result = dictTypeService.batch(converter.convert(req, DictBatchCommand.class));
+        return Result.ok(converter.convert(result, DictBatchResultVO.class));
     }
 }

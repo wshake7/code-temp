@@ -98,9 +98,8 @@ public class TaskConfigController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete|trigger")
     public Result<TaskConfigBatchResultVO> batch(@RequestBody TaskConfigBatchRequest req) {
-        TaskBatchResult result = taskConfigService.batch(new TaskBatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new TaskConfigBatchResultVO(
-                result.action(), result.affected(), result.ids(), result.executionIds(), result.skippedDisabled()));
+        TaskBatchResult result = taskConfigService.batch(converter.convert(req, TaskBatchCommand.class));
+        return Result.ok(converter.convert(result, TaskConfigBatchResultVO.class));
     }
 
     @PostMapping("/{id}/trigger")

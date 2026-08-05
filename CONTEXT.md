@@ -47,3 +47,7 @@ _Avoid_: 业务或配置代码中直接使用 `@Value` 散落绑定配置键
 **API Response VO**：
 Controller 接口成功体 `Result` / `ObjectResult` 的 `data` 优先使用强类型 VO（`com.wshake.api.vo`），字段名与对外 JSON 契约对齐；批量结果、绑定结果、公钥等小对象也建专用 VO，不手写 `Map.of` / `LinkedHashMap` 拼装。
 _Avoid_: `Result<Map<…>>` 作为业务接口返回类型（除非键集合本身动态、无法稳定建模，如动态路由 `meta` 自由形态；Service/Repository 内部聚合 Map 不在此限）
+
+**MapStruct Plus Mapping**：
+java-admin 各层对象映射统一用 mapstruct-plus：字段一一对应的类型转换（如 Request↔Command、Entity↔View、View↔VO、Batch/Result 等）在源或目标类型上声明 `@AutoMapper`，通过 `Converter.convert` 转换；路径参数（如 `id`）等无法从 body 映射的字段由调用方补入（目标为 record 时 convert 后再重建）。
+_Avoid_: 对同名字段列表手写 `new Xxx(…get…)` / 逐字段 setter 拷贝；对 **presence 语义**（如字段是否在 JSON 中出现、`ParentIdChange` / `MetadataChange`）做朴素 AutoMapper 而丢失「省略 vs 显式 null」语义

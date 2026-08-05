@@ -1,5 +1,7 @@
 package com.wshake.api.dto;
 
+import com.wshake.service.task.TaskManageModels.TaskBatchCommand;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.Data;
@@ -10,6 +12,7 @@ import lombok.Data;
  * @author wshake
  */
 @Data
+@AutoMapper(target = TaskBatchCommand.class)
 @Schema(description = "任务配置批量 enable|disable|delete|trigger")
 public class TaskConfigBatchRequest {
 

@@ -123,8 +123,8 @@ public class MenuController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<MenuBatchResultVO> batch(@RequestBody MenuBatchRequest req) {
-        MenuBatchResult result = sysMenuService.batch(new MenuBatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new MenuBatchResultVO(result.action(), result.affected(), result.ids()));
+        MenuBatchResult result = sysMenuService.batch(converter.convert(req, MenuBatchCommand.class));
+        return Result.ok(converter.convert(result, MenuBatchResultVO.class));
     }
 
     @GetMapping("/{id}/apis")
@@ -138,14 +138,14 @@ public class MenuController {
     @Operation(summary = "全量替换菜单-API 绑定")
     public Result<MenuApiBindResultVO> setMenuApis(@PathVariable Long id, @RequestBody MenuApiBindRequest req) {
         MenuApiBindResult result = sysMenuService.setMenuApis(id, req.getApiIds());
-        return Result.ok(new MenuApiBindResultVO(result.menuId(), result.apiIds()));
+        return Result.ok(converter.convert(result, MenuApiBindResultVO.class));
     }
 
     @PostMapping("/apis-by-menus")
     @Operation(summary = "按菜单聚合 API IDs")
     public Result<ApisByMenusResultVO> apisByMenus(@RequestBody ApisByMenusRequest req) {
         var result = sysMenuService.apisByMenus(req.getMenuIds());
-        return Result.ok(new ApisByMenusResultVO(result.menuIds(), result.apiIds()));
+        return Result.ok(converter.convert(result, ApisByMenusResultVO.class));
     }
 
     @GetMapping("/name-exists")

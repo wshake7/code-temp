@@ -1,5 +1,7 @@
 package com.wshake.api.dto;
 
+import com.wshake.service.i18n.I18nManageModels.BatchCommand;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.Data;
@@ -10,6 +12,7 @@ import lombok.Data;
  * @author wshake
  */
 @Data
+@AutoMapper(target = BatchCommand.class)
 @Schema(description = "i18n 批量操作")
 public class I18nBatchRequest {
 

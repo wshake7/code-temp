@@ -96,14 +96,10 @@ public class I18nLocaleController {
     @PutMapping("/{id}")
     @Operation(summary = "更新语言")
     public Result<I18nLocaleVO> update(@PathVariable Long id, @Valid @RequestBody UpdateI18nLocaleRequest req) {
+        // id 来自路径，映射体只覆盖可改字段
+        UpdateLocaleCommand body = converter.convert(req, UpdateLocaleCommand.class);
         UpdateLocaleCommand cmd = new UpdateLocaleCommand(
-                id,
-                req.getCode(),
-                req.getName(),
-                req.getSort(),
-                req.getRemark(),
-                req.getIsDefault(),
-                req.getIsEnabled());
+                id, body.code(), body.name(), body.sort(), body.remark(), body.isDefault(), body.isEnabled());
         return Result.ok(converter.convert(localeService.update(cmd), I18nLocaleVO.class));
     }
 
@@ -116,8 +112,8 @@ public class I18nLocaleController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<I18nBatchResultVO> batch(@RequestBody I18nBatchRequest req) {
-        BatchResult result = localeService.batch(new BatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new I18nBatchResultVO(result.action(), result.affected(), result.ids()));
+        BatchResult result = localeService.batch(converter.convert(req, BatchCommand.class));
+        return Result.ok(converter.convert(result, I18nBatchResultVO.class));
     }
 
     @PostMapping("/export-batch")

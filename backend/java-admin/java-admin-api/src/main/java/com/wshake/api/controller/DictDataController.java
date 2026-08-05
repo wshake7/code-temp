@@ -81,16 +81,18 @@ public class DictDataController {
     @PutMapping("/{id}")
     @Operation(summary = "更新字典数据")
     public Result<DictDataVO> update(@PathVariable Long id, @Valid @RequestBody UpdateDictDataRequest req) {
+        // id 来自路径，映射体只覆盖可改字段
+        UpdateDictDataCommand body = converter.convert(req, UpdateDictDataCommand.class);
         UpdateDictDataCommand cmd = new UpdateDictDataCommand(
                 id,
-                req.getValue(),
-                req.getLabel(),
-                req.getSort(),
-                req.getIsDefault(),
-                req.getPlatform(),
-                req.getTagType(),
-                req.getIsEnabled(),
-                req.getRemark());
+                body.value(),
+                body.label(),
+                body.sort(),
+                body.isDefault(),
+                body.platform(),
+                body.tagType(),
+                body.isEnabled(),
+                body.remark());
         return Result.ok(converter.convert(dictDataService.update(cmd), DictDataVO.class));
     }
 
@@ -103,7 +105,7 @@ public class DictDataController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<DictBatchResultVO> batch(@RequestBody DictBatchRequest req) {
-        DictBatchResult result = dictDataService.batch(new DictBatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new DictBatchResultVO(result.action(), result.affected(), result.ids()));
+        DictBatchResult result = dictDataService.batch(converter.convert(req, DictBatchCommand.class));
+        return Result.ok(converter.convert(result, DictBatchResultVO.class));
     }
 }

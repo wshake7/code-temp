@@ -8,6 +8,7 @@ import com.wshake.api.vo.ApiListItemVO;
 import com.wshake.api.vo.ApiSyncResultVO;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.TreePageData;
+import com.wshake.service.api.ApiManageModels.ApiBatchCommand;
 import com.wshake.service.api.ApiManageModels.ApiBatchResult;
 import com.wshake.service.api.ApiManageModels.ApiListPage;
 import com.wshake.service.api.ApiManageModels.ApiListQuery;
@@ -90,15 +91,17 @@ public class ApiController {
     @PutMapping("/{id}")
     @Operation(summary = "更新 API")
     public Result<ApiListItemVO> update(@PathVariable Long id, @Valid @RequestBody UpdateApiRequest req) {
+        // id 来自路径，映射体只覆盖可改字段
+        UpdateApiCommand body = converter.convert(req, UpdateApiCommand.class);
         UpdateApiCommand cmd = new UpdateApiCommand(
                 id,
-                req.getName(),
-                req.getMethod(),
-                req.getPath(),
-                req.getPermissionCode(),
-                req.getApiGroup(),
-                req.getRemark(),
-                req.getIsEnabled());
+                body.name(),
+                body.method(),
+                body.path(),
+                body.permissionCode(),
+                body.apiGroup(),
+                body.remark(),
+                body.isEnabled());
         return Result.ok(converter.convert(sysApiService.update(cmd), ApiListItemVO.class));
     }
 
@@ -111,15 +114,14 @@ public class ApiController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<ApiBatchResultVO> batch(@RequestBody ApiBatchRequest req) {
-        ApiBatchResult result = sysApiService.batch(
-                new com.wshake.service.api.ApiManageModels.ApiBatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new ApiBatchResultVO(result.action(), result.affected(), result.ids()));
+        ApiBatchResult result = sysApiService.batch(converter.convert(req, ApiBatchCommand.class));
+        return Result.ok(converter.convert(result, ApiBatchResultVO.class));
     }
 
     @PostMapping("/sync")
     @Operation(summary = "同步路由清单", description = "按内置 manifest upsert；命中 method+path 则 skip")
     public Result<ApiSyncResultVO> sync() {
         ApiSyncResult result = sysApiService.syncFromManifest();
-        return Result.ok(new ApiSyncResultVO(result.added(), result.skipped(), result.total()));
+        return Result.ok(converter.convert(result, ApiSyncResultVO.class));
     }
 }

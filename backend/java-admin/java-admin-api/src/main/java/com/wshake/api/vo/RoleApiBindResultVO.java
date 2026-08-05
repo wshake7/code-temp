@@ -1,5 +1,7 @@
 package com.wshake.api.vo;
 
+import com.wshake.service.role.RoleManageModels.RoleApiBindResult;
+import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -14,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AutoMapper(target = RoleApiBindResult.class)
 @Schema(description = "角色 API 绑定结果")
 public class RoleApiBindResultVO {
 

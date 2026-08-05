@@ -115,8 +115,10 @@ public class I18nTranslationController {
     @Operation(summary = "更新翻译")
     public Result<I18nTranslationVO> update(
             @PathVariable Long id, @Valid @RequestBody UpdateI18nTranslationRequest req) {
+        // id 来自路径，映射体只覆盖可改字段
+        UpdateTranslationCommand body = converter.convert(req, UpdateTranslationCommand.class);
         UpdateTranslationCommand cmd = new UpdateTranslationCommand(
-                id, req.getTranslationKey(), req.getValue(), req.getRemark(), req.getIsEnabled());
+                id, body.translationKey(), body.value(), body.remark(), body.isEnabled());
         return Result.ok(converter.convert(translationService.update(cmd), I18nTranslationVO.class));
     }
 
@@ -129,8 +131,8 @@ public class I18nTranslationController {
     @PostMapping("/batch")
     @Operation(summary = "批量 enable|disable|delete")
     public Result<I18nBatchResultVO> batch(@RequestBody I18nBatchRequest req) {
-        BatchResult result = translationService.batch(new BatchCommand(req.getAction(), req.getIds()));
-        return Result.ok(new I18nBatchResultVO(result.action(), result.affected(), result.ids()));
+        BatchResult result = translationService.batch(converter.convert(req, BatchCommand.class));
+        return Result.ok(converter.convert(result, I18nBatchResultVO.class));
     }
 
     @PostMapping("/batch-upsert-by-key")

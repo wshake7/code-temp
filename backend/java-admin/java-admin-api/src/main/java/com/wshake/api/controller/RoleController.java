@@ -109,7 +109,7 @@ public class RoleController {
     @Operation(summary = "全量替换角色菜单绑定")
     public Result<RoleMenuBindResultVO> setMenus(@PathVariable Long id, @Valid @RequestBody RoleMenuBindRequest req) {
         RoleMenuBindResult result = sysRoleService.replaceMenus(id, req.getMenuIds());
-        return Result.ok(new RoleMenuBindResultVO(result.roleId(), result.menuIds()));
+        return Result.ok(converter.convert(result, RoleMenuBindResultVO.class));
     }
 
     @GetMapping("/{id}/apis")
@@ -123,6 +123,6 @@ public class RoleController {
     @Operation(summary = "全量替换角色 API 绑定", description = "变更后同步受影响用户的 Casbin 策略")
     public Result<RoleApiBindResultVO> setApis(@PathVariable Long id, @Valid @RequestBody RoleApiBindRequest req) {
         RoleApiBindResult result = sysRoleService.replaceApis(id, req.getApiIds());
-        return Result.ok(new RoleApiBindResultVO(result.roleId(), result.apiIds()));
+        return Result.ok(converter.convert(result, RoleApiBindResultVO.class));
     }
 }
