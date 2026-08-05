@@ -5,10 +5,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.wshake.api.dto.CreateTaskConfigRequest;
 import com.wshake.api.dto.TaskConfigBatchRequest;
+import com.wshake.api.dto.UpdateTaskConfigRequest;
 import com.wshake.api.vo.TaskConfigBatchResultVO;
 import com.wshake.api.vo.TaskConfigVO;
 import com.wshake.api.vo.TaskTriggerResultVO;
@@ -37,9 +36,8 @@ class TaskConfigControllerTest {
 
     private final TaskConfigService taskConfigService = mock(TaskConfigService.class);
     private final Converter converter = new Converter();
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final TaskConfigController controller =
-            new TaskConfigController(taskConfigService, converter, objectMapper);
+            new TaskConfigController(taskConfigService, converter);
 
     @Test
     void list_returnsItemsTotal() {
@@ -76,8 +74,8 @@ class TaskConfigControllerTest {
     void update_usesFieldPresence() {
         when(taskConfigService.update(ArgumentMatchers.any(UpdateTaskConfigCommand.class)))
                 .thenReturn(sampleConfig(2L, "log_count_tick"));
-        ObjectNode body = objectMapper.createObjectNode();
-        body.put("isEnabled", 0);
+        UpdateTaskConfigRequest body = new UpdateTaskConfigRequest();
+        body.setIsEnabled(0);
 
         Result<TaskConfigVO> result = controller.update(2L, body);
 
@@ -96,8 +94,8 @@ class TaskConfigControllerTest {
     void update_canClearCronExprWithNull() {
         when(taskConfigService.update(ArgumentMatchers.any(UpdateTaskConfigCommand.class)))
                 .thenReturn(sampleConfig(2L, "log_count_tick"));
-        ObjectNode body = objectMapper.createObjectNode();
-        body.putNull("cronExpr");
+        UpdateTaskConfigRequest body = new UpdateTaskConfigRequest();
+        body.setCronExpr(null);
 
         controller.update(2L, body);
 

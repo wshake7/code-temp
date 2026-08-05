@@ -1,6 +1,5 @@
 package com.wshake.api.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.wshake.api.dto.ApisByMenusRequest;
 import com.wshake.api.dto.CreateMenuRequest;
 import com.wshake.api.dto.MenuApiBindRequest;
@@ -93,9 +92,9 @@ public class MenuController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新菜单")
-    public Result<MenuListItemVO> update(@PathVariable Long id, @RequestBody JsonNode body) {
-        // ParentIdChange / MetadataChange 含 presence 语义，保留手写组装
-        UpdateMenuRequest req = parseUpdate(body);
+    public Result<MenuListItemVO> update(
+            @PathVariable Long id, @RequestBody(required = false) UpdateMenuRequest body) {
+        UpdateMenuRequest req = body == null ? new UpdateMenuRequest() : body;
         UpdateMenuCommand cmd = new UpdateMenuCommand(
                 id,
                 req.isParentIdPresent() ? ParentIdChange.of(req.getParentId()) : ParentIdChange.absent(),
@@ -160,76 +159,5 @@ public class MenuController {
     public Result<Boolean> pathExists(
             @RequestParam(required = false) String path, @RequestParam(required = false) Long id) {
         return Result.ok(sysMenuService.pathExists(path, id));
-    }
-
-    private static UpdateMenuRequest parseUpdate(JsonNode body) {
-        UpdateMenuRequest req = new UpdateMenuRequest();
-        if (body == null || body.isNull()) {
-            return req;
-        }
-        if (body.has("parentId") || body.has("parent_id")) {
-            req.setParentIdPresent(true);
-            JsonNode n = body.has("parentId") ? body.get("parentId") : body.get("parent_id");
-            req.setParentId(n == null || n.isNull() ? null : n.asLong());
-        }
-        if (body.has("name")) {
-            req.setName(textOrNull(body.get("name")));
-        }
-        if (body.has("type")) {
-            req.setType(textOrNull(body.get("type")));
-        }
-        if (body.has("path")) {
-            req.setPath(textOrNull(body.get("path")));
-        }
-        if (body.has("component")) {
-            req.setComponent(textOrNull(body.get("component")));
-        }
-        if (body.has("icon")) {
-            req.setIcon(textOrNull(body.get("icon")));
-        }
-        if (body.has("redirect")) {
-            req.setRedirect(textOrNull(body.get("redirect")));
-        }
-        if (body.has("permissionCode") || body.has("permission_code")) {
-            JsonNode n = body.has("permissionCode") ? body.get("permissionCode") : body.get("permission_code");
-            req.setPermissionCode(n == null || n.isNull() ? null : n.asText());
-        }
-        if (body.has("metadata")) {
-            req.setMetadataPresent(true);
-            JsonNode n = body.get("metadata");
-            if (n == null || n.isNull()) {
-                req.setMetadata(null);
-            } else if (n.isTextual()) {
-                req.setMetadata(n.asText());
-            } else {
-                req.setMetadata(n.toString());
-            }
-        }
-        if (body.has("sort") && !body.get("sort").isNull()) {
-            req.setSort(body.get("sort").asInt());
-        }
-        if (body.has("isHidden") || body.has("is_hidden")) {
-            JsonNode n = body.has("isHidden") ? body.get("isHidden") : body.get("is_hidden");
-            if (n != null && !n.isNull()) {
-                req.setIsHidden(n.asInt());
-            }
-        }
-        if (body.has("isEnabled") || body.has("is_enabled")) {
-            JsonNode n = body.has("isEnabled") ? body.get("isEnabled") : body.get("is_enabled");
-            if (n != null && !n.isNull()) {
-                req.setIsEnabled(n.asInt());
-            }
-        }
-        if (body.has("remark")) {
-            req.setRemark(textOrNull(body.get("remark")));
-        }
-        return req;
-    }
-
-    private static String textOrNull(JsonNode n) {
-        if (n == null || n.isNull()) {
-            return null;
-        }
-        return n.asText();
     }
 }

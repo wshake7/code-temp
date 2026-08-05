@@ -5,11 +5,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.wshake.api.dto.CreateMenuRequest;
 import com.wshake.api.dto.MenuApiBindRequest;
 import com.wshake.api.dto.MenuBatchRequest;
+import com.wshake.api.dto.UpdateMenuRequest;
 import com.wshake.api.vo.MenuApiBindResultVO;
 import com.wshake.api.vo.MenuBatchResultVO;
 import com.wshake.api.vo.MenuListItemVO;
@@ -39,7 +38,6 @@ class MenuControllerTest {
     private final SysMenuService sysMenuService = mock(SysMenuService.class);
     private final Converter converter = new Converter();
     private final MenuController controller = new MenuController(sysMenuService, converter);
-    private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
     void list_returnsTreePage() {
@@ -72,9 +70,9 @@ class MenuControllerTest {
     @Test
     void update_parentIdNull_present() {
         when(sysMenuService.update(ArgumentMatchers.any())).thenReturn(sampleView(2L, "X"));
-        ObjectNode body = mapper.createObjectNode();
-        body.putNull("parentId");
-        body.put("name", "X");
+        UpdateMenuRequest body = new UpdateMenuRequest();
+        body.setParentId(null);
+        body.setName("X");
 
         Result<MenuListItemVO> result = controller.update(2L, body);
         assertThat(result.getCode()).isEqualTo(0);
@@ -110,9 +108,9 @@ class MenuControllerTest {
     }
 
     @Test
-    void nameExists_returnsBoolean() {
-        when(sysMenuService.nameExists("dup", null)).thenReturn(true);
-        assertThat(controller.nameExists("dup", null).getData()).isTrue();
+    void nameExists_delegates() {
+        when(sysMenuService.nameExists("系统", 1L)).thenReturn(true);
+        assertThat(controller.nameExists("系统", 1L).getData()).isTrue();
     }
 
     private static MenuView sampleView(Long id, String name) {

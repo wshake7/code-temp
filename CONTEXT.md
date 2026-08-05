@@ -48,6 +48,10 @@ _Avoid_: 业务或配置代码中直接使用 `@Value` 散落绑定配置键
 Controller 接口成功体 `Result` / `ObjectResult` 的 `data` 优先使用强类型 VO（`com.wshake.api.vo`），字段名与对外 JSON 契约对齐；批量结果、绑定结果、公钥等小对象也建专用 VO，不手写 `Map.of` / `LinkedHashMap` 拼装。
 _Avoid_: `Result<Map<…>>` 作为业务接口返回类型（除非键集合本身动态、无法稳定建模，如动态路由 `meta` 自由形态；Service/Repository 内部聚合 Map 不在此限）
 
+**API Request DTO**：
+Controller `@RequestBody` 入参优先使用强类型 DTO（`com.wshake.api.dto`），字段名与对外 JSON 契约对齐；创建/更新/批量等请求各建专用 Request 类。部分更新需区分「字段未出现」与「显式 null」时，在 DTO 对应字段的 setter 内置 `*Present` 标志（Jackson 仅在 JSON 出现该 key 时调用 setter），再映射到 Command 的 presence 语义。
+_Avoid_: `@RequestBody JsonNode`（含 `com.fasterxml.jackson.databind.JsonNode`：Spring Boot 4 HTTP 层为 Jackson 3/`tools.jackson`，会触发 `HttpMessageConversionException: Type definition error`）；`@RequestBody Map<String, Object>` 作为业务接口请求体（动态键集合、无法稳定建模时除外）
+
 **MapStruct Plus Mapping**：
 java-admin 各层对象映射统一用 mapstruct-plus：字段一一对应的类型转换（如 Request↔Command、Entity↔View、View↔VO、Batch/Result 等）在源或目标类型上声明 `@AutoMapper`，通过 `Converter.convert` 转换；路径参数（如 `id`）与 enrich 字段（如 `typeCode` / `roleNames`）等无法从源对象映射的，由调用方 convert 后再重建；Entity→View 目标为 **record** 时，null→`""`/`0` 等契约默认优先用 **record 紧凑构造器**规范化（勿在 record 上用 `ReverseAutoMapping.defaultValue`，会生成不可编译的 update 方法）；JSON 字符串↔`Map` 等类型不兼容字段（如 Task `retryPolicy`）保留手写映射 + `TaskJsonSupport`。
 _Avoid_: 对同名字段列表手写 `new Xxx(…get…)` / 逐字段 setter 拷贝；对 **presence 语义**（如字段是否在 JSON 中出现、`ParentIdChange` / `MetadataChange`）做朴素 AutoMapper 而丢失「省略 vs 显式 null」语义

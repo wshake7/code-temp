@@ -1,10 +1,8 @@
 package com.wshake.api.controller;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.api.dto.CreateTaskConfigRequest;
 import com.wshake.api.dto.TaskConfigBatchRequest;
+import com.wshake.api.dto.UpdateTaskConfigRequest;
 import com.wshake.api.vo.TaskConfigBatchResultVO;
 import com.wshake.api.vo.TaskConfigVO;
 import com.wshake.api.vo.TaskExecutionVO;
@@ -25,7 +23,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,11 +46,8 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class TaskConfigController {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
-
     private final TaskConfigService taskConfigService;
     private final Converter converter;
-    private final ObjectMapper objectMapper;
 
     @GetMapping("/list")
     @Operation(summary = "分页查询任务配置", description = "筛选 code/name/status；软删不出现")
@@ -84,8 +78,10 @@ public class TaskConfigController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新任务配置", description = "按 JSON 字段是否出现决定是否修改（对齐 mock）")
-    public Result<TaskConfigVO> update(@PathVariable Long id, @RequestBody JsonNode body) {
-        UpdateTaskConfigCommand cmd = toUpdateCommand(id, body == null ? objectMapper.nullNode() : body);
+    public Result<TaskConfigVO> update(
+            @PathVariable Long id, @RequestBody(required = false) UpdateTaskConfigRequest body) {
+        UpdateTaskConfigRequest req = body == null ? new UpdateTaskConfigRequest() : body;
+        UpdateTaskConfigCommand cmd = toUpdateCommand(id, req);
         return Result.ok(converter.convert(taskConfigService.update(cmd), TaskConfigVO.class));
     }
 
@@ -111,65 +107,26 @@ public class TaskConfigController {
                 converter.convert(result.execution(), TaskExecutionVO.class)));
     }
 
-    private UpdateTaskConfigCommand toUpdateCommand(Long id, JsonNode body) {
-        boolean codePresent = body.has("code");
-        boolean namePresent = body.has("name");
-        boolean workflowTypePresent = body.has("workflowType");
-        boolean taskQueuePresent = body.has("taskQueue");
-        boolean cronExprPresent = body.has("cronExpr");
-        boolean retryPolicyPresent = body.has("retryPolicy");
-        boolean timeoutSecondsPresent = body.has("timeoutSeconds");
-        boolean remarkPresent = body.has("remark");
-        boolean isEnabledPresent = body.has("isEnabled");
-
-        String code =
-                codePresent && !body.get("code").isNull() ? body.get("code").asText() : null;
-        String name =
-                namePresent && !body.get("name").isNull() ? body.get("name").asText() : null;
-        String workflowType = workflowTypePresent && !body.get("workflowType").isNull()
-                ? body.get("workflowType").asText()
-                : null;
-        String taskQueue = taskQueuePresent && !body.get("taskQueue").isNull()
-                ? body.get("taskQueue").asText()
-                : null;
-        String cronExpr = cronExprPresent && !body.get("cronExpr").isNull()
-                ? body.get("cronExpr").asText()
-                : null;
-        Map<String, Object> retryPolicy = null;
-        if (retryPolicyPresent && !body.get("retryPolicy").isNull()) {
-            retryPolicy = objectMapper.convertValue(body.get("retryPolicy"), MAP_TYPE);
-        }
-        Integer timeoutSeconds = null;
-        if (timeoutSecondsPresent && !body.get("timeoutSeconds").isNull()) {
-            timeoutSeconds = body.get("timeoutSeconds").asInt();
-        }
-        String remark = remarkPresent && !body.get("remark").isNull()
-                ? body.get("remark").asText()
-                : null;
-        Integer isEnabled = null;
-        if (isEnabledPresent && !body.get("isEnabled").isNull()) {
-            isEnabled = body.get("isEnabled").asInt();
-        }
-
+    private static UpdateTaskConfigCommand toUpdateCommand(Long id, UpdateTaskConfigRequest req) {
         return new UpdateTaskConfigCommand(
                 id,
-                code,
-                codePresent,
-                name,
-                namePresent,
-                workflowType,
-                workflowTypePresent,
-                taskQueue,
-                taskQueuePresent,
-                cronExpr,
-                cronExprPresent,
-                retryPolicy,
-                retryPolicyPresent,
-                timeoutSeconds,
-                timeoutSecondsPresent,
-                remark,
-                remarkPresent,
-                isEnabled,
-                isEnabledPresent);
+                req.getCode(),
+                req.isCodePresent(),
+                req.getName(),
+                req.isNamePresent(),
+                req.getWorkflowType(),
+                req.isWorkflowTypePresent(),
+                req.getTaskQueue(),
+                req.isTaskQueuePresent(),
+                req.getCronExpr(),
+                req.isCronExprPresent(),
+                req.getRetryPolicy(),
+                req.isRetryPolicyPresent(),
+                req.getTimeoutSeconds(),
+                req.isTimeoutSecondsPresent(),
+                req.getRemark(),
+                req.isRemarkPresent(),
+                req.getIsEnabled(),
+                req.isEnabledPresent());
     }
 }
