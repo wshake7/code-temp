@@ -92,8 +92,7 @@ public class MenuController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新菜单")
-    public Result<MenuListItemVO> update(
-            @PathVariable Long id, @RequestBody(required = false) UpdateMenuRequest body) {
+    public Result<MenuListItemVO> update(@PathVariable Long id, @RequestBody(required = false) UpdateMenuRequest body) {
         UpdateMenuRequest req = body == null ? new UpdateMenuRequest() : body;
         UpdateMenuCommand cmd = new UpdateMenuCommand(
                 id,

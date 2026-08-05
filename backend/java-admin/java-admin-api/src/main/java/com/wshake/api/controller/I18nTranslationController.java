@@ -117,8 +117,8 @@ public class I18nTranslationController {
             @PathVariable Long id, @Valid @RequestBody UpdateI18nTranslationRequest req) {
         // id 来自路径，映射体只覆盖可改字段
         UpdateTranslationCommand body = converter.convert(req, UpdateTranslationCommand.class);
-        UpdateTranslationCommand cmd = new UpdateTranslationCommand(
-                id, body.translationKey(), body.value(), body.remark(), body.isEnabled());
+        UpdateTranslationCommand cmd =
+                new UpdateTranslationCommand(id, body.translationKey(), body.value(), body.remark(), body.isEnabled());
         return Result.ok(converter.convert(translationService.update(cmd), I18nTranslationVO.class));
     }
 

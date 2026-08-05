@@ -48,8 +48,7 @@ class I18nTranslationServiceTest {
 
     @BeforeEach
     void init() {
-        service = new I18nTranslationService(
-                translationRepo, localeRepo, new io.github.linpeilie.Converter());
+        service = new I18nTranslationService(translationRepo, localeRepo, new io.github.linpeilie.Converter());
     }
 
     @Test

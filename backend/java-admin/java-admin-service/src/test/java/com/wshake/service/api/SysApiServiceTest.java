@@ -44,8 +44,7 @@ class SysApiServiceTest {
 
     @BeforeEach
     void init() {
-        service = new SysApiService(
-                apiRepo, menuApiRepo, roleBindingRepo, userRoleRepo, userService, new Converter());
+        service = new SysApiService(apiRepo, menuApiRepo, roleBindingRepo, userRoleRepo, userService, new Converter());
     }
 
     @Test

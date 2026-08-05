@@ -61,10 +61,7 @@ public final class LogManageModels {
         }
     }
 
-    @AutoMappers({
-        @AutoMapper(target = SysLoginLog.class),
-        @AutoMapper(target = SysLoginLogArchive.class)
-    })
+    @AutoMappers({@AutoMapper(target = SysLoginLog.class), @AutoMapper(target = SysLoginLogArchive.class)})
     public record LoginLogView(
             Long id,
             String username,

@@ -46,8 +46,7 @@ public class DictTypeService {
 
     public List<DictTypeView> listAll(DictTypeListQuery query) {
         return converter.convert(
-                dictTypeRepository.listFiltered(
-                        query.codeExact(), query.codeLike(), query.name(), query.status()),
+                dictTypeRepository.listFiltered(query.codeExact(), query.codeLike(), query.name(), query.status()),
                 DictTypeView.class);
     }
 

@@ -46,8 +46,7 @@ public class I18nLocaleService {
 
     public List<LocaleView> listAll(LocaleListQuery query) {
         return converter.convert(
-                localeRepository.listFiltered(
-                        query.codeExact(), query.codeLike(), query.name(), query.status()),
+                localeRepository.listFiltered(query.codeExact(), query.codeLike(), query.name(), query.status()),
                 LocaleView.class);
     }
 
