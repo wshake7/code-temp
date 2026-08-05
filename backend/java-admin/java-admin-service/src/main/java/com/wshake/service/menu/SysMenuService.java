@@ -88,7 +88,7 @@ public class SysMenuService {
         List<MenuView> items = new ArrayList<>();
         for (SysMenu r : pageRoots) {
             for (SysMenu node : collectSubtree(r, childrenMap)) {
-                items.add(toView(node));
+                items.add(converter.convert(node, MenuView.class));
             }
         }
         return new MenuListPage(items, roots.size(), itemTotal);
@@ -96,7 +96,7 @@ public class SysMenuService {
 
     /** 全量未软删菜单（父菜单下拉等）。 */
     public List<MenuView> listAll(String type, Integer status) {
-        return menuRepository.listAll(type, status).stream().map(this::toView).toList();
+        return converter.convert(menuRepository.listAll(type, status), MenuView.class);
     }
 
     public MenuView create(CreateMenuCommand cmd) {
@@ -263,7 +263,7 @@ public class SysMenuService {
         if (menuRepository.hasChildren(id)) {
             throw BizException.of(ResultCode.PARAM_INVALID, "请先删除子菜单");
         }
-        MenuView snapshot = toView(menu);
+        MenuView snapshot = converter.convert(menu, MenuView.class);
         menuApiRepository.clearByMenuId(id);
         menuApiRepository.clearRoleMenusByMenuId(id);
         long rows = menuRepository.softDeleteById(id);
@@ -429,7 +429,7 @@ public class SysMenuService {
     }
 
     private MenuView loadView(Long id) {
-        return toView(requireMenu(id));
+        return converter.convert(requireMenu(id), MenuView.class);
     }
 
     private SysMenu requireMenu(Long id) {
@@ -441,10 +441,6 @@ public class SysMenuService {
             throw BizException.of(ResultCode.PARAM_INVALID, "菜单 " + id + " 不存在");
         }
         return menu;
-    }
-
-    private MenuView toView(SysMenu m) {
-        return converter.convert(m, MenuView.class);
     }
 
     private static boolean matches(SysMenu m, MenuListQuery query) {

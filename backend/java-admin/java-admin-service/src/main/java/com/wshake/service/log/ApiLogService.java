@@ -40,7 +40,7 @@ public class ApiLogService {
                     query.createdAtFrom(),
                     query.createdAtTo());
             List<ApiLogArchive> rows = page.getData() == null ? List.of() : page.getData();
-            return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
+            return PageData.of(converter.convert(rows, ApiLogView.class), page.getTotal());
         }
 
         EasyPageResult<ApiLog> page = apiLogRepository.pageHot(
@@ -57,14 +57,6 @@ public class ApiLogService {
                 query.createdAtFrom(),
                 query.createdAtTo());
         List<ApiLog> rows = page.getData() == null ? List.of() : page.getData();
-        return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
-    }
-
-    private ApiLogView toView(ApiLog row) {
-        return converter.convert(row, ApiLogView.class);
-    }
-
-    private ApiLogView toView(ApiLogArchive row) {
-        return converter.convert(row, ApiLogView.class);
+        return PageData.of(converter.convert(rows, ApiLogView.class), page.getTotal());
     }
 }

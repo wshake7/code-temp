@@ -41,19 +41,18 @@ public class DictTypeService {
         EasyPageResult<DictType> page = dictTypeRepository.page(
                 query.page(), query.pageSize(), query.codeExact(), query.codeLike(), query.name(), query.status());
         List<DictType> rows = page.getData() == null ? List.of() : page.getData();
-        return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
+        return PageData.of(converter.convert(rows, DictTypeView.class), page.getTotal());
     }
 
     public List<DictTypeView> listAll(DictTypeListQuery query) {
-        return dictTypeRepository
-                .listFiltered(query.codeExact(), query.codeLike(), query.name(), query.status())
-                .stream()
-                .map(this::toView)
-                .toList();
+        return converter.convert(
+                dictTypeRepository.listFiltered(
+                        query.codeExact(), query.codeLike(), query.name(), query.status()),
+                DictTypeView.class);
     }
 
     public DictTypeView getById(Long id) {
-        return toView(requireType(id));
+        return converter.convert(requireType(id), DictTypeView.class);
     }
 
     public DictTypeView create(CreateDictTypeCommand cmd) {
@@ -72,7 +71,7 @@ public class DictTypeService {
         type.setRemark(DictManageModels.nullToEmpty(cmd.remark()).trim());
         type.setIsEnabled(DictManageModels.normalize01(cmd.isEnabled(), 1));
         dictTypeRepository.insert(type);
-        return toView(requireType(type.getId()));
+        return converter.convert(requireType(type.getId()), DictTypeView.class);
     }
 
     public DictTypeView update(UpdateDictTypeCommand cmd) {
@@ -101,7 +100,7 @@ public class DictTypeService {
             type.setIsEnabled(DictManageModels.normalize01(cmd.isEnabled(), 1));
         }
         dictTypeRepository.update(type);
-        return toView(requireType(type.getId()));
+        return converter.convert(requireType(type.getId()), DictTypeView.class);
     }
 
     /**
@@ -112,7 +111,7 @@ public class DictTypeService {
         if (dictDataRepository.existsActiveByTypeId(id)) {
             throw BizException.of(ResultCode.PARAM_INVALID, "请先清空字典项");
         }
-        DictTypeView snapshot = toView(type);
+        DictTypeView snapshot = converter.convert(type, DictTypeView.class);
         long rows = dictTypeRepository.softDeleteById(id);
         if (rows == 0) {
             throw BizException.of(ResultCode.PARAM_INVALID, "dict-type " + id + " not found");
@@ -205,9 +204,5 @@ public class DictTypeService {
             }
         }
         return List.copyOf(set);
-    }
-
-    private DictTypeView toView(DictType t) {
-        return converter.convert(t, DictTypeView.class);
     }
 }

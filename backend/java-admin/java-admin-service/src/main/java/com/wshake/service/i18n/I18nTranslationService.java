@@ -64,7 +64,6 @@ public class I18nTranslationService {
 
     private final I18nTranslationRepository translationRepository;
     private final I18nLocaleRepository localeRepository;
-    private final I18nLocaleService localeService;
     private final Converter converter;
 
     public PageData<?> page(TranslationListQuery query) {
@@ -470,7 +469,7 @@ public class I18nTranslationService {
             if ("raw".equals(format)) {
                 Map<String, Object> content = new LinkedHashMap<>();
                 content.put("@type", "raw");
-                content.put("locale", localeToMap(localeService.toView(locale)));
+                content.put("locale", localeToMap(converter.convert(locale, LocaleView.class)));
                 List<Map<String, Object>> translations = new ArrayList<>();
                 for (I18nTranslation t : mine) {
                     Map<String, Object> tr = new LinkedHashMap<>();
@@ -517,7 +516,7 @@ public class I18nTranslationService {
             result.put(
                     "locales",
                     selected.stream()
-                            .map(l -> localeToMap(localeService.toView(l)))
+                            .map(l -> localeToMap(converter.convert(l, LocaleView.class)))
                             .toList());
             List<Map<String, Object>> translations = new ArrayList<>();
             for (I18nTranslation t : allTranslations) {

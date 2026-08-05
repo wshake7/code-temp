@@ -36,7 +36,7 @@ public class LoginLogService {
                     query.loginTimeFrom(),
                     query.loginTimeTo());
             List<SysLoginLogArchive> rows = page.getData() == null ? List.of() : page.getData();
-            return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
+            return PageData.of(converter.convert(rows, LoginLogView.class), page.getTotal());
         }
 
         EasyPageResult<SysLoginLog> page = sysLoginLogRepository.pageHot(
@@ -49,14 +49,6 @@ public class LoginLogService {
                 query.loginTimeFrom(),
                 query.loginTimeTo());
         List<SysLoginLog> rows = page.getData() == null ? List.of() : page.getData();
-        return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
-    }
-
-    private LoginLogView toView(SysLoginLog row) {
-        return converter.convert(row, LoginLogView.class);
-    }
-
-    private LoginLogView toView(SysLoginLogArchive row) {
-        return converter.convert(row, LoginLogView.class);
+        return PageData.of(converter.convert(rows, LoginLogView.class), page.getTotal());
     }
 }

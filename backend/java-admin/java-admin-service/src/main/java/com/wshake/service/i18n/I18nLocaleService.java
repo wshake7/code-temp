@@ -41,17 +41,18 @@ public class I18nLocaleService {
         EasyPageResult<I18nLocale> page = localeRepository.page(
                 query.page(), query.pageSize(), query.codeExact(), query.codeLike(), query.name(), query.status());
         List<I18nLocale> rows = page.getData() == null ? List.of() : page.getData();
-        return PageData.of(rows.stream().map(this::toView).toList(), page.getTotal());
+        return PageData.of(converter.convert(rows, LocaleView.class), page.getTotal());
     }
 
     public List<LocaleView> listAll(LocaleListQuery query) {
-        return localeRepository.listFiltered(query.codeExact(), query.codeLike(), query.name(), query.status()).stream()
-                .map(this::toView)
-                .toList();
+        return converter.convert(
+                localeRepository.listFiltered(
+                        query.codeExact(), query.codeLike(), query.name(), query.status()),
+                LocaleView.class);
     }
 
     public LocaleView getById(Long id) {
-        return toView(requireLocale(id));
+        return converter.convert(requireLocale(id), LocaleView.class);
     }
 
     public LocaleView create(CreateLocaleCommand cmd) {
@@ -80,7 +81,7 @@ public class I18nLocaleService {
         locale.setRemark(I18nManageModels.nullToEmpty(cmd.remark()).trim());
         locale.setIsEnabled(isEnabled);
         localeRepository.insert(locale);
-        return toView(requireLocale(locale.getId()));
+        return converter.convert(requireLocale(locale.getId()), LocaleView.class);
     }
 
     public LocaleView update(UpdateLocaleCommand cmd) {
@@ -119,7 +120,7 @@ public class I18nLocaleService {
             locale.setIsDefault(isDefault);
         }
         localeRepository.update(locale);
-        return toView(requireLocale(locale.getId()));
+        return converter.convert(requireLocale(locale.getId()), LocaleView.class);
     }
 
     /**
@@ -133,7 +134,7 @@ public class I18nLocaleService {
         if (translationRepository.existsActiveByLocaleId(id)) {
             throw BizException.of(ResultCode.PARAM_INVALID, "请先清空该语言的翻译");
         }
-        LocaleView snapshot = toView(locale);
+        LocaleView snapshot = converter.convert(locale, LocaleView.class);
         long rows = localeRepository.softDeleteById(id);
         if (rows == 0) {
             throw BizException.of(ResultCode.PARAM_INVALID, "i18n-locale " + id + " not found");
@@ -232,9 +233,5 @@ public class I18nLocaleService {
             }
         }
         return List.copyOf(set);
-    }
-
-    LocaleView toView(I18nLocale t) {
-        return converter.convert(t, LocaleView.class);
     }
 }

@@ -73,7 +73,7 @@ public class SysApiService {
             List<SysApi> apis = groupMap.getOrDefault(g, List.of());
             apis.sort(Comparator.comparing(SysApi::getId));
             for (SysApi a : apis) {
-                items.add(toView(a));
+                items.add(converter.convert(a, ApiView.class));
             }
         }
         return new ApiListPage(items, groupNames.size(), filtered.size());
@@ -81,7 +81,7 @@ public class SysApiService {
 
     /** 全量未软删接口。 */
     public List<ApiView> listAll() {
-        return apiRepository.listAll().stream().map(this::toView).toList();
+        return converter.convert(apiRepository.listAll(), ApiView.class);
     }
 
     /** 去重分组名（非空），供下拉。 */
@@ -175,7 +175,7 @@ public class SysApiService {
      */
     public ApiView softDelete(Long id) {
         SysApi api = requireApi(id);
-        ApiView snapshot = toView(api);
+        ApiView snapshot = converter.convert(api, ApiView.class);
 
         List<Long> roleIds = roleBindingRepository.findRoleIdsByApiId(id);
         menuApiRepository.clearByApiId(id);
@@ -325,7 +325,7 @@ public class SysApiService {
     }
 
     private ApiView loadView(Long id) {
-        return toView(requireApi(id));
+        return converter.convert(requireApi(id), ApiView.class);
     }
 
     private SysApi requireApi(Long id) {
@@ -349,10 +349,6 @@ public class SysApiService {
         if (apiRepository.existsByPermissionCode(permissionCode, excludeId)) {
             throw BizException.of(ResultCode.PARAM_INVALID, "permissionCode " + permissionCode + " 已存在");
         }
-    }
-
-    private ApiView toView(SysApi a) {
-        return converter.convert(a, ApiView.class);
     }
 
     private static String normalizeGroupLabel(String apiGroup) {
