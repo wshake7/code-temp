@@ -31,7 +31,8 @@ public class TemporalTaskExecutionRepository {
             Long configId,
             String status,
             LocalDateTime startedAtFrom,
-            LocalDateTime startedAtTo) {
+            LocalDateTime startedAtTo,
+            String workflowType) {
         return easyEntityQuery
                 .queryable(TemporalTaskExecution.class)
                 .where(t -> {
@@ -39,6 +40,7 @@ public class TemporalTaskExecutionRepository {
                     t.status().eq(status != null, status);
                     t.startedAt().ge(startedAtFrom != null, startedAtFrom);
                     t.startedAt().le(startedAtTo != null, startedAtTo);
+                    t.workflowType().eq(workflowType != null, workflowType);
                 })
                 .orderBy(t -> {
                     // PENDING 的 startedAt 为 null，按创建时间保证「最新派发优先」

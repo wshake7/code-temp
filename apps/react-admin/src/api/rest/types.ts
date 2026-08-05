@@ -897,6 +897,10 @@ export interface TaskConfigQuery {
   name?: string;
   /** isEnabled 过滤：0 | 1 */
   status?: 0 | 1;
+  /** 工作流类型精确匹配 */
+  workflowType?: string;
+  /** 任务队列精确匹配 */
+  taskQueue?: string;
   [k: string]: unknown;
 }
 
@@ -973,5 +977,7 @@ export interface TaskExecutionQuery {
   status?: TaskExecutionStatus | string;
   startedAtFrom?: string;
   startedAtTo?: string;
+  /** 工作流类型精确匹配 */
+  workflowType?: string;
   [k: string]: unknown;
 }

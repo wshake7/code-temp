@@ -27,14 +27,35 @@ public final class TaskManageModels {
     // ---------- task-config ----------
 
     public record TaskConfigListQuery(
-            int page, int pageSize, List<String> codeExact, String codeLike, String name, Integer status) {
+            int page,
+            int pageSize,
+            List<String> codeExact,
+            String codeLike,
+            String name,
+            Integer status,
+            String workflowType,
+            String taskQueue) {
 
         public static TaskConfigListQuery of(
-                Integer page, Integer pageSize, List<String> code, String name, Integer status) {
+                Integer page,
+                Integer pageSize,
+                List<String> code,
+                String name,
+                Integer status,
+                String workflowType,
+                String taskQueue) {
             int pageNo = page == null || page < 1 ? 1 : page;
             int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
             CodeFilter filter = parseCodeFilter(code);
-            return new TaskConfigListQuery(pageNo, size, filter.exact(), filter.like(), trimToNull(name), status);
+            return new TaskConfigListQuery(
+                    pageNo,
+                    size,
+                    filter.exact(),
+                    filter.like(),
+                    trimToNull(name),
+                    status,
+                    trimToNull(workflowType),
+                    trimToNull(taskQueue));
         }
     }
 
@@ -112,7 +133,8 @@ public final class TaskManageModels {
             Long configId,
             String status,
             LocalDateTime startedAtFrom,
-            LocalDateTime startedAtTo) {
+            LocalDateTime startedAtTo,
+            String workflowType) {
 
         public static TaskExecutionListQuery of(
                 Integer page,
@@ -120,14 +142,16 @@ public final class TaskManageModels {
                 Long configId,
                 String status,
                 LocalDateTime startedAtFrom,
-                LocalDateTime startedAtTo) {
+                LocalDateTime startedAtTo,
+                String workflowType) {
             int pageNo = page == null || page < 1 ? 1 : page;
             int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
             String normalizedStatus = null;
             if (status != null && !status.isBlank()) {
                 normalizedStatus = status.trim().toUpperCase(Locale.ROOT);
             }
-            return new TaskExecutionListQuery(pageNo, size, configId, normalizedStatus, startedAtFrom, startedAtTo);
+            return new TaskExecutionListQuery(
+                    pageNo, size, configId, normalizedStatus, startedAtFrom, startedAtTo, trimToNull(workflowType));
         }
     }
 

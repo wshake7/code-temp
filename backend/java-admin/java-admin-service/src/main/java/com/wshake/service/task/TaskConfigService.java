@@ -51,7 +51,14 @@ public class TaskConfigService {
 
     public PageData<TaskConfigView> page(TaskConfigListQuery query) {
         EasyPageResult<TemporalTaskConfig> page = configRepository.page(
-                query.page(), query.pageSize(), query.codeExact(), query.codeLike(), query.name(), query.status());
+                query.page(),
+                query.pageSize(),
+                query.codeExact(),
+                query.codeLike(),
+                query.name(),
+                query.status(),
+                query.workflowType(),
+                query.taskQueue());
         List<TemporalTaskConfig> rows = page.getData() == null ? List.of() : page.getData();
         return PageData.of(rows.stream().map(this::toConfigView).toList(), page.getTotal());
     }

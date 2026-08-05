@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { listTaskConfigApi } from '@/api/rest/task-config';
 import { listTaskExecutionApi } from '@/api/rest/task-execution';
 import type { TaskExecution, TaskExecutionStatus } from '@/api/rest/types';
+import { useListTaskWorkflowTypes } from '@/api/hooks/task-config';
 import { onTaskExecutionChanged } from '../modules/events';
 import TaskExecutionDetailDrawer from './modules/detail-drawer';
 import { formatDuration, statusColor, statusLabelKey } from './modules/shared';
@@ -28,6 +29,8 @@ export function TaskExecutionPanel() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRow, setDetailRow] = useState<TaskExecution | null>(null);
   const [configOptions, setConfigOptions] = useState<{ label: string; value: number }[]>([]);
+  const { data: workflowTypeOptions = [], isLoading: workflowTypesLoading } =
+    useListTaskWorkflowTypes();
 
   useEffect(() => {
     listTaskConfigApi({ page: 1, pageSize: 200 })
@@ -58,8 +61,9 @@ export function TaskExecutionPanel() {
     configId?: number;
     status?: string;
     startedAt?: [string, string];
+    workflowType?: string;
   }) {
-    const { current = 1, pageSize = 20, configId, status, startedAt } = params;
+    const { current = 1, pageSize = 20, configId, status, startedAt, workflowType } = params;
     const res = await listTaskExecutionApi({
       page: current,
       pageSize,
@@ -67,6 +71,7 @@ export function TaskExecutionPanel() {
       status: status || undefined,
       startedAtFrom: startedAt?.[0],
       startedAtTo: startedAt?.[1],
+      workflowType: workflowType || undefined,
     });
     return { data: res.items, total: res.total, success: true };
   }
@@ -102,6 +107,21 @@ export function TaskExecutionPanel() {
         ) : (
           <span style={{ color: '#999' }}>—</span>
         ),
+    },
+    {
+      title: t('workflowType'),
+      dataIndex: 'workflowType',
+      width: 160,
+      ellipsis: true,
+      valueType: 'select',
+      fieldProps: {
+        options: workflowTypeOptions,
+        showSearch: true,
+        allowClear: true,
+        optionFilterProp: 'label',
+        loading: workflowTypesLoading,
+        placeholder: t('workflowTypeFilterPlaceholder'),
+      },
     },
     {
       title: t('workflowId'),

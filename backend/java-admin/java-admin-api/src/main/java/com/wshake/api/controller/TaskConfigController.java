@@ -53,15 +53,17 @@ public class TaskConfigController {
     private final Converter converter;
 
     @GetMapping("/list")
-    @Operation(summary = "分页查询任务配置", description = "筛选 code/name/status；软删不出现")
+    @Operation(summary = "分页查询任务配置", description = "筛选 code/name/status/workflowType/taskQueue；软删不出现")
     public Result<PageData<TaskConfigVO>> list(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) List<String> code,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) Integer status) {
-        PageData<TaskConfigView> pageData =
-                taskConfigService.page(TaskConfigListQuery.of(page, pageSize, code, name, status));
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String workflowType,
+            @RequestParam(required = false) String taskQueue) {
+        PageData<TaskConfigView> pageData = taskConfigService.page(
+                TaskConfigListQuery.of(page, pageSize, code, name, status, workflowType, taskQueue));
         List<TaskConfigVO> items = converter.convert(pageData.getItems(), TaskConfigVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }

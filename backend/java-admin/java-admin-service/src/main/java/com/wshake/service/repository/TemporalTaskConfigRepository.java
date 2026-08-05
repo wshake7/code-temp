@@ -41,7 +41,14 @@ public class TemporalTaskConfigRepository {
     }
 
     public EasyPageResult<TemporalTaskConfig> page(
-            int page, int pageSize, List<String> codeExact, String codeLike, String name, Integer status) {
+            int page,
+            int pageSize,
+            List<String> codeExact,
+            String codeLike,
+            String name,
+            Integer status,
+            String workflowType,
+            String taskQueue) {
         return easyEntityQuery
                 .queryable(TemporalTaskConfig.class)
                 .where(t -> {
@@ -52,6 +59,8 @@ public class TemporalTaskConfigRepository {
                     }
                     t.name().like(name != null, name);
                     t.isEnabled().eq(status != null, status);
+                    t.workflowType().eq(workflowType != null, workflowType);
+                    t.taskQueue().eq(taskQueue != null, taskQueue);
                 })
                 .orderBy(t -> t.id().asc())
                 .toPageResult(page, pageSize);

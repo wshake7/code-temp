@@ -9,7 +9,7 @@ import { usePageResponseSuccess } from "~/utils/response";
 
 /**
  * 任务配置分页列表。
- * 筛选：code / name / status(isEnabled 0|1)
+ * 筛选：code / name / status(isEnabled 0|1) / workflowType / taskQueue
  * 软删行不出现在 list。
  */
 export default defineEventHandler(async (event) => {
@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event);
   const code = (query.code ?? query["code[]"]) as string | string[] | undefined;
-  const { page = 1, pageSize = 20, name, status } = query;
+  const { page = 1, pageSize = 20, name, status, workflowType, taskQueue } = query;
   const shared = getMockTemporalTaskConfigList();
 
   let filtered: TemporalTaskConfig[] = shared.filter((x) => x.deleted_at === 0);
@@ -36,6 +36,14 @@ export default defineEventHandler(async (event) => {
   }
   if (["0", "1"].includes(status as string)) {
     filtered = filtered.filter((x) => x.is_enabled === Number(status));
+  }
+  if (workflowType !== undefined && workflowType !== null && String(workflowType) !== "") {
+    const wt = String(workflowType);
+    filtered = filtered.filter((x) => x.workflow_type === wt);
+  }
+  if (taskQueue !== undefined && taskQueue !== null && String(taskQueue) !== "") {
+    const tq = String(taskQueue);
+    filtered = filtered.filter((x) => x.task_queue === tq);
   }
   filtered.sort((a, b) => a.id - b.id);
 

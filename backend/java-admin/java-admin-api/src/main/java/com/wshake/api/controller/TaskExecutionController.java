@@ -36,7 +36,7 @@ public class TaskExecutionController {
     private final Converter converter;
 
     @GetMapping("/list")
-    @Operation(summary = "分页查询任务执行", description = "筛选 configId/status/startedAt 区间；最新优先")
+    @Operation(summary = "分页查询任务执行", description = "筛选 configId/status/startedAt 区间/workflowType；最新优先")
     public Result<PageData<TaskExecutionVO>> list(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
@@ -45,9 +45,10 @@ public class TaskExecutionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
                     LocalDateTime startedAtFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                    LocalDateTime startedAtTo) {
+                    LocalDateTime startedAtTo,
+            @RequestParam(required = false) String workflowType) {
         PageData<TaskExecutionView> pageData = taskExecutionService.page(
-                TaskExecutionListQuery.of(page, pageSize, configId, status, startedAtFrom, startedAtTo));
+                TaskExecutionListQuery.of(page, pageSize, configId, status, startedAtFrom, startedAtTo, workflowType));
         List<TaskExecutionVO> items = converter.convert(pageData.getItems(), TaskExecutionVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
     }

@@ -10,14 +10,22 @@ import { usePageResponseSuccess } from "~/utils/response";
 
 /**
  * 任务执行记录分页列表（无删除接口）。
- * 筛选：configId / status / startedAtFrom / startedAtTo
+ * 筛选：configId / status / startedAtFrom / startedAtTo / workflowType
  * 配置软删后仍可 list；configName 缺失时为 null（前端展示 —）。
  */
 export default defineEventHandler(async (event) => {
   ensureTemporalTaskSeeds();
 
   const query = getQuery(event);
-  const { page = 1, pageSize = 20, configId, status, startedAtFrom, startedAtTo } = query;
+  const {
+    page = 1,
+    pageSize = 20,
+    configId,
+    status,
+    startedAtFrom,
+    startedAtTo,
+    workflowType,
+  } = query;
 
   let filtered: TemporalTaskExecution[] = [...getMockTemporalTaskExecutionList()];
 
@@ -30,6 +38,10 @@ export default defineEventHandler(async (event) => {
   if (status) {
     const s = String(status).toUpperCase();
     filtered = filtered.filter((r) => r.status === s);
+  }
+  if (workflowType !== undefined && workflowType !== null && String(workflowType) !== "") {
+    const wt = String(workflowType);
+    filtered = filtered.filter((r) => r.workflow_type === wt);
   }
   if (startedAtFrom) {
     const from = Date.parse(String(startedAtFrom));

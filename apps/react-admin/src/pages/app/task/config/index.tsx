@@ -26,6 +26,7 @@ import {
 } from '@/api/rest/task-config';
 import type { TaskConfig, TaskConfigBatchAction } from '@/api/rest/types';
 import { useDictLookups } from '@/api/hooks/dict';
+import { useListTaskQueues, useListTaskWorkflowTypes } from '@/api/hooks/task-config';
 import { getApiErrorMessage } from '../modules/error-message';
 import { notifyTaskExecutionChanged } from '../modules/events';
 import TaskConfigDrawer from './modules/config-drawer';
@@ -44,6 +45,9 @@ export function TaskConfigPanel() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<TaskConfig | null>(null);
   const dictLookups = useDictLookups({ typeCodes: ['sys_switch_status'] });
+  const { data: workflowTypeOptions = [], isLoading: workflowTypesLoading } =
+    useListTaskWorkflowTypes();
+  const { data: taskQueueOptions = [], isLoading: taskQueuesLoading } = useListTaskQueues();
 
   async function fetchRows(params: {
     current?: number;
@@ -51,14 +55,26 @@ export function TaskConfigPanel() {
     code?: string;
     name?: string;
     isEnabled?: number | '';
+    workflowType?: string;
+    taskQueue?: string;
   }) {
-    const { current = 1, pageSize = 20, code, name, isEnabled } = params;
+    const {
+      current = 1,
+      pageSize = 20,
+      code,
+      name,
+      isEnabled,
+      workflowType,
+      taskQueue,
+    } = params;
     const res = await listTaskConfigApi({
       page: current,
       pageSize,
       code: code || undefined,
       name: name || undefined,
       status: statusOrUndefined(isEnabled),
+      workflowType: workflowType || undefined,
+      taskQueue: taskQueue || undefined,
     });
     return { data: res.items, total: res.total, success: true };
   }
@@ -245,14 +261,30 @@ export function TaskConfigPanel() {
       dataIndex: 'workflowType',
       width: 180,
       ellipsis: true,
-      search: false,
+      valueType: 'select',
+      fieldProps: {
+        options: workflowTypeOptions,
+        showSearch: true,
+        allowClear: true,
+        optionFilterProp: 'label',
+        loading: workflowTypesLoading,
+        placeholder: t('workflowTypeFilterPlaceholder'),
+      },
     },
     {
       title: t('taskQueue'),
       dataIndex: 'taskQueue',
       width: 120,
       ellipsis: true,
-      search: false,
+      valueType: 'select',
+      fieldProps: {
+        options: taskQueueOptions,
+        showSearch: true,
+        allowClear: true,
+        optionFilterProp: 'label',
+        loading: taskQueuesLoading,
+        placeholder: t('taskQueueFilterPlaceholder'),
+      },
     },
     {
       title: t('cronExpr'),

@@ -12,8 +12,6 @@ import com.wshake.api.vo.TaskConfigBatchResultVO;
 import com.wshake.api.vo.TaskConfigVO;
 import com.wshake.api.vo.TaskOptionVO;
 import com.wshake.api.vo.TaskTriggerResultVO;
-import com.wshake.service.task.TemporalTaskQueue;
-import com.wshake.service.task.TemporalWorkflowType;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.Result;
 import com.wshake.service.task.TaskConfigService;
@@ -24,6 +22,8 @@ import com.wshake.service.task.TaskManageModels.TaskConfigView;
 import com.wshake.service.task.TaskManageModels.TaskExecutionView;
 import com.wshake.service.task.TaskManageModels.TaskTriggerResult;
 import com.wshake.service.task.TaskManageModels.UpdateTaskConfigCommand;
+import com.wshake.service.task.TemporalTaskQueue;
+import com.wshake.service.task.TemporalWorkflowType;
 import io.github.linpeilie.Converter;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,15 +39,14 @@ class TaskConfigControllerTest {
 
     private final TaskConfigService taskConfigService = mock(TaskConfigService.class);
     private final Converter converter = new Converter();
-    private final TaskConfigController controller =
-            new TaskConfigController(taskConfigService, converter);
+    private final TaskConfigController controller = new TaskConfigController(taskConfigService, converter);
 
     @Test
     void list_returnsItemsTotal() {
         when(taskConfigService.page(ArgumentMatchers.any(TaskConfigListQuery.class)))
                 .thenReturn(PageData.of(List.of(sampleConfig(1L, "log_count_tick")), 1L));
 
-        Result<PageData<TaskConfigVO>> result = controller.list(1, 20, null, null, null);
+        Result<PageData<TaskConfigVO>> result = controller.list(1, 20, null, null, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(1L);
@@ -62,7 +61,8 @@ class TaskConfigControllerTest {
         assertThat(result.getData()).isNotEmpty();
         assertThat(result.getData().stream().map(TaskOptionVO::getValue).toList())
                 .containsExactlyElementsOf(TemporalWorkflowType.ALL);
-        assertThat(result.getData().get(0).getLabel()).isEqualTo(result.getData().get(0).getValue());
+        assertThat(result.getData().get(0).getLabel())
+                .isEqualTo(result.getData().get(0).getValue());
     }
 
     @Test

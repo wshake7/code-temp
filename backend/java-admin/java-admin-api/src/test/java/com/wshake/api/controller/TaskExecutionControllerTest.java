@@ -31,7 +31,7 @@ class TaskExecutionControllerTest {
         when(taskExecutionService.page(ArgumentMatchers.any(TaskExecutionListQuery.class)))
                 .thenReturn(PageData.of(List.of(sample(1L, 1L, "名称")), 1L));
 
-        Result<PageData<TaskExecutionVO>> result = controller.list(1, 20, null, null, null, null);
+        Result<PageData<TaskExecutionVO>> result = controller.list(1, 20, null, null, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(1L);

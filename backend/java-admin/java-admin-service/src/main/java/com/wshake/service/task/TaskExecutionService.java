@@ -41,7 +41,8 @@ public class TaskExecutionService {
                 query.configId(),
                 query.status(),
                 query.startedAtFrom(),
-                query.startedAtTo());
+                query.startedAtTo(),
+                query.workflowType());
         List<TemporalTaskExecution> rows = page.getData() == null ? List.of() : page.getData();
         Map<Long, String> nameMap = resolveConfigNames(rows);
         return PageData.of(
