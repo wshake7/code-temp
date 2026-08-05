@@ -41,7 +41,8 @@ public class TemporalTaskExecutionRepository {
                     t.startedAt().le(startedAtTo != null, startedAtTo);
                 })
                 .orderBy(t -> {
-                    t.startedAt().desc();
+                    // PENDING 的 startedAt 为 null，按创建时间保证「最新派发优先」
+                    t.createdAt().desc();
                     t.id().desc();
                 })
                 .toPageResult(page, pageSize);
@@ -52,17 +53,18 @@ public class TemporalTaskExecutionRepository {
     }
 
     /**
-     * 将 PENDING 记录推进为 RUNNING，并写入 child 真实 workflowId/runId。
+     * 将 PENDING 记录推进为 RUNNING：写入 child 真实 workflowId/runId，并设置 startedAt。
      *
      * @return 影响行数
      */
-    public long markRunning(Long id, String workflowId, String runId) {
+    public long markRunning(Long id, String workflowId, String runId, LocalDateTime startedAt) {
         return easyEntityQuery
                 .updatable(TemporalTaskExecution.class)
                 .setColumns(t -> {
                     t.status().set("RUNNING");
                     t.workflowId().set(workflowId);
                     t.runId().set(runId);
+                    t.startedAt().set(startedAt);
                 })
                 .where(t -> t.id().eq(id))
                 .executeRows();

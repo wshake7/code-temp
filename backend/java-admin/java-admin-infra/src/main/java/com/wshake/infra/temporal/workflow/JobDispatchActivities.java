@@ -15,7 +15,7 @@ import io.temporal.activity.ActivityMethod;
 @ActivityInterface
 public interface JobDispatchActivities {
 
-    /** 派发开始时写入 PENDING 记录（等待 child 实际启动）。 */
+    /** 派发开始时写入 PENDING 记录（startedAt 为空，等待 child 实际启动）。 */
     @ActivityMethod
     CreateExecutionResult createExecution(CreateExecutionInput input);
 

@@ -34,18 +34,21 @@ export default defineEventHandler(async (event) => {
   if (startedAtFrom) {
     const from = Date.parse(String(startedAtFrom));
     if (!Number.isNaN(from)) {
-      filtered = filtered.filter((r) => Date.parse(r.started_at) >= from);
+      // PENDING 无 started_at：按时间筛选时排除
+      filtered = filtered.filter((r) => r.started_at != null && Date.parse(r.started_at) >= from);
     }
   }
   if (startedAtTo) {
     const to = Date.parse(String(startedAtTo));
     if (!Number.isNaN(to)) {
-      filtered = filtered.filter((r) => Date.parse(r.started_at) <= to);
+      filtered = filtered.filter((r) => r.started_at != null && Date.parse(r.started_at) <= to);
     }
   }
 
-  // 最新优先
-  filtered.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at) || b.id - a.id);
+  // 最新优先：按 created_at（PENDING 无 started_at）
+  filtered.sort(
+    (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id,
+  );
 
   const rows = filtered.map((r) => ({
     ...toTaskCamelRow(r),

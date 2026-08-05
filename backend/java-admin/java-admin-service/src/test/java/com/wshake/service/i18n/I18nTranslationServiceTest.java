@@ -44,13 +44,12 @@ class I18nTranslationServiceTest {
 
     private final I18nTranslationRepository translationRepo = mock(I18nTranslationRepository.class);
     private final I18nLocaleRepository localeRepo = mock(I18nLocaleRepository.class);
-    private final I18nLocaleService localeService = mock(I18nLocaleService.class);
     private I18nTranslationService service;
 
     @BeforeEach
     void init() {
         service = new I18nTranslationService(
-                translationRepo, localeRepo, localeService, new io.github.linpeilie.Converter());
+                translationRepo, localeRepo, new io.github.linpeilie.Converter());
     }
 
     @Test

@@ -27,8 +27,8 @@ export function statusLabelKey(status: string): string {
 }
 
 /** 由 startedAt / closedAt 推导耗时展示 */
-export function formatDuration(startedAt: string, closedAt: string | null): string {
-  if (!closedAt) return '—';
+export function formatDuration(startedAt: string | null | undefined, closedAt: string | null): string {
+  if (!startedAt || !closedAt) return '—';
   const start = Date.parse(startedAt);
   const end = Date.parse(closedAt);
   if (Number.isNaN(start) || Number.isNaN(end) || end < start) return '—';

@@ -52,8 +52,9 @@ public class JobDispatchActivitiesImpl implements JobDispatchActivities {
         row.setRunId(input.temporalRunId().trim());
         row.setWorkflowType(nullToEmpty(input.workflowType()));
         row.setTaskQueue(nullToEmpty(input.taskQueue()));
+        // 尚未真正运行：PENDING 且 startedAt 为空，等 markRunning 再写入
         row.setStatus("PENDING");
-        row.setStartedAt(now);
+        row.setStartedAt(null);
         row.setClosedAt(null);
         row.setInputSummary(TaskJsonSupport.toJson(input.input(), "inputSummary"));
         row.setResultSummary(null);
@@ -80,15 +81,18 @@ public class JobDispatchActivitiesImpl implements JobDispatchActivities {
         if (input.temporalRunId() == null || input.temporalRunId().isBlank()) {
             throw new IllegalArgumentException("temporalRunId is required");
         }
+        LocalDateTime startedAt = LocalDateTime.now(ZoneId.systemDefault());
         long n = executionRepository.markRunning(
                 input.id(),
                 input.temporalWorkflowId().trim(),
-                input.temporalRunId().trim());
+                input.temporalRunId().trim(),
+                startedAt);
         log.info(
-                "execution running: id={} workflowId={} runId={} rows={}",
+                "execution running: id={} workflowId={} runId={} startedAt={} rows={}",
                 input.id(),
                 input.temporalWorkflowId(),
                 input.temporalRunId(),
+                startedAt,
                 n);
     }
 

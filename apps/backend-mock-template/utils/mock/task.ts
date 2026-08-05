@@ -51,7 +51,8 @@ export interface TemporalTaskExecution {
   workflow_type: string;
   task_queue: string;
   status: TaskExecutionStatus;
-  started_at: string;
+  /** PENDING 尚未真正启动时为 null/省略 */
+  started_at: string | null;
   closed_at: string | null;
   input_summary: Record<string, unknown> | null;
   result_summary: Record<string, unknown> | null;

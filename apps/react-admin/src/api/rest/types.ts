@@ -951,7 +951,8 @@ export interface TaskExecution {
   workflowType: string;
   taskQueue: string;
   status: TaskExecutionStatus;
-  startedAt: string;
+  /** PENDING 尚未真正启动时为 null */
+  startedAt: string | null;
   closedAt: string | null;
   inputSummary: Record<string, unknown> | null;
   resultSummary: Record<string, unknown> | null;

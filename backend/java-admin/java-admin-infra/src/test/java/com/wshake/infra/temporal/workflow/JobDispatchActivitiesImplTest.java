@@ -54,6 +54,8 @@ class JobDispatchActivitiesImplTest {
         assertThat(row.getWorkflowId()).isEqualTo("child-wf-1");
         assertThat(row.getRunId()).isEqualTo("pending");
         assertThat(row.getStatus()).isEqualTo("PENDING");
+        assertThat(row.getStartedAt()).isNull();
+        assertThat(row.getCreatedAt()).isNotNull();
         assertThat(row.getInputSummary()).contains("manual");
         assertThat(row.getClosedAt()).isNull();
     }
@@ -66,12 +68,13 @@ class JobDispatchActivitiesImplTest {
     }
 
     @Test
-    void markRunning_updatesStatusAndIds() {
-        when(repository.markRunning(eq(42L), eq("child-wf-1"), eq("run-real"))).thenReturn(1L);
+    void markRunning_updatesStatusIdsAndStartedAt() {
+        when(repository.markRunning(eq(42L), eq("child-wf-1"), eq("run-real"), any(LocalDateTime.class)))
+                .thenReturn(1L);
 
         activities.markRunning(new MarkRunningInput(42L, "child-wf-1", "run-real"));
 
-        verify(repository).markRunning(eq(42L), eq("child-wf-1"), eq("run-real"));
+        verify(repository).markRunning(eq(42L), eq("child-wf-1"), eq("run-real"), any(LocalDateTime.class));
     }
 
     @Test

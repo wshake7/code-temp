@@ -11,8 +11,9 @@ import lombok.Data;
 /**
  * Temporal 执行记录镜像（对齐 schema {@code temporal_task_execution}）。
  *
- * <p>派发时 insert {@code PENDING}，child 实际启动后 update {@code RUNNING}，结束后 update 终态
- * （status / result / failure / closedAt）；无软删、无 {@code updated_at}，故不继承 {@link BaseEntity}。
+ * <p>派发时 insert {@code PENDING}（{@code startedAt=null}），child 实际启动后 update
+ * {@code RUNNING} 并写入 {@code startedAt}，结束后 update 终态（status / result / failure /
+ * closedAt）；无软删、无 {@code updated_at}，故不继承 {@link BaseEntity}。
  *
  * @author wshake
  */
@@ -40,9 +41,10 @@ public class TemporalTaskExecution implements ProxyEntityAvailable<TemporalTaskE
      */
     private String status;
 
+    /** 真正启动时间；PENDING 时为 null。 */
     private LocalDateTime startedAt;
 
-    /** 关闭时间；null=仍在运行。 */
+    /** 关闭时间；null=仍在运行或尚未启动。 */
     private LocalDateTime closedAt;
 
     /** 输入摘要 JSON。 */

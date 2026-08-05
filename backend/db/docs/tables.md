@@ -473,8 +473,8 @@
 | `workflow_type`  | VARCHAR(128)    | 是   | -              |                                              |
 | `task_queue`     | VARCHAR(128)    | 是   | -              |                                              |
 | `status`         | VARCHAR(32)     | 是   | -              | PENDING / RUNNING / COMPLETED / FAILED / ... |
-| `started_at`     | TIMESTAMP       | 是   | -              | 启动时间                                     |
-| `closed_at`      | TIMESTAMP       | 否   | NULL           | 关闭时间（NULL=仍在运行）                    |
+| `started_at`     | TIMESTAMP       | 否   | NULL           | 真正启动时间（NULL=PENDING 尚未运行）        |
+| `closed_at`      | TIMESTAMP       | 否   | NULL           | 关闭时间（NULL=仍在运行/未启动）             |
 | `input_summary`  | JSON            | 否   | NULL           |                                              |
 | `result_summary` | JSON            | 否   | NULL           |                                              |
 | `failure_reason` | VARCHAR(1024)   | 否   | NULL           |                                              |

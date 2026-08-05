@@ -57,7 +57,7 @@ public final class JobDispatchModels {
     public record CreateExecutionResult(Long id) {}
 
     /**
-     * 将执行记录标记为 RUNNING。
+     * 将执行记录标记为 RUNNING（写入真实 workflowId/runId 与 startedAt）。
      *
      * @param id                  记录主键
      * @param temporalWorkflowId  子 WF 真实 workflowId
