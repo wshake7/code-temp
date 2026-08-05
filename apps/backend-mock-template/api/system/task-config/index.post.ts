@@ -4,6 +4,8 @@ import {
   getMockTemporalTaskConfigList,
   isoNow,
   nextTaskConfigId,
+  requireAllowedTaskQueue,
+  requireAllowedWorkflowType,
 } from "~/utils/mock-data";
 import { pickTaskCamelKeys, toTaskCamelRow } from "~/utils/task-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
@@ -61,9 +63,22 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, 400);
     return useResponseError("BadRequest", "workflowType is required");
   }
+  const normalizedWorkflowType = requireAllowedWorkflowType(workflowType);
+  if (!normalizedWorkflowType) {
+    setResponseStatus(event, 400);
+    return useResponseError(
+      "BadRequest",
+      `unknown workflowType: ${workflowType}`,
+    );
+  }
   if (!taskQueue) {
     setResponseStatus(event, 400);
     return useResponseError("BadRequest", "taskQueue is required");
+  }
+  const normalizedTaskQueue = requireAllowedTaskQueue(taskQueue);
+  if (!normalizedTaskQueue) {
+    setResponseStatus(event, 400);
+    return useResponseError("BadRequest", `unknown taskQueue: ${taskQueue}`);
   }
 
   let cronExpr: string | null = null;
@@ -131,8 +146,8 @@ export default defineEventHandler(async (event) => {
     id: nextTaskConfigId(),
     code,
     name,
-    workflow_type: workflowType,
-    task_queue: taskQueue,
+    workflow_type: normalizedWorkflowType,
+    task_queue: normalizedTaskQueue,
     cron_expr: cronExpr,
     retry_policy: retryPolicy,
     timeout_seconds: timeoutSeconds,

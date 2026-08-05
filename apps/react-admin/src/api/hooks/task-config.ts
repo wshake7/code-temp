@@ -11,6 +11,8 @@ import {
   deleteTaskConfigApi,
   getTaskConfigApi,
   listTaskConfigApi,
+  listTaskQueuesApi,
+  listTaskWorkflowTypesApi,
   triggerTaskConfigApi,
   updateTaskConfigApi,
 } from '@/api/rest/task-config';
@@ -22,6 +24,7 @@ import type {
   TaskConfigBatchResult,
   TaskConfigQuery,
   TaskConfigTriggerResult,
+  TaskSelectOption,
   UpdateTaskConfigRequest,
 } from '@/api/rest/types';
 
@@ -32,6 +35,28 @@ export function useListTaskConfig(
   return useQuery({
     queryKey: ['listTaskConfig', query],
     queryFn: () => listTaskConfigApi(query),
+    ...options,
+  });
+}
+
+export function useListTaskWorkflowTypes(
+  options?: UseQueryOptions<TaskSelectOption[], Error>,
+) {
+  return useQuery({
+    queryKey: ['listTaskWorkflowTypes'],
+    queryFn: () => listTaskWorkflowTypesApi(),
+    staleTime: 60_000,
+    ...options,
+  });
+}
+
+export function useListTaskQueues(
+  options?: UseQueryOptions<TaskSelectOption[], Error>,
+) {
+  return useQuery({
+    queryKey: ['listTaskQueues'],
+    queryFn: () => listTaskQueuesApi(),
+    staleTime: 60_000,
     ...options,
   });
 }

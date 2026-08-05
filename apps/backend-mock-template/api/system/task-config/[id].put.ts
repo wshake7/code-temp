@@ -1,5 +1,11 @@
 import { defineEventHandler, getRouterParam, readBody, setResponseStatus } from "h3";
-import { ensureTemporalTaskSeeds, getMockTemporalTaskConfigList, isoNow } from "~/utils/mock-data";
+import {
+  ensureTemporalTaskSeeds,
+  getMockTemporalTaskConfigList,
+  isoNow,
+  requireAllowedTaskQueue,
+  requireAllowedWorkflowType,
+} from "~/utils/mock-data";
 import { pickTaskCamelKeys, taskCamelToSnakeKey, toTaskCamelRow } from "~/utils/task-camel";
 import { useResponseError, useResponseSuccess } from "~/utils/response";
 
@@ -74,7 +80,12 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 400);
       return useResponseError("BadRequest", "workflowType cannot be empty");
     }
-    patch.workflowType = v;
+    const normalized = requireAllowedWorkflowType(v);
+    if (!normalized) {
+      setResponseStatus(event, 400);
+      return useResponseError("BadRequest", `unknown workflowType: ${v}`);
+    }
+    patch.workflowType = normalized;
   }
 
   if ("taskQueue" in patch) {
@@ -83,7 +94,12 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 400);
       return useResponseError("BadRequest", "taskQueue cannot be empty");
     }
-    patch.taskQueue = v;
+    const normalized = requireAllowedTaskQueue(v);
+    if (!normalized) {
+      setResponseStatus(event, 400);
+      return useResponseError("BadRequest", `unknown taskQueue: ${v}`);
+    }
+    patch.taskQueue = normalized;
   }
 
   if ("cronExpr" in patch) {

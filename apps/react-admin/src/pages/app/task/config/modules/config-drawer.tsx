@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Button,
   Drawer,
   Form,
   Input,
   InputNumber,
+  Select,
   Space,
   Switch,
   message,
@@ -12,10 +13,24 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   useCreateTaskConfig,
+  useListTaskQueues,
+  useListTaskWorkflowTypes,
   useUpdateTaskConfig,
 } from '@/api/hooks/task-config';
-import type { CreateTaskConfigRequest, TaskConfig } from '@/api/rest/types';
+import type { CreateTaskConfigRequest, TaskConfig, TaskSelectOption } from '@/api/rest/types';
 import { getApiErrorMessage } from '../../modules/error-message';
+
+/** 编辑时若当前值不在选项中，合并进去以保证回显 */
+function mergeCurrentOption(
+  options: TaskSelectOption[] | undefined,
+  current: string | undefined | null,
+): TaskSelectOption[] {
+  const base = options ?? [];
+  const v = (current ?? '').trim();
+  if (!v) return base;
+  if (base.some((o) => o.value === v)) return base;
+  return [{ label: v, value: v }, ...base];
+}
 
 const CODE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 
@@ -66,6 +81,19 @@ function parseRetryPolicy(
 const TaskConfigDrawer = ({ open, row, onClose, onSaved }: Props) => {
   const { t } = useTranslation('task');
   const [form] = Form.useForm<FormValues>();
+  const { data: workflowTypeOptions, isLoading: workflowTypesLoading } =
+    useListTaskWorkflowTypes({ enabled: open });
+  const { data: taskQueueOptions, isLoading: taskQueuesLoading } = useListTaskQueues({
+    enabled: open,
+  });
+  const workflowSelectOptions = useMemo(
+    () => mergeCurrentOption(workflowTypeOptions, row?.workflowType),
+    [workflowTypeOptions, row?.workflowType],
+  );
+  const queueSelectOptions = useMemo(
+    () => mergeCurrentOption(taskQueueOptions, row?.taskQueue),
+    [taskQueueOptions, row?.taskQueue],
+  );
   const createMut = useCreateTaskConfig({
     onSuccess: () => {
       message.success(t('createSuccess'));
@@ -211,14 +239,28 @@ const TaskConfigDrawer = ({ open, row, onClose, onSaved }: Props) => {
           name="workflowType"
           rules={[{ required: true, message: t('requiredWorkflowType') }]}
         >
-          <Input placeholder={t('workflowTypePlaceholder')} />
+          <Select
+            showSearch
+            optionFilterProp="label"
+            loading={workflowTypesLoading}
+            options={workflowSelectOptions}
+            placeholder={t('workflowTypePlaceholder')}
+            allowClear
+          />
         </Form.Item>
         <Form.Item
           label={t('taskQueue')}
           name="taskQueue"
           rules={[{ required: true, message: t('requiredTaskQueue') }]}
         >
-          <Input placeholder={t('taskQueuePlaceholder')} />
+          <Select
+            showSearch
+            optionFilterProp="label"
+            loading={taskQueuesLoading}
+            options={queueSelectOptions}
+            placeholder={t('taskQueuePlaceholder')}
+            allowClear
+          />
         </Form.Item>
         <Form.Item
           label={t('cronExpr')}

@@ -6,6 +6,7 @@ import com.wshake.api.dto.UpdateTaskConfigRequest;
 import com.wshake.api.vo.TaskConfigBatchResultVO;
 import com.wshake.api.vo.TaskConfigVO;
 import com.wshake.api.vo.TaskExecutionVO;
+import com.wshake.api.vo.TaskOptionVO;
 import com.wshake.api.vo.TaskTriggerResultVO;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.Result;
@@ -17,6 +18,8 @@ import com.wshake.service.task.TaskManageModels.TaskConfigListQuery;
 import com.wshake.service.task.TaskManageModels.TaskConfigView;
 import com.wshake.service.task.TaskManageModels.TaskTriggerResult;
 import com.wshake.service.task.TaskManageModels.UpdateTaskConfigCommand;
+import com.wshake.service.task.TemporalTaskQueue;
+import com.wshake.service.task.TemporalWorkflowType;
 import io.github.linpeilie.Converter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -61,6 +64,23 @@ public class TaskConfigController {
                 taskConfigService.page(TaskConfigListQuery.of(page, pageSize, code, name, status));
         List<TaskConfigVO> items = converter.convert(pageData.getItems(), TaskConfigVO.class);
         return Result.ok(PageData.of(items, pageData.getTotal()));
+    }
+
+    @GetMapping("/workflow-types")
+    @Operation(summary = "工作流类型下拉选项", description = "来自已注册 TemporalWorkflowType")
+    public Result<List<TaskOptionVO>> workflowTypes() {
+        List<TaskOptionVO> options = TemporalWorkflowType.ALL.stream()
+                .map(v -> new TaskOptionVO(v, v))
+                .toList();
+        return Result.ok(options);
+    }
+
+    @GetMapping("/task-queues")
+    @Operation(summary = "任务队列下拉选项", description = "来自已注册 TemporalTaskQueue")
+    public Result<List<TaskOptionVO>> taskQueues() {
+        List<TaskOptionVO> options =
+                TemporalTaskQueue.ALL.stream().map(v -> new TaskOptionVO(v, v)).toList();
+        return Result.ok(options);
     }
 
     @GetMapping("/{id}")

@@ -63,6 +63,60 @@ export interface TemporalTaskExecution {
 const mockTemporalTaskConfigList: TemporalTaskConfig[] = [];
 const mockTemporalTaskExecutionList: TemporalTaskExecution[] = [];
 
+/**
+ * 允许的 workflowType（下拉 + create/update 门禁）。
+ * 含 mock 演示种子值，并兼容 Java 侧 TemporalWorkflowType.ALL。
+ */
+export const ALLOWED_WORKFLOW_TYPES = [
+  "LogCountTickWorkflow",
+  "ReportDailyWorkflow",
+  "OrderSettlementWorkflow",
+  "DataArchiveWorkflow",
+  "CacheWarmupWorkflow",
+  "SessionCleanupWorkflow",
+] as const;
+
+/**
+ * 允许的 taskQueue（下拉 + create/update 门禁）。
+ * 含 mock 演示种子值，并兼容 Java 侧 TemporalTaskQueue.ALL。
+ */
+export const ALLOWED_TASK_QUEUES = [
+  "demo",
+  "reports",
+  "finance",
+  "maintenance",
+] as const;
+
+export type TaskSelectOption = { label: string; value: string };
+
+export function listWorkflowTypeOptions(): TaskSelectOption[] {
+  return ALLOWED_WORKFLOW_TYPES.map((v) => ({ label: v, value: v }));
+}
+
+export function listTaskQueueOptions(): TaskSelectOption[] {
+  return ALLOWED_TASK_QUEUES.map((v) => ({ label: v, value: v }));
+}
+
+/** 规范化并校验 workflowType；非法返回 null */
+export function requireAllowedWorkflowType(raw: string): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return null;
+  const hit = ALLOWED_WORKFLOW_TYPES.find(
+    (v) => v.toLowerCase() === trimmed.toLowerCase(),
+  );
+  return hit ?? null;
+}
+
+/** 规范化并校验 taskQueue；非法返回 null */
+export function requireAllowedTaskQueue(raw: string): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return null;
+  const hit = ALLOWED_TASK_QUEUES.find(
+    (v) => v.toLowerCase() === trimmed.toLowerCase(),
+  );
+  return hit ?? null;
+}
+
 export function getMockTemporalTaskConfigList() {
   return mockTemporalTaskConfigList;
 }

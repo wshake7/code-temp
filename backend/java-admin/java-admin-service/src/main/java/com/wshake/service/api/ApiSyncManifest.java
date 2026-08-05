@@ -158,6 +158,18 @@ public final class ApiSyncManifest {
             new Entry("API 日志分页列表", "GET", "/api/system/api-log/list", "log:api-log:list", "日志审计"),
             new Entry("任务配置分页", "GET", "/api/system/task-config/list", "task:config:list", "任务调度"),
             new Entry(
+                    "工作流类型选项",
+                    "GET",
+                    "/api/system/task-config/workflow-types",
+                    "task:config:list__system_task-config_workflow-types",
+                    "任务调度"),
+            new Entry(
+                    "任务队列选项",
+                    "GET",
+                    "/api/system/task-config/task-queues",
+                    "task:config:list__system_task-config_task-queues",
+                    "任务调度"),
+            new Entry(
                     "任务配置详情", "GET", "/api/system/task-config/:id", "task:config:list__system_task-config__id", "任务调度"),
             new Entry("创建任务配置", "POST", "/api/system/task-config", "task:config:create", "任务调度"),
             new Entry("更新任务配置", "PUT", "/api/system/task-config/:id", "task:config:update", "任务调度"),

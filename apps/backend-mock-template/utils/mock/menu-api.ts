@@ -1287,6 +1287,20 @@ export const API_SYNC_MANIFEST = [
     apiGroup: "任务调度",
   },
   {
+    name: "工作流类型选项",
+    method: "GET",
+    path: "/api/system/task-config/workflow-types",
+    permissionCode: "task:config:list__system_task-config_workflow-types",
+    apiGroup: "任务调度",
+  },
+  {
+    name: "任务队列选项",
+    method: "GET",
+    path: "/api/system/task-config/task-queues",
+    permissionCode: "task:config:list__system_task-config_task-queues",
+    apiGroup: "任务调度",
+  },
+  {
     name: "任务配置详情",
     method: "GET",
     path: "/api/system/task-config/:id",
@@ -1417,8 +1431,10 @@ export function ensureMenuApiSeeds(): void {
     bind(301, "GET", "/api/system/login-log/list");
     // API 日志 list 按钮(302)
     bind(302, "GET", "/api/system/api-log/list");
-    // 任务调度：配置 list + 执行 list（按钮 401/402）
+    // 任务调度：配置 list + 选项 + 执行 list（按钮 401/402）
     bind(401, "GET", "/api/system/task-config/list");
+    bind(401, "GET", "/api/system/task-config/workflow-types");
+    bind(401, "GET", "/api/system/task-config/task-queues");
     bind(402, "GET", "/api/system/task-execution/list");
   }
 }

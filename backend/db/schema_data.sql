@@ -243,9 +243,11 @@ VALUES
     (77, '批量操作任务配置', 'POST', '/api/system/task-config/batch', 'task:config:batch', '任务调度', '', 1, 0, 0, 0),
     (78, '手动触发任务配置', 'POST', '/api/system/task-config/:id/trigger', 'task:config:trigger', '任务调度', '', 1, 0, 0, 0),
     (79, '任务执行分页', 'GET', '/api/system/task-execution/list', 'task:execution:list', '任务调度', '', 1, 0, 0, 0),
-    (80, '任务执行详情', 'GET', '/api/system/task-execution/:id', 'task:execution:list__system_task-execution__id', '任务调度', '', 1, 0, 0, 0);
+    (80, '任务执行详情', 'GET', '/api/system/task-execution/:id', 'task:execution:list__system_task-execution__id', '任务调度', '', 1, 0, 0, 0),
+    (81, '工作流类型选项', 'GET', '/api/system/task-config/workflow-types', 'task:config:list__system_task-config_workflow-types', '任务调度', '', 1, 0, 0, 0),
+    (82, '任务队列选项', 'GET', '/api/system/task-config/task-queues', 'task:config:list__system_task-config_task-queues', '任务调度', '', 1, 0, 0, 0);
 
-ALTER TABLE sys_api AUTO_INCREMENT = 81;
+ALTER TABLE sys_api AUTO_INCREMENT = 83;
 
 -- ============================================================
 -- Section 4: sys_menu（对齐 mock buildSysMenuSeeds，固定 id 便于 tree_path / 授权）
@@ -420,7 +422,9 @@ INSERT INTO sys_role_api (role_id, api_id) VALUES
     (1, 77),
     (1, 78),
     (1, 79),
-    (1, 80);
+    (1, 80),
+    (1, 81),
+    (1, 82);
 
 -- ============================================================
 -- Section 10: sys_menu_api（菜单-接口快捷绑定）
@@ -437,6 +441,8 @@ INSERT INTO sys_menu_api (menu_id, api_id, created_by) VALUES
     (301, 70, 0),
     (302, 71, 0),
     (401, 72, 0),
+    (401, 81, 0),
+    (401, 82, 0),
     (402, 79, 0);
 
 SET FOREIGN_KEY_CHECKS = 1;

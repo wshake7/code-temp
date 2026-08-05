@@ -863,6 +863,12 @@ export type TaskExecutionStatus =
   | 'TIMED_OUT'
   | 'CONTINUED_AS_NEW';
 
+/** 任务配置下拉选项（workflowType / taskQueue） */
+export interface TaskSelectOption {
+  label: string;
+  value: string;
+}
+
 /** 任务配置 */
 export interface TaskConfig {
   id: number;

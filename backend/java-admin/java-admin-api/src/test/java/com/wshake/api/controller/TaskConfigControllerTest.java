@@ -10,7 +10,10 @@ import com.wshake.api.dto.TaskConfigBatchRequest;
 import com.wshake.api.dto.UpdateTaskConfigRequest;
 import com.wshake.api.vo.TaskConfigBatchResultVO;
 import com.wshake.api.vo.TaskConfigVO;
+import com.wshake.api.vo.TaskOptionVO;
 import com.wshake.api.vo.TaskTriggerResultVO;
+import com.wshake.service.task.TemporalTaskQueue;
+import com.wshake.service.task.TemporalWorkflowType;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.Result;
 import com.wshake.service.task.TaskConfigService;
@@ -49,6 +52,27 @@ class TaskConfigControllerTest {
         assertThat(result.getCode()).isEqualTo(0);
         assertThat(result.getData().getTotal()).isEqualTo(1L);
         assertThat(result.getData().getItems().get(0).getCode()).isEqualTo("log_count_tick");
+    }
+
+    @Test
+    void workflowTypes_returnsRegisteredOptions() {
+        Result<List<TaskOptionVO>> result = controller.workflowTypes();
+
+        assertThat(result.getCode()).isEqualTo(0);
+        assertThat(result.getData()).isNotEmpty();
+        assertThat(result.getData().stream().map(TaskOptionVO::getValue).toList())
+                .containsExactlyElementsOf(TemporalWorkflowType.ALL);
+        assertThat(result.getData().get(0).getLabel()).isEqualTo(result.getData().get(0).getValue());
+    }
+
+    @Test
+    void taskQueues_returnsRegisteredOptions() {
+        Result<List<TaskOptionVO>> result = controller.taskQueues();
+
+        assertThat(result.getCode()).isEqualTo(0);
+        assertThat(result.getData()).isNotEmpty();
+        assertThat(result.getData().stream().map(TaskOptionVO::getValue).toList())
+                .containsExactlyElementsOf(TemporalTaskQueue.ALL);
     }
 
     @Test
