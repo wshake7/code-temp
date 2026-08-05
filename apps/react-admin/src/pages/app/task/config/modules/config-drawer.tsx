@@ -1,10 +1,12 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Button,
+  Col,
   Drawer,
   Form,
   Input,
   InputNumber,
+  Row,
   Select,
   Space,
   Switch,
@@ -33,6 +35,21 @@ function mergeCurrentOption(
 }
 
 const CODE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
+
+/** 与 Vue task form / React user-form 一致的分段标题 */
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <div
+    style={{
+      color: '#94a3b8',
+      fontSize: 12,
+      fontWeight: 500,
+      marginBottom: 16,
+      marginTop: 8,
+    }}
+  >
+    {children}
+  </div>
+);
 
 interface Props {
   open: boolean;
@@ -78,6 +95,34 @@ function parseRetryPolicy(
   }
 }
 
+/** 由列表行构建表单初值；新建时给默认空值（与 Vue 一致：重试策略默认空） */
+function buildFormValues(row: TaskConfig | null): FormValues {
+  if (row) {
+    return {
+      code: row.code,
+      name: row.name,
+      workflowType: row.workflowType,
+      taskQueue: row.taskQueue,
+      cronExpr: row.cronExpr ?? '',
+      timeoutSeconds: row.timeoutSeconds,
+      retryPolicyText: formatRetryPolicy(row.retryPolicy),
+      remark: row.remark ?? '',
+      isEnabled: row.isEnabled === 1,
+    };
+  }
+  return {
+    code: '',
+    name: '',
+    workflowType: '',
+    taskQueue: '',
+    cronExpr: '',
+    timeoutSeconds: undefined,
+    retryPolicyText: '',
+    remark: '',
+    isEnabled: true,
+  };
+}
+
 const TaskConfigDrawer = ({ open, row, onClose, onSaved }: Props) => {
   const { t } = useTranslation('task');
   const [form] = Form.useForm<FormValues>();
@@ -117,34 +162,10 @@ const TaskConfigDrawer = ({ open, row, onClose, onSaved }: Props) => {
   const isEdit = !!row;
   const submitting = createMut.isPending || updateMut.isPending;
 
-  useEffect(() => {
-    if (!open) return;
-    form.setFieldsValue(
-      row
-        ? {
-            code: row.code,
-            name: row.name,
-            workflowType: row.workflowType,
-            taskQueue: row.taskQueue,
-            cronExpr: row.cronExpr ?? '',
-            timeoutSeconds: row.timeoutSeconds,
-            retryPolicyText: formatRetryPolicy(row.retryPolicy),
-            remark: row.remark,
-            isEnabled: row.isEnabled === 1,
-          }
-        : {
-            code: '',
-            name: '',
-            workflowType: '',
-            taskQueue: '',
-            cronExpr: '',
-            timeoutSeconds: undefined,
-            retryPolicyText: '{\n  "maxAttempts": 3\n}',
-            remark: '',
-            isEnabled: true,
-          },
-    );
-  }, [open, row, form]);
+  // Form 用 key + initialValues 保证 destroyOnClose 挂载即回显，
+  // 避免 useEffect + setFieldsValue 在字段注册前执行导致丢值。
+  const formInitialValues = useMemo(() => buildFormValues(row), [row]);
+  const formKey = row ? `edit-${row.id}` : 'create';
 
   const handleOk = async () => {
     const values = await form.validateFields();
@@ -200,7 +221,7 @@ const TaskConfigDrawer = ({ open, row, onClose, onSaved }: Props) => {
       title={isEdit ? t('editConfig') : t('createConfig')}
       open={open}
       onClose={onClose}
-      size={560}
+      size={640}
       destroyOnClose
       footer={
         <Space style={{ float: 'right' }}>
@@ -213,84 +234,123 @@ const TaskConfigDrawer = ({ open, row, onClose, onSaved }: Props) => {
         </Space>
       }
     >
-      <Form form={form} layout="vertical" preserve={false}>
-        <Form.Item
-          label={t('code')}
-          name="code"
-          rules={[
-            { required: true, message: t('requiredCode') },
-            { pattern: CODE_PATTERN, message: t('codeRule') },
-          ]}
-        >
-          <Input placeholder={t('codePlaceholder')} />
-        </Form.Item>
-        <Form.Item
-          label={t('name')}
-          name="name"
-          rules={[
-            { required: true, message: t('requiredName') },
-            { max: 128, message: t('nameMax') },
-          ]}
-        >
-          <Input placeholder={t('namePlaceholder')} />
-        </Form.Item>
-        <Form.Item
-          label={t('workflowType')}
-          name="workflowType"
-          rules={[{ required: true, message: t('requiredWorkflowType') }]}
-        >
-          <Select
-            showSearch
-            optionFilterProp="label"
-            loading={workflowTypesLoading}
-            options={workflowSelectOptions}
-            placeholder={t('workflowTypePlaceholder')}
-            allowClear
+      <Form
+        key={formKey}
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={formInitialValues}
+      >
+        {/* 基础信息：两列网格，对齐 Vue form.vue */}
+        <SectionTitle>基础信息</SectionTitle>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label={t('code')}
+              name="code"
+              rules={[
+                { required: true, message: t('requiredCode') },
+                { pattern: CODE_PATTERN, message: t('codeRule') },
+              ]}
+            >
+              <Input
+                placeholder={t('codePlaceholder')}
+                maxLength={64}
+                disabled={isEdit}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={t('name')}
+              name="name"
+              rules={[
+                { required: true, message: t('requiredName') },
+                { max: 128, message: t('nameMax') },
+              ]}
+            >
+              <Input placeholder={t('namePlaceholder')} maxLength={128} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={t('workflowType')}
+              name="workflowType"
+              rules={[{ required: true, message: t('requiredWorkflowType') }]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                loading={workflowTypesLoading}
+                options={workflowSelectOptions}
+                placeholder={t('workflowTypePlaceholder')}
+                allowClear
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={t('taskQueue')}
+              name="taskQueue"
+              rules={[{ required: true, message: t('requiredTaskQueue') }]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                loading={taskQueuesLoading}
+                options={queueSelectOptions}
+                placeholder={t('taskQueuePlaceholder')}
+                allowClear
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={t('cronExpr')}
+              name="cronExpr"
+              rules={[{ max: 64, message: t('cronMax') }]}
+            >
+              <Input placeholder={t('cronPlaceholder')} allowClear maxLength={64} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label={t('timeoutSeconds')} name="timeoutSeconds">
+              <InputNumber
+                min={0}
+                precision={0}
+                style={{ width: '100%' }}
+                placeholder={t('timeoutPlaceholder')}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={24}>
+            <Form.Item
+              label={t('status')}
+              name="isEnabled"
+              valuePropName="checked"
+              getValueFromEvent={(v) => !!v}
+              getValueProps={(v) => ({ checked: v !== false })}
+            >
+              <Switch checkedChildren={t('enabled')} unCheckedChildren={t('disabled')} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {/* 重试策略：独立分段，与 Vue 一致 */}
+        <SectionTitle>{t('retryPolicy')}</SectionTitle>
+        <Form.Item name="retryPolicyText" extra={t('retryPolicyHint')}>
+          <Input.TextArea
+            rows={4}
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder='{"maxAttempts": 3}'
+            style={{ fontFamily: 'monospace', fontSize: 12 }}
           />
         </Form.Item>
-        <Form.Item
-          label={t('taskQueue')}
-          name="taskQueue"
-          rules={[{ required: true, message: t('requiredTaskQueue') }]}
-        >
-          <Select
-            showSearch
-            optionFilterProp="label"
-            loading={taskQueuesLoading}
-            options={queueSelectOptions}
-            placeholder={t('taskQueuePlaceholder')}
-            allowClear
-          />
-        </Form.Item>
-        <Form.Item
-          label={t('cronExpr')}
-          name="cronExpr"
-          rules={[{ max: 64, message: t('cronMax') }]}
-          extra={t('cronHint')}
-        >
-          <Input placeholder={t('cronPlaceholder')} allowClear />
-        </Form.Item>
-        <Form.Item label={t('timeoutSeconds')} name="timeoutSeconds">
-          <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder={t('timeoutPlaceholder')} />
-        </Form.Item>
-        <Form.Item
-          label={t('retryPolicy')}
-          name="retryPolicyText"
-          extra={t('retryPolicyHint')}
-        >
-          <Input.TextArea rows={6} placeholder='{"maxAttempts": 3}' style={{ fontFamily: 'monospace' }} />
-        </Form.Item>
-        <Form.Item label={t('remark')} name="remark">
-          <Input.TextArea rows={3} placeholder={t('remarkPlaceholder')} />
-        </Form.Item>
-        <Form.Item
-          label={t('isEnabled')}
-          name="isEnabled"
-          valuePropName="checked"
-          getValueFromEvent={(v) => !!v}
-          getValueProps={(v) => ({ checked: v !== false })}
-        >
-          <Switch checkedChildren={t('enabled')} unCheckedChildren={t('disabled')} />
+
+        {/* 备注：独立分段 */}
+        <SectionTitle>{t('remark')}</SectionTitle>
+        <Form.Item name="remark">
+          <Input.TextArea rows={3} autoSize={{ minRows: 3 }} placeholder={t('remarkPlaceholder')} />
         </Form.Item>
       </Form>
     </Drawer>
