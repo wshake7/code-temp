@@ -23,6 +23,7 @@ import com.wshake.service.repository.SysMenuApiRepository;
 import com.wshake.service.repository.SysRoleBindingRepository;
 import com.wshake.service.repository.SysUserRoleRepository;
 import com.wshake.service.user.SysUserService;
+import io.github.linpeilie.Converter;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +44,8 @@ class SysApiServiceTest {
 
     @BeforeEach
     void init() {
-        service = new SysApiService(apiRepo, menuApiRepo, roleBindingRepo, userRoleRepo, userService);
+        service = new SysApiService(
+                apiRepo, menuApiRepo, roleBindingRepo, userRoleRepo, userService, new Converter());
     }
 
     @Test

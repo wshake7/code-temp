@@ -38,7 +38,7 @@ class SysMenuServiceTest {
 
     @BeforeEach
     void init() {
-        service = new SysMenuService(menuRepo, menuApiRepo, authQueryRepo);
+        service = new SysMenuService(menuRepo, menuApiRepo, authQueryRepo, new io.github.linpeilie.Converter());
     }
 
     @Test

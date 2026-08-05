@@ -1,5 +1,8 @@
 package com.wshake.service.dict;
 
+import com.wshake.service.entity.DictData;
+import com.wshake.service.entity.DictType;
+import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +66,7 @@ public final class DictManageModels {
     /** 更新命令；字段 null 表示不改。 */
     public record UpdateDictTypeCommand(Long id, String code, String name, String remark, Integer isEnabled) {}
 
+    @AutoMapper(target = DictType.class)
     public record DictTypeView(
             Long id,
             String code,
@@ -73,7 +77,13 @@ public final class DictManageModels {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             Long createdBy,
-            Long updatedBy) {}
+            Long updatedBy) {
+        public DictTypeView {
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+        }
+    }
 
     public record DictBatchCommand(String action, List<Long> ids) {}
 
@@ -146,6 +156,8 @@ public final class DictManageModels {
             Integer isEnabled,
             String remark) {}
 
+    /** typeCode 为 enrich 字段，不在 Entity 上；convert 后由 Service 补入。 */
+    @AutoMapper(target = DictData.class)
     public record DictDataView(
             Long id,
             Long typeId,
@@ -162,7 +174,13 @@ public final class DictManageModels {
             LocalDateTime updatedAt,
             Long createdBy,
             Long updatedBy,
-            String typeCode) {}
+            String typeCode) {
+        public DictDataView {
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+        }
+    }
 
     // ---------- helpers ----------
 

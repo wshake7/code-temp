@@ -13,6 +13,7 @@ import com.wshake.service.i18n.I18nManageModels.LocaleView;
 import com.wshake.service.i18n.I18nManageModels.UpdateLocaleCommand;
 import com.wshake.service.repository.I18nLocaleRepository;
 import com.wshake.service.repository.I18nTranslationRepository;
+import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ public class I18nLocaleService {
 
     private final I18nLocaleRepository localeRepository;
     private final I18nTranslationRepository translationRepository;
+    private final Converter converter;
 
     public PageData<LocaleView> page(LocaleListQuery query) {
         EasyPageResult<I18nLocale> page = localeRepository.page(
@@ -233,18 +235,6 @@ public class I18nLocaleService {
     }
 
     LocaleView toView(I18nLocale t) {
-        return new LocaleView(
-                t.getId(),
-                t.getCode(),
-                t.getName(),
-                t.getIsDefault() == null ? 0 : t.getIsDefault(),
-                t.getSort() == null ? 0 : t.getSort(),
-                t.getRemark(),
-                t.getIsEnabled(),
-                t.getDeletedAt() == null ? 0L : t.getDeletedAt(),
-                t.getCreatedAt(),
-                t.getUpdatedAt(),
-                t.getCreatedBy() == null ? 0L : t.getCreatedBy(),
-                t.getUpdatedBy() == null ? 0L : t.getUpdatedBy());
+        return converter.convert(t, LocaleView.class);
     }
 }

@@ -1,5 +1,8 @@
 package com.wshake.service.i18n;
 
+import com.wshake.service.entity.I18nLocale;
+import com.wshake.service.entity.I18nTranslation;
+import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,6 +46,7 @@ public final class I18nManageModels {
     public record UpdateLocaleCommand(
             Long id, String code, String name, Integer sort, String remark, Integer isDefault, Integer isEnabled) {}
 
+    @AutoMapper(target = I18nLocale.class)
     public record LocaleView(
             Long id,
             String code,
@@ -55,7 +59,15 @@ public final class I18nManageModels {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             Long createdBy,
-            Long updatedBy) {}
+            Long updatedBy) {
+        public LocaleView {
+            isDefault = isDefault == null ? 0 : isDefault;
+            sort = sort == null ? 0 : sort;
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+        }
+    }
 
     public record BatchCommand(String action, List<Long> ids) {}
 
@@ -88,6 +100,8 @@ public final class I18nManageModels {
     public record UpdateTranslationCommand(
             Long id, String translationKey, String value, String remark, Integer isEnabled) {}
 
+    /** localeCode 为 enrich 字段，convert 后由 Service 补入。 */
+    @AutoMapper(target = I18nTranslation.class)
     public record TranslationView(
             Long id,
             Long localeId,
@@ -100,7 +114,13 @@ public final class I18nManageModels {
             LocalDateTime updatedAt,
             Long createdBy,
             Long updatedBy,
-            String localeCode) {}
+            String localeCode) {
+        public TranslationView {
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+        }
+    }
 
     /** list ?byKey=true 聚合行。 */
     public record TranslationKeyView(

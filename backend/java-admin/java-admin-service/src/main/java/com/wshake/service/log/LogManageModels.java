@@ -1,5 +1,11 @@
 package com.wshake.service.log;
 
+import com.wshake.service.entity.ApiLog;
+import com.wshake.service.entity.ApiLogArchive;
+import com.wshake.service.entity.SysLoginLog;
+import com.wshake.service.entity.SysLoginLogArchive;
+import io.github.linpeilie.annotations.AutoMapper;
+import io.github.linpeilie.annotations.AutoMappers;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -55,6 +61,10 @@ public final class LogManageModels {
         }
     }
 
+    @AutoMappers({
+        @AutoMapper(target = SysLoginLog.class),
+        @AutoMapper(target = SysLoginLogArchive.class)
+    })
     public record LoginLogView(
             Long id,
             String username,
@@ -75,7 +85,23 @@ public final class LogManageModels {
             String osVersion,
             String location,
             LocalDateTime createdAt,
-            LocalDateTime archivedAt) {}
+            LocalDateTime archivedAt) {
+        public LoginLogView {
+            username = username == null ? "" : username;
+            reason = reason == null ? "" : reason;
+            loginMethod = loginMethod == null ? "" : loginMethod;
+            loginIp = loginIp == null ? "" : loginIp;
+            loginMac = loginMac == null ? "" : loginMac;
+            clientId = clientId == null ? "" : clientId;
+            clientName = clientName == null ? "" : clientName;
+            userAgent = userAgent == null ? "" : userAgent;
+            browserName = browserName == null ? "" : browserName;
+            browserVersion = browserVersion == null ? "" : browserVersion;
+            osName = osName == null ? "" : osName;
+            osVersion = osVersion == null ? "" : osVersion;
+            location = location == null ? "" : location;
+        }
+    }
 
     // ---------- api-log ----------
 
@@ -125,6 +151,7 @@ public final class LogManageModels {
         }
     }
 
+    @AutoMappers({@AutoMapper(target = ApiLog.class), @AutoMapper(target = ApiLogArchive.class)})
     public record ApiLogView(
             Long id,
             String method,
@@ -156,7 +183,35 @@ public final class LogManageModels {
             String osVersion,
             String location,
             LocalDateTime createdAt,
-            LocalDateTime archivedAt) {}
+            LocalDateTime archivedAt) {
+        public ApiLogView {
+            method = method == null ? "" : method;
+            module = module == null ? "" : module;
+            path = path == null ? "" : path;
+            reason = reason == null ? "" : reason;
+            costTime = costTime == null ? 0L : costTime;
+            requestId = requestId == null ? "" : requestId;
+            username = username == null ? "" : username;
+            requestUri = requestUri == null ? "" : requestUri;
+            requestQuery = requestQuery == null ? "" : requestQuery;
+            requestBody = requestBody == null ? "" : requestBody;
+            requestHeader = requestHeader == null ? "" : requestHeader;
+            referer = referer == null ? "" : referer;
+            response = response == null ? "" : response;
+            beforeChange = beforeChange == null ? "" : beforeChange;
+            afterChange = afterChange == null ? "" : afterChange;
+            formatChange = formatChange == null ? "" : formatChange;
+            clientId = clientId == null ? "" : clientId;
+            clientName = clientName == null ? "" : clientName;
+            clientIp = clientIp == null ? "" : clientIp;
+            userAgent = userAgent == null ? "" : userAgent;
+            browserName = browserName == null ? "" : browserName;
+            browserVersion = browserVersion == null ? "" : browserVersion;
+            osName = osName == null ? "" : osName;
+            osVersion = osVersion == null ? "" : osVersion;
+            location = location == null ? "" : location;
+        }
+    }
 
     /**
      * 异步写入 API 日志的快照（在请求线程采集，后台线程落库）。

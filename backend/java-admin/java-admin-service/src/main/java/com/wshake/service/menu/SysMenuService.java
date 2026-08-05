@@ -18,6 +18,7 @@ import com.wshake.service.menu.MenuManageModels.UpdateMenuCommand;
 import com.wshake.service.repository.AuthQueryRepository;
 import com.wshake.service.repository.SysMenuApiRepository;
 import com.wshake.service.repository.SysMenuRepository;
+import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -44,6 +45,7 @@ public class SysMenuService {
     private final SysMenuRepository menuRepository;
     private final SysMenuApiRepository menuApiRepository;
     private final AuthQueryRepository authQueryRepository;
+    private final Converter converter;
 
     /**
      * 分页列出菜单：分页基数为根节点；items 为展开子树扁平列表。
@@ -442,27 +444,7 @@ public class SysMenuService {
     }
 
     private MenuView toView(SysMenu m) {
-        return new MenuView(
-                m.getId(),
-                m.getParentId(),
-                m.getName(),
-                m.getType(),
-                m.getPath(),
-                m.getComponent(),
-                nullToEmpty(m.getIcon()),
-                nullToEmpty(m.getRedirect()),
-                m.getPermissionCode(),
-                nullToEmpty(m.getTreePath()),
-                m.getMetadata(),
-                m.getSort() == null ? 0 : m.getSort(),
-                m.getIsHidden() == null ? 0 : m.getIsHidden(),
-                m.getIsEnabled() == null ? 0 : m.getIsEnabled(),
-                m.getDeletedAt() == null ? 0L : m.getDeletedAt(),
-                nullToEmpty(m.getRemark()),
-                m.getCreatedAt(),
-                m.getUpdatedAt(),
-                m.getCreatedBy() == null ? 0L : m.getCreatedBy(),
-                m.getUpdatedBy() == null ? 0L : m.getUpdatedBy());
+        return converter.convert(m, MenuView.class);
     }
 
     private static boolean matches(SysMenu m, MenuListQuery query) {

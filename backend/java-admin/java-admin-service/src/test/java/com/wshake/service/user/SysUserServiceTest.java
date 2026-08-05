@@ -40,7 +40,7 @@ class SysUserServiceTest {
 
     @BeforeEach
     void initService() {
-        service = new SysUserService(userRepo, roleRepo, casbin);
+        service = new SysUserService(userRepo, roleRepo, casbin, new io.github.linpeilie.Converter());
     }
 
     @Test

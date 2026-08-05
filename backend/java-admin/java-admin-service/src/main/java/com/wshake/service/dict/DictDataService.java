@@ -14,6 +14,7 @@ import com.wshake.service.entity.DictData;
 import com.wshake.service.entity.DictType;
 import com.wshake.service.repository.DictDataRepository;
 import com.wshake.service.repository.DictTypeRepository;
+import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -36,6 +37,7 @@ public class DictDataService {
 
     private final DictDataRepository dictDataRepository;
     private final DictTypeRepository dictTypeRepository;
+    private final Converter converter;
 
     public PageData<DictDataView> page(DictDataListQuery query) {
         Collection<Long> typeIds = resolveTypeIdFilter(query);
@@ -301,22 +303,23 @@ public class DictDataService {
     }
 
     private DictDataView toView(DictData d, String typeCode) {
+        DictDataView base = converter.convert(d, DictDataView.class);
         return new DictDataView(
-                d.getId(),
-                d.getTypeId(),
-                d.getValue(),
-                d.getLabel(),
-                d.getSort(),
-                d.getIsDefault(),
-                d.getPlatform(),
-                d.getTagType(),
-                d.getIsEnabled(),
-                d.getDeletedAt() == null ? 0L : d.getDeletedAt(),
-                d.getRemark(),
-                d.getCreatedAt(),
-                d.getUpdatedAt(),
-                d.getCreatedBy() == null ? 0L : d.getCreatedBy(),
-                d.getUpdatedBy() == null ? 0L : d.getUpdatedBy(),
+                base.id(),
+                base.typeId(),
+                base.value(),
+                base.label(),
+                base.sort(),
+                base.isDefault(),
+                base.platform(),
+                base.tagType(),
+                base.isEnabled(),
+                base.deletedAt(),
+                base.remark(),
+                base.createdAt(),
+                base.updatedAt(),
+                base.createdBy(),
+                base.updatedBy(),
                 typeCode);
     }
 }

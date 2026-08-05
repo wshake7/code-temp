@@ -74,6 +74,12 @@ public final class TaskManageModels {
             Integer isEnabled,
             boolean isEnabledPresent) {}
 
+    /**
+     * 任务配置视图。
+     *
+     * <p>{@code retryPolicy} 在 Entity 上为 JSON 字符串，与 {@code Map} 类型不兼容，
+     * 故不使用 {@code @AutoMapper}，由 Service 手写映射 + {@link TaskJsonSupport}。
+     */
     public record TaskConfigView(
             Long id,
             String code,
@@ -125,6 +131,11 @@ public final class TaskManageModels {
         }
     }
 
+    /**
+     * 任务执行视图。
+     *
+     * <p>含 enrich {@code configName} 与 JSON 摘要字段，手写映射（见 Service）。
+     */
     public record TaskExecutionView(
             Long id,
             Long configId,

@@ -1,5 +1,7 @@
 package com.wshake.service.menu;
 
+import com.wshake.service.entity.SysMenu;
+import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +100,7 @@ public final class MenuManageModels {
         }
     }
 
+    @AutoMapper(target = SysMenu.class)
     public record MenuView(
             Long id,
             Long parentId,
@@ -118,7 +121,20 @@ public final class MenuManageModels {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             Long createdBy,
-            Long updatedBy) {}
+            Long updatedBy) {
+        public MenuView {
+            icon = icon == null ? "" : icon;
+            redirect = redirect == null ? "" : redirect;
+            treePath = treePath == null ? "" : treePath;
+            remark = remark == null ? "" : remark;
+            sort = sort == null ? 0 : sort;
+            isHidden = isHidden == null ? 0 : isHidden;
+            isEnabled = isEnabled == null ? 0 : isEnabled;
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+        }
+    }
 
     public record MenuListPage(List<MenuView> items, long total, long itemTotal) {}
 

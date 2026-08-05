@@ -7,6 +7,7 @@ import com.wshake.service.entity.SysLoginLogArchive;
 import com.wshake.service.log.LogManageModels.LoginLogListQuery;
 import com.wshake.service.log.LogManageModels.LoginLogView;
 import com.wshake.service.repository.SysLoginLogRepository;
+import io.github.linpeilie.Converter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class LoginLogService {
 
     private final SysLoginLogRepository sysLoginLogRepository;
+    private final Converter converter;
 
     public PageData<LoginLogView> page(LoginLogListQuery query) {
         if (query.archive()) {
@@ -51,54 +53,10 @@ public class LoginLogService {
     }
 
     private LoginLogView toView(SysLoginLog row) {
-        return new LoginLogView(
-                row.getId(),
-                nullToEmpty(row.getUsername()),
-                row.getSuccess(),
-                nullToEmpty(row.getReason()),
-                row.getStatusCode(),
-                row.getSysUserId(),
-                nullToEmpty(row.getLoginMethod()),
-                row.getLoginTime(),
-                nullToEmpty(row.getLoginIp()),
-                nullToEmpty(row.getLoginMac()),
-                nullToEmpty(row.getClientId()),
-                nullToEmpty(row.getClientName()),
-                nullToEmpty(row.getUserAgent()),
-                nullToEmpty(row.getBrowserName()),
-                nullToEmpty(row.getBrowserVersion()),
-                nullToEmpty(row.getOsName()),
-                nullToEmpty(row.getOsVersion()),
-                nullToEmpty(row.getLocation()),
-                row.getCreatedAt(),
-                null);
+        return converter.convert(row, LoginLogView.class);
     }
 
     private LoginLogView toView(SysLoginLogArchive row) {
-        return new LoginLogView(
-                row.getId(),
-                nullToEmpty(row.getUsername()),
-                row.getSuccess(),
-                nullToEmpty(row.getReason()),
-                row.getStatusCode(),
-                row.getSysUserId(),
-                nullToEmpty(row.getLoginMethod()),
-                row.getLoginTime(),
-                nullToEmpty(row.getLoginIp()),
-                nullToEmpty(row.getLoginMac()),
-                nullToEmpty(row.getClientId()),
-                nullToEmpty(row.getClientName()),
-                nullToEmpty(row.getUserAgent()),
-                nullToEmpty(row.getBrowserName()),
-                nullToEmpty(row.getBrowserVersion()),
-                nullToEmpty(row.getOsName()),
-                nullToEmpty(row.getOsVersion()),
-                nullToEmpty(row.getLocation()),
-                row.getCreatedAt(),
-                row.getArchivedAt());
-    }
-
-    private static String nullToEmpty(String value) {
-        return value == null ? "" : value;
+        return converter.convert(row, LoginLogView.class);
     }
 }

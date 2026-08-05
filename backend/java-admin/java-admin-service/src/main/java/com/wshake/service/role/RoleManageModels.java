@@ -1,5 +1,7 @@
 package com.wshake.service.role;
 
+import com.wshake.service.entity.SysRole;
+import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -54,6 +56,8 @@ public final class RoleManageModels {
         }
     }
 
+    /** userCount / parentName 为 enrich，由 Service 在 convert 后补入。 */
+    @AutoMapper(target = SysRole.class)
     public record RoleView(
             Long id,
             String code,
@@ -68,7 +72,17 @@ public final class RoleManageModels {
             Long createdBy,
             Long updatedBy,
             Long userCount,
-            String parentName) {}
+            String parentName) {
+        public RoleView {
+            sort = sort == null ? 0 : sort;
+            remark = remark == null ? "" : remark;
+            isEnabled = isEnabled == null ? 0 : isEnabled;
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+            userCount = userCount == null ? 0L : userCount;
+        }
+    }
 
     public record RoleMenuBindView(
             Long id,

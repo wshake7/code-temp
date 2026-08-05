@@ -1,5 +1,7 @@
 package com.wshake.service.user;
 
+import com.wshake.service.entity.SysUser;
+import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -57,7 +59,12 @@ public final class UserManageModels {
             /** null=不改角色；非 null（可为空列表）=全量替换。 */
             List<Long> roleIds) {}
 
-    /** 对外用户视图（无 passwordHash）。 */
+    /**
+     * 对外用户视图（无 passwordHash）。
+     *
+     * <p>roleIds / roleNames 为 enrich，由 Service 在 convert 后补入。
+     */
+    @AutoMapper(target = SysUser.class)
     public record UserView(
             Long id,
             String username,
@@ -74,5 +81,17 @@ public final class UserManageModels {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             List<Long> roleIds,
-            List<String> roleNames) {}
+            List<String> roleNames) {
+        public UserView {
+            email = email == null ? "" : email;
+            phone = phone == null ? "" : phone;
+            avatar = avatar == null ? "" : avatar;
+            lastLoginIp = lastLoginIp == null ? "" : lastLoginIp;
+            remark = remark == null ? "" : remark;
+            isEnabled = isEnabled == null ? 0 : isEnabled;
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            roleIds = roleIds == null ? List.of() : List.copyOf(roleIds);
+            roleNames = roleNames == null ? List.of() : List.copyOf(roleNames);
+        }
+    }
 }

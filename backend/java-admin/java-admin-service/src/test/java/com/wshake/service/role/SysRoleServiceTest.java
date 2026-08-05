@@ -44,7 +44,8 @@ class SysRoleServiceTest {
 
     @BeforeEach
     void init() {
-        service = new SysRoleService(roleRepo, bindingRepo, userRoleRepo, userService);
+        service = new SysRoleService(
+                roleRepo, bindingRepo, userRoleRepo, userService, new io.github.linpeilie.Converter());
     }
 
     @Test

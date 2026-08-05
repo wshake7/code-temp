@@ -34,6 +34,7 @@ import com.wshake.service.i18n.I18nManageModels.TranslationView;
 import com.wshake.service.i18n.I18nManageModels.UpdateTranslationCommand;
 import com.wshake.service.repository.I18nLocaleRepository;
 import com.wshake.service.repository.I18nTranslationRepository;
+import io.github.linpeilie.Converter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -64,6 +65,7 @@ public class I18nTranslationService {
     private final I18nTranslationRepository translationRepository;
     private final I18nLocaleRepository localeRepository;
     private final I18nLocaleService localeService;
+    private final Converter converter;
 
     public PageData<?> page(TranslationListQuery query) {
         if (query.byKey()) {
@@ -835,18 +837,19 @@ public class I18nTranslationService {
     }
 
     private TranslationView toView(I18nTranslation t, String localeCode) {
+        TranslationView base = converter.convert(t, TranslationView.class);
         return new TranslationView(
-                t.getId(),
-                t.getLocaleId(),
-                t.getTranslationKey(),
-                t.getValue(),
-                t.getRemark(),
-                t.getIsEnabled(),
-                t.getDeletedAt() == null ? 0L : t.getDeletedAt(),
-                t.getCreatedAt(),
-                t.getUpdatedAt(),
-                t.getCreatedBy() == null ? 0L : t.getCreatedBy(),
-                t.getUpdatedBy() == null ? 0L : t.getUpdatedBy(),
+                base.id(),
+                base.localeId(),
+                base.translationKey(),
+                base.value(),
+                base.remark(),
+                base.isEnabled(),
+                base.deletedAt(),
+                base.createdAt(),
+                base.updatedAt(),
+                base.createdBy(),
+                base.updatedBy(),
                 localeCode);
     }
 

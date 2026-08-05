@@ -13,6 +13,7 @@ import com.wshake.service.user.UserManageModels.CreateUserCommand;
 import com.wshake.service.user.UserManageModels.UpdateUserCommand;
 import com.wshake.service.user.UserManageModels.UserListQuery;
 import com.wshake.service.user.UserManageModels.UserView;
+import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ public class SysUserService {
     private final SysUserRepository sysUserRepository;
     private final SysUserRoleRepository sysUserRoleRepository;
     private final CasbinPolicyPort casbinPolicyPort;
+    private final Converter converter;
 
     /** 根据主键查询用户；找不到返回 {@code null}。 */
     public SysUser findById(Long id) {
@@ -228,7 +230,7 @@ public class SysUserService {
         return filtered;
     }
 
-    private static UserView toView(SysUser user, List<Long> roleIds, Map<Long, String> roleNameMap) {
+    private UserView toView(SysUser user, List<Long> roleIds, Map<Long, String> roleNameMap) {
         List<Long> ids = roleIds == null ? List.of() : List.copyOf(roleIds);
         List<String> names = new ArrayList<>();
         for (Long rid : ids) {
@@ -237,21 +239,22 @@ public class SysUserService {
                 names.add(name);
             }
         }
+        UserView base = converter.convert(user, UserView.class);
         return new UserView(
-                user.getId(),
-                user.getUsername(),
-                user.getNickname(),
-                nullToEmpty(user.getEmail()),
-                nullToEmpty(user.getPhone()),
-                nullToEmpty(user.getAvatar()),
-                user.getLanguageCode(),
-                user.getLastLoginAt(),
-                nullToEmpty(user.getLastLoginIp()),
-                nullToEmpty(user.getRemark()),
-                user.getIsEnabled() == null ? 0 : user.getIsEnabled(),
-                user.getDeletedAt() == null ? 0L : user.getDeletedAt(),
-                user.getCreatedAt(),
-                user.getUpdatedAt(),
+                base.id(),
+                base.username(),
+                base.nickname(),
+                base.email(),
+                base.phone(),
+                base.avatar(),
+                base.languageCode(),
+                base.lastLoginAt(),
+                base.lastLoginIp(),
+                base.remark(),
+                base.isEnabled(),
+                base.deletedAt(),
+                base.createdAt(),
+                base.updatedAt(),
                 ids,
                 names);
     }

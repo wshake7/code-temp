@@ -13,6 +13,7 @@ import com.wshake.service.dict.DictManageModels.UpdateDictTypeCommand;
 import com.wshake.service.entity.DictType;
 import com.wshake.service.repository.DictDataRepository;
 import com.wshake.service.repository.DictTypeRepository;
+import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ public class DictTypeService {
 
     private final DictTypeRepository dictTypeRepository;
     private final DictDataRepository dictDataRepository;
+    private final Converter converter;
 
     public PageData<DictTypeView> page(DictTypeListQuery query) {
         EasyPageResult<DictType> page = dictTypeRepository.page(
@@ -206,16 +208,6 @@ public class DictTypeService {
     }
 
     private DictTypeView toView(DictType t) {
-        return new DictTypeView(
-                t.getId(),
-                t.getCode(),
-                t.getName(),
-                t.getRemark(),
-                t.getIsEnabled(),
-                t.getDeletedAt() == null ? 0L : t.getDeletedAt(),
-                t.getCreatedAt(),
-                t.getUpdatedAt(),
-                t.getCreatedBy() == null ? 0L : t.getCreatedBy(),
-                t.getUpdatedBy() == null ? 0L : t.getUpdatedBy());
+        return converter.convert(t, DictTypeView.class);
     }
 }

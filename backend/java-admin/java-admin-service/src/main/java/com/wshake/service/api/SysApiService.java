@@ -16,6 +16,7 @@ import com.wshake.service.repository.SysMenuApiRepository;
 import com.wshake.service.repository.SysRoleBindingRepository;
 import com.wshake.service.repository.SysUserRoleRepository;
 import com.wshake.service.user.SysUserService;
+import io.github.linpeilie.Converter;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,6 +46,7 @@ public class SysApiService {
     private final SysRoleBindingRepository roleBindingRepository;
     private final SysUserRoleRepository userRoleRepository;
     private final SysUserService sysUserService;
+    private final Converter converter;
 
     /**
      * 分页列出接口：分页基数为 api_group；items 为当前页各组下的全部接口（扁平）。
@@ -350,20 +352,7 @@ public class SysApiService {
     }
 
     private ApiView toView(SysApi a) {
-        return new ApiView(
-                a.getId(),
-                a.getName(),
-                a.getMethod(),
-                a.getPath(),
-                a.getPermissionCode(),
-                nullToEmpty(a.getApiGroup()),
-                nullToEmpty(a.getRemark()),
-                a.getIsEnabled() == null ? 0 : a.getIsEnabled(),
-                a.getDeletedAt() == null ? 0L : a.getDeletedAt(),
-                a.getCreatedAt(),
-                a.getUpdatedAt(),
-                a.getCreatedBy() == null ? 0L : a.getCreatedBy(),
-                a.getUpdatedBy() == null ? 0L : a.getUpdatedBy());
+        return converter.convert(a, ApiView.class);
     }
 
     private static String normalizeGroupLabel(String apiGroup) {

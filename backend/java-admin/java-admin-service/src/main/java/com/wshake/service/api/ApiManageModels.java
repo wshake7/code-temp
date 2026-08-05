@@ -1,5 +1,7 @@
 package com.wshake.service.api;
 
+import com.wshake.service.entity.SysApi;
+import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -68,6 +70,13 @@ public final class ApiManageModels {
             String remark,
             Integer isEnabled) {}
 
+    /**
+     * API 资源视图；{@link AutoMapper} 映射自 {@link SysApi}。
+     *
+     * <p>紧凑构造器将 null 规范为 "" / 0，与历史 toView 契约一致（record 目标无法用
+     * ReverseAutoMapping.defaultValue，因其会生成不可编译的 update 方法）。
+     */
+    @AutoMapper(target = SysApi.class)
     public record ApiView(
             Long id,
             String name,
@@ -81,7 +90,16 @@ public final class ApiManageModels {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             Long createdBy,
-            Long updatedBy) {}
+            Long updatedBy) {
+        public ApiView {
+            apiGroup = apiGroup == null ? "" : apiGroup;
+            remark = remark == null ? "" : remark;
+            isEnabled = isEnabled == null ? 0 : isEnabled;
+            deletedAt = deletedAt == null ? 0L : deletedAt;
+            createdBy = createdBy == null ? 0L : createdBy;
+            updatedBy = updatedBy == null ? 0L : updatedBy;
+        }
+    }
 
     /**
      * 按组分页结果。

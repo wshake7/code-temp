@@ -13,12 +13,14 @@ import com.wshake.service.entity.SysLoginLog;
 import com.wshake.service.log.LogManageModels.LoginLogListQuery;
 import com.wshake.service.log.LogManageModels.LoginLogView;
 import com.wshake.service.repository.SysLoginLogRepository;
+import io.github.linpeilie.Converter;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
@@ -31,6 +33,9 @@ class LoginLogServiceTest {
 
     @Mock
     private SysLoginLogRepository sysLoginLogRepository;
+
+    @Spy
+    private Converter converter = new Converter();
 
     @InjectMocks
     private LoginLogService loginLogService;

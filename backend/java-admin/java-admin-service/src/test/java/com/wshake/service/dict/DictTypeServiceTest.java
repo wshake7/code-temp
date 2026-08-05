@@ -36,7 +36,7 @@ class DictTypeServiceTest {
 
     @BeforeEach
     void init() {
-        service = new DictTypeService(typeRepo, dataRepo);
+        service = new DictTypeService(typeRepo, dataRepo, new io.github.linpeilie.Converter());
     }
 
     @Test

@@ -19,6 +19,7 @@ import com.wshake.service.role.RoleManageModels.RoleMenuBindView;
 import com.wshake.service.role.RoleManageModels.RoleView;
 import com.wshake.service.role.RoleManageModels.UpdateRoleCommand;
 import com.wshake.service.user.SysUserService;
+import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +44,7 @@ public class SysRoleService {
     private final SysRoleBindingRepository bindingRepository;
     private final SysUserRoleRepository userRoleRepository;
     private final SysUserService sysUserService;
+    private final Converter converter;
 
     public PageData<RoleView> pageRoles(RoleListQuery query) {
         EasyPageResult<SysRole> page = roleRepository.page(query);
@@ -253,20 +255,21 @@ public class SysRoleService {
         return toView(role, counts.getOrDefault(id, 0L), parentName);
     }
 
-    private static RoleView toView(SysRole role, Long userCount, String parentName) {
+    private RoleView toView(SysRole role, Long userCount, String parentName) {
+        RoleView base = converter.convert(role, RoleView.class);
         return new RoleView(
-                role.getId(),
-                role.getCode(),
-                role.getName(),
-                role.getParentId(),
-                role.getSort() == null ? 0 : role.getSort(),
-                nullToEmpty(role.getRemark()),
-                role.getIsEnabled() == null ? 0 : role.getIsEnabled(),
-                role.getDeletedAt() == null ? 0L : role.getDeletedAt(),
-                role.getCreatedAt(),
-                role.getUpdatedAt(),
-                role.getCreatedBy() == null ? 0L : role.getCreatedBy(),
-                role.getUpdatedBy() == null ? 0L : role.getUpdatedBy(),
+                base.id(),
+                base.code(),
+                base.name(),
+                base.parentId(),
+                base.sort(),
+                base.remark(),
+                base.isEnabled(),
+                base.deletedAt(),
+                base.createdAt(),
+                base.updatedAt(),
+                base.createdBy(),
+                base.updatedBy(),
                 userCount == null ? 0L : userCount,
                 parentName);
     }

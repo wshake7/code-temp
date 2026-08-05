@@ -7,6 +7,7 @@ import com.wshake.service.entity.ApiLogArchive;
 import com.wshake.service.log.LogManageModels.ApiLogListQuery;
 import com.wshake.service.log.LogManageModels.ApiLogView;
 import com.wshake.service.repository.ApiLogRepository;
+import io.github.linpeilie.Converter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class ApiLogService {
 
     private final ApiLogRepository apiLogRepository;
+    private final Converter converter;
 
     public PageData<ApiLogView> page(ApiLogListQuery query) {
         if (query.archive()) {
@@ -59,76 +61,10 @@ public class ApiLogService {
     }
 
     private ApiLogView toView(ApiLog row) {
-        return new ApiLogView(
-                row.getId(),
-                nullToEmpty(row.getMethod()),
-                nullToEmpty(row.getModule()),
-                nullToEmpty(row.getPath()),
-                row.getStatusCode(),
-                row.getSuccess(),
-                nullToEmpty(row.getReason()),
-                row.getCostTime() == null ? 0L : row.getCostTime(),
-                nullToEmpty(row.getRequestId()),
-                row.getSysUserId(),
-                nullToEmpty(row.getUsername()),
-                nullToEmpty(row.getRequestUri()),
-                nullToEmpty(row.getRequestQuery()),
-                nullToEmpty(row.getRequestBody()),
-                nullToEmpty(row.getRequestHeader()),
-                nullToEmpty(row.getReferer()),
-                nullToEmpty(row.getResponse()),
-                nullToEmpty(row.getBeforeChange()),
-                nullToEmpty(row.getAfterChange()),
-                nullToEmpty(row.getFormatChange()),
-                nullToEmpty(row.getClientId()),
-                nullToEmpty(row.getClientName()),
-                nullToEmpty(row.getClientIp()),
-                nullToEmpty(row.getUserAgent()),
-                nullToEmpty(row.getBrowserName()),
-                nullToEmpty(row.getBrowserVersion()),
-                nullToEmpty(row.getOsName()),
-                nullToEmpty(row.getOsVersion()),
-                nullToEmpty(row.getLocation()),
-                row.getCreatedAt(),
-                null);
+        return converter.convert(row, ApiLogView.class);
     }
 
     private ApiLogView toView(ApiLogArchive row) {
-        return new ApiLogView(
-                row.getId(),
-                nullToEmpty(row.getMethod()),
-                nullToEmpty(row.getModule()),
-                nullToEmpty(row.getPath()),
-                row.getStatusCode(),
-                row.getSuccess(),
-                nullToEmpty(row.getReason()),
-                row.getCostTime() == null ? 0L : row.getCostTime(),
-                nullToEmpty(row.getRequestId()),
-                row.getSysUserId(),
-                nullToEmpty(row.getUsername()),
-                nullToEmpty(row.getRequestUri()),
-                nullToEmpty(row.getRequestQuery()),
-                nullToEmpty(row.getRequestBody()),
-                nullToEmpty(row.getRequestHeader()),
-                nullToEmpty(row.getReferer()),
-                nullToEmpty(row.getResponse()),
-                nullToEmpty(row.getBeforeChange()),
-                nullToEmpty(row.getAfterChange()),
-                nullToEmpty(row.getFormatChange()),
-                nullToEmpty(row.getClientId()),
-                nullToEmpty(row.getClientName()),
-                nullToEmpty(row.getClientIp()),
-                nullToEmpty(row.getUserAgent()),
-                nullToEmpty(row.getBrowserName()),
-                nullToEmpty(row.getBrowserVersion()),
-                nullToEmpty(row.getOsName()),
-                nullToEmpty(row.getOsVersion()),
-                nullToEmpty(row.getLocation()),
-                row.getCreatedAt(),
-                row.getArchivedAt());
-    }
-
-    private static String nullToEmpty(String value) {
-        return value == null ? "" : value;
+        return converter.convert(row, ApiLogView.class);
     }
 }
