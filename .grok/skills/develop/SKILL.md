@@ -17,6 +17,9 @@ argument-hint: "<feature description>"
 | 一个 session 装不下的巨大/模糊 effort | `/wayfinder`，再汇入 main flow |
 | 已有 agent-ready ticket | 直接 `/implement` |
 | 难复现 bug / regression | `/diagnosing-bugs` |
+| 阻塞点在别人脑子里，不在 codebase | `/to-questionnaire`，回收后再接本 command 或 `/develop-grill` |
+| 刚说的话没听懂，需要重讲 | `/wait-what`（可叠在任何阶段） |
+| 只有人能点的基建/密钥/第三方控制台 | 实现途中触发 `/wizard`，不要在 Plan 里假装 agent 能代劳 |
 
 Research → Plan **无门禁**（评分达标或用户决定带着差距继续后直接进入）；其余阶段过渡必须走门禁，禁止自动进入下一阶段。
 
@@ -63,14 +66,22 @@ Research → Plan **无门禁**（评分达标或用户决定带着差距继续�
 约束：
 
 - 选定编排后**写入 Plan 的 Approach 顶部**作为「实现顺序」一行，Phase 3 据此执行
-- 并行选项仅在不违反 Context hygiene（见下）的前提下可用；接近 smart zone 时强制降级为串行或 `/handoff`
+- 并行选项仅在不违反 Context hygiene（见下）的前提下可用；接近 smart zone 时强制降级为串行或在阶段边界做 phase-boundary 决策
 - 并行 subagent 的产出必须回主 session 合并 typecheck + 相关测试，再进 Phase 4
 
 ### Context hygiene
 
-- Research → Plan →（单 session）Implement 前半：尽量留在**同一未中断** context window；不要中途 compact
-- 接近 **smart zone**（约 120k tokens）时：用 `/handoff` 导出，在 fresh session 从 Plan 或 ticket 继续，不要硬撑
-- multi-session 路径：每个 ticket 的 `/implement` 从 **fresh session** 开始；tickets 之间清空 context
+对齐 ask-matt / `PHASE-BOUNDARIES.md`（`/ask-matt` 技能包内）：
+
+1. **Research → Plan →（单 session）Implement**：尽量 **Continue** 在同一未中断 context window；下一阶段需要本阶段作 **primary source** 时，优先继续，不要中途 compact
+2. **smart zone** 约 **150k tokens**。接近上限时在**阶段边界**决策，按序问：
+   - 还能 Continue 且下一阶段装得下？→ 继续
+   - 本窗口内容对下一步完全无关？→ `/clear`
+   - 需要 **portability**（换 harness / 换目录 / 交给同事 / 中途分叉旁路）？→ `/handoff`
+   - 任务可 AFK、可收紧 scope？→ **subagent**
+   - 否则 → **`/compact`**（默认落地，带指令说明下一阶段要什么）
+3. multi-session 路径：每个 ticket 的 `/implement` 从 **fresh session** 开始，tickets 之间 **`/clear`**；不要把上一个 ticket 的上下文拖进下一个
+4. `/handoff` **窄用**：只买 portability。同 harness、同目录、还要人在回路时，优先 Continue / compact，不要默认 handoff
 
 ---
 
@@ -116,6 +127,7 @@ Research → Plan **无门禁**（评分达标或用户决定带着差距继续�
 - 总分 >= 70：展示输出后进入 **规模分支**
 - 总分 < 70：补最低维后重评；循环直到 >= 70，或说明无法提升的维度并询问是否带着差距继续
 - 若未决点主要是**产品/设计决策**（而非 codebase 事实）：建议切换 `/develop-grill`，不要在 Plan 里用猜测填坑
+- 若缺的是**别人的知识**（非本机/非本 repo）：先 `/to-questionnaire`，不要空猜
 
 #### 规模分支（Research 后立刻判断）
 
@@ -124,7 +136,7 @@ Research → Plan **无门禁**（评分达标或用户决定带着差距继续�
 | 判断 | 条件（经验） | 动作 |
 |------|--------------|------|
 | **A. 单 session** | 文件列表可控、一条 tracer bullet 能 demo、预估能在当前 window 内完成 | 进入 Phase 2 Plan |
-| **B. multi-session** | 多条独立可 demo 的 vertical slices、或 Approach 明显超出单 window | 综合 Research 结论跑 `/to-spec` → `/to-tickets`，**本 command 在 tickets 发布后结束**，并给出「按 blockers-first，每 ticket 新 session 跑 `/implement`」的交接说明 |
+| **B. multi-session** | 多条独立可 demo 的 vertical slices、或 Approach 明显超出单 window | 综合 Research 结论跑 `/to-spec` → `/to-tickets`，**本 command 在 tickets 发布后结束**，并给出「按 blockers-first，每 ticket 新 session + `/clear` 后跑 `/implement`」的交接说明 |
 | **C. 需先打磨** | 目标/边界/验收仍高度主观 | 建议 `/develop-grill`（展示原因，用户确认后切换） |
 
 不确定时默认 **A**，在 Plan 门禁保留「改走 multi-session」出口。
@@ -143,6 +155,7 @@ Research → Plan **无门禁**（评分达标或用户决定带着差距继续�
 4. Risks 写潜在问题与缓解；Test strategy 写手动/自动如何验收
 5. Research 中的未决假设写入 Risks 或明确默认选择（并在计划中标出）
 6. 若写着写着发现工作其实装不进单 session：停止硬塞，改走规模分支 B
+7. 若步骤里出现「只有人能完成」的项（密钥、云控制台、一次性 cutover）→ 标出，实现时用 `/wizard`，不要写进 agent 可自动完成的步骤
 
 展示完整计划后走门禁（Plan → Implement）。
 
@@ -178,8 +191,9 @@ Test strategy:
 - 在认可的 seams 上优先 `/tdd`（red-green 小步）
 - 定期 typecheck / 单测；收尾跑相关测试套件
 - **并行编排时**：每个 subagent 独立完成自己切片的 typecheck/单测；主 session 合并后再次跑全量 typecheck + 相关测试套件，确保切片间无隐性冲突
-- **本 command 覆盖提交权**：实现阶段**不要**自动 commit；把提交留给 Phase 4 门禁
-- `/implement` 内的 `/code-review` 可在实现收尾时跑；其发现在 Phase 4 一并展示
+- **本 command 覆盖提交权**：实现阶段**不要**自动 commit（裸 `/implement` skill 会 commit；本编排故意延后）；把提交留给 Phase 4 门禁
+- `/implement` 内的 `/code-review`（Standards + Spec 双轴）可在实现收尾时跑；其发现在 Phase 4 一并展示
+- 撞到只有人能过的墙 → `/wizard`，不要卡住空转
 
 若实现中发现计划错误：停下来修订 Plan（或回 Research），不要默默扩大范围。若发现切片其实有依赖（原以为可并行）：暂停并行，回门禁重选串行。
 
@@ -187,7 +201,7 @@ Test strategy:
 
 ### Phase 4: Review & Commit
 
-1. 用 `/code-review`（若实现阶段未跑）或汇总已有 review：读变更全文；有精确行号才报；`grep` 查 console.log / TODO / 密钥，只报实际命中；不报未验证猜测
+1. 用 `/code-review`（若实现阶段未跑）或汇总已有 review：固定点以来的 diff 做 **Standards + Spec** 双轴；有精确行号才报；`grep` 查 console.log / TODO / 密钥，只报实际命中；不报未验证猜测
 2. 展示摘要：做了什么、测试结果、残留风险
 3. 走提交门禁；**不自动提交**。用户选提交后再 commit
 
@@ -196,5 +210,5 @@ Test strategy:
 ### 完成时
 
 - **分支 A**：变更已 review，按用户选择提交或留下 diff
-- **分支 B**：spec + tickets 已发布；给出 frontier ticket 列表与「新 session + `/implement <ticket>`」指引
+- **分支 B**：spec + tickets 已发布；给出 frontier ticket 列表与「新 session + `/clear` + `/implement <ticket>`」指引
 - **分支 C**：已说明为何改走 `/develop-grill`，并等待用户切换

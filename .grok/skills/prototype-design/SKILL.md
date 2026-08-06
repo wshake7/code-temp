@@ -6,7 +6,7 @@ argument-hint: "<要回答的设计问题 / 原型主题>"
 
 # prototype-design
 
-对齐 ask-matt 的 **prototype 绕行**：用一次性代码回答**一个**设计问题。保留答案，默认不把原型代码合进 main。
+对齐 ask-matt 的 **prototype 绕行**：用一次性代码回答**一个**设计问题。**答案**进入正式设计；原型代码默认作为 **primary source** 留在 throwaway branch（非 main），不把实验代码合进 main。
 
 与 `/develop` 的区别：**develop 交付功能**；本 command **验证假设**。问题答完就结束，或把 decision 交接回 main flow。
 
@@ -18,6 +18,7 @@ argument-hint: "<要回答的设计问题 / 原型主题>"
 | 已决定方案，要正式实现 | `/develop` 或 `/develop-grill` |
 | 纸面访谈就能说清，无需可运行物 | `/grill-with-docs` / `/grill-me` |
 | 只想直接跑底层 skill、自己编排 | `/prototype` |
+| 刚说的话没听懂 | `/wait-what` |
 
 Frame → Research **无门禁**（问题清晰且评分达标后直接 Build）；Build 完成后的 Play / Capture 必须走门禁。
 
@@ -33,7 +34,7 @@ Frame → Research **无门禁**（问题清晰且评分达标后直接 Build）
 |------|------|------|------|
 | Research → Build | 问题与分支是否确认？ | `开始构建 (Recommended)` | `需要补充` / `问题不对，重框` |
 | Play → Capture | 是否已得到可记录的结论？ | `记录结论 (Recommended)` | `继续玩 / 改原型` |
-| Capture → 收尾 | 原型代码怎么处理？ | `丢弃工作区改动，只保留 decision (Recommended)` | `提交到 throwaway branch` / `暂留本地` |
+| Capture → 收尾 | 原型代码怎么处理？ | `提交到 throwaway branch 作 primary source (Recommended)` | `丢弃工作区改动，只保留 decision` / `暂留本地` |
 
 - 只有选「继续」类选项才可进入下一阶段
 - 禁止凭 "ok" / "good" 等软确认跳过门禁
@@ -41,19 +42,23 @@ Frame → Research **无门禁**（问题清晰且评分达标后直接 Build）
 
 ### Context hygiene
 
-- Frame → Research → Build → Play：尽量同一 window；接近 smart zone 时用 `/handoff`，不要硬撑
-- Capture 之后若要进正式实现：用 `/handoff` 导出 decision，**新 session** 跑 `/develop` 或 `/develop-grill`
+对齐 PHASE-BOUNDARIES：
+
+- Frame → Research → Build → Play：尽量 **Continue** 同一 window；接近 **smart zone（~150k）** 时在阶段边界决策（Continue → clear → handoff → subagent → compact）
+- Capture 之后若要进正式实现：用 `/handoff` 导出 decision（换 session / 接 main flow 属于 portability），**新 session** 跑 `/develop` 或 `/develop-grill`
 - 原型 session 与实现 session 分开，避免 throwaway 代码与 production 改动搅在一起
 
 ### 硬规则（贯穿全程）
 
 1. **Throwaway from day one**：命名/路径标明 prototype；贴近将被使用的 module 或 page，但不伪装成 production
 2. **一个问题**：不顺带解决第二个设计问题；范围漂移就停下来重框
-3. **一条命令可运行**：匹配项目现有 runner（`pnpm` / `vp` / `python` 等）
+3. **易启动**：
+   - **UI**：匹配项目现有 runner（`pnpm` / `vp` / `python` 等）一条命令可跑
+   - **Logic**：单个自包含 **HTML 文件**，双击即可打开（无 bundler / 无 dev server）
 4. **默认不持久化**：内存 state；若问题本身关于 persistence，用可擦的 scratch
 5. **跳过 polish**：无 tests、无多余抽象、error handling 只求能跑
 6. **暴露 state**：每次 action（Logic）或 variant 切换（UI）后能看见完整相关 state
-7. **Main 只留 decision**：验证过的结论可写回 ADR / issue / handoff；原型代码默认不进 main
+7. **Main 只留 decision**：验证过的结论写回 ADR / issue / handoff；原型代码默认进 **throwaway branch**（`prototype/<name>`）作 primary source，issue 上留 branch 指针——**不是**默默合进 main，也**不是**默认直接扔进回收站
 
 ---
 
@@ -71,7 +76,7 @@ OUT OF SCOPE: [本原型明确不碰的]
 
 | 分支 | 何时 | 产物形状 |
 |------|------|----------|
-| **Logic** | state / 业务规则 / 数据形状 / API 手感 | 可运行 terminal TUI + 可搬运的 pure logic module |
+| **Logic** | state / 业务规则 / 数据形状 / API 手感 | **单个自包含 HTML**：pure logic 模块 + free-play 按钮 + 分 tab 的 guided walkthrough；可用领域语言，非开发者也能点 |
 | **UI** | 长什么样 / 布局与信息层级 | 同路由多 variant + `?variant=` + 浮动切换条 |
 
 选错分支会浪费整个 session。后端模块/状态机 → 默认 Logic；页面/组件 → 默认 UI。模糊时问用户，不要猜完就开干。
@@ -88,7 +93,7 @@ OUT OF SCOPE: [本原型明确不碰的]
 
 1. 相关 domain 类型、现有 reducer / service / 状态约定
 2. 关键 edge cases（从代码与产品语言里挖）
-3. 宿主语言与 runner（不要为原型引入新 runtime）
+3. 领域词汇（按钮与状态展示要用业务语言，不要暴露 reducer 术语）
 
 #### UI 探索清单
 
@@ -102,7 +107,7 @@ OUT OF SCOPE: [本原型明确不碰的]
 |------|------|----------|----------|
 | 问题可检验性 | SUCCESS 是否可判定？ | 用户能说 yes/no 或选出 variant | 目标仍是「看看感觉」 |
 | 分支匹配度 | Logic/UI 是否选对？ | 产物形状直接回答 QUESTION | 用 UI 答状态机或相反 |
-| 宿主清晰度 | 挂在哪、怎么跑？ | 有明确 page/module + 一条 run 命令设想 | 无处安放或需新基建 |
+| 宿主清晰度 | 挂在哪、怎么跑？ | Logic：HTML 路径明确；UI：有 page + run 命令 | 无处安放或需新基建 |
 | 约束已知度 | 设计系统/domain 边界？ | 知道必须遵守的 pattern | 会发明第二套 UI/模型 |
 | 范围克制度 | 是否仍是一个问题？ | Out of scope 清楚 | 已滑向 mini-product |
 
@@ -117,7 +122,7 @@ OUT OF SCOPE: [本原型明确不碰的]
 - QUESTION / 分支 /（UI 时）sub-shape A 或 B 与宿主路径
 - 可复用模式与关键约束
 - 评分表
-- 拟定 run 命令
+- 拟定启动方式（Logic：HTML 路径；UI：run 命令）
 
 ---
 
@@ -129,9 +134,10 @@ OUT OF SCOPE: [本原型明确不碰的]
 2. 在**该 skill 自己的目录**内读分支文件并全量遵守（`LOGIC.md` / `UI.md` 与 `SKILL.md` 同目录）：
 
 - **Logic** → `/prototype` 的 `LOGIC.md`
-  - 先写问题 comment/README
-  - pure logic 与 TUI 分离；TUI 只是薄壳
-  - 一帧内：当前 state + 快捷键；每 action 整帧重绘
+  - 先写可见的问题说明（页面顶部 intro，不只是 comment）
+  - pure logic 与 HTML shell 分离；logic 不碰 DOM/`document`
+  - 单文件 HTML/CSS/JS：当前 state 面板 + free-play 按钮 + tab 化 guided walkthroughs
+  - 无 framework / bundler / server；双击可开
 - **UI** → `/prototype` 的 `UI.md`
   - 默认 **3** 个**结构上**不同的 variants（最多 5）；禁止只换配色的假对比
   - 优先现有路由 + `?variant=`；浮动底栏切换
@@ -139,7 +145,7 @@ OUT OF SCOPE: [本原型明确不碰的]
 
 Build 过程中**不**写生产抽象、**不**接真库（除非问题就是 persistence）、**不**写测试。
 
-**完成标准：** 给出一条可复制的 run 命令，并说明用户第一步该做什么 → 进入 Play。
+**完成标准：** 给出可复制的启动方式（Logic：文件路径；UI：run 命令），并说明用户第一步该做什么 → 进入 Play。
 
 ---
 
@@ -147,7 +153,7 @@ Build 过程中**不**写生产抽象、**不**接真库（除非问题就是 pe
 
 把控制权交给用户：
 
-1. 贴出 run 命令与操作提示（Logic：按哪些键；UI：如何切 variant / URL）
+1. 贴出启动方式与操作提示（Logic：free-play / walkthrough tabs；UI：如何切 variant / URL）
 2. 用户驱动；你根据反馈**小步**改原型（加 action、调 variant），不重启成新功能
 3. 捕捉高价值时刻：「这不该发生」「我以为会是 X」「选 B 但要 A 的导航」
 
@@ -160,7 +166,7 @@ Build 过程中**不**写生产抽象、**不**接真库（除非问题就是 pe
 
 ### Phase 4: Capture
 
-原型的价值是 **answer**，不是仓库里的实验代码。
+原型的价值是 **answer** + 可回看的 **primary source**，不是 main 上的实验代码。
 
 **必须产出（展示给用户）：**
 
@@ -172,8 +178,10 @@ Evidence:  [哪些操作/variant 支撑了结论]
 Carry forward:
   - [可搬进正式实现的决策：state shape / reducer / 选定 layout 要点…]
   - [若有 decision-dense snippet（状态机、类型），可摘录并标注来自 prototype]
-Discard:
-  - [明确扔掉的：TUI 壳 / 落选 variants / 临时路由…]
+Discard from main:
+  - [不得进 main 的：HTML shell / 落选 variants / 临时路由 / switcher…]
+Primary source branch:
+  - [建议] prototype/<slug>（或用户指定的 throwaway 名）
 Next:
   - [ ] 回 main flow：/develop 或 /develop-grill（新 session + handoff）
   - [ ] 或：结论已够，无需实现
@@ -183,11 +191,11 @@ Next:
 
 | 选项 | 行为 |
 |------|------|
+| 提交到 throwaway branch 作 primary source | **默认（对齐 `/prototype`）**：在 **非 main** 分支（如 `prototype/<name>`）commit 原型；在 issue/handoff 留 branch 指针；**不**合入 main |
 | 丢弃工作区改动，只保留 decision | 不 commit 原型；decision 写入 handoff / 用户指定的 ADR 或 issue 注释 |
-| 提交到 throwaway branch | 在 **非 main** 分支 commit 原型作 primary source；在 issue/handoff 留 branch 指针；**不**合入 main |
 | 暂留本地 | 不 commit；提醒用户工作区仍是 throwaway |
 
-Logic 特例：验证过的 pure module **可以**作为 carry-forward 的候选，但仍须经正式 `/develop` 路径进入 production，不在本 command 里「顺便合进主流程」。
+Logic 特例：验证过的 pure module **可以**作为 carry-forward 的候选，但仍须经正式 `/develop` 路径进入 production，不在本 command 里「顺便合进主流程」。HTML shell 随 throwaway branch 保留以便重放。
 
 ---
 
@@ -196,15 +204,15 @@ Logic 特例：验证过的 pure module **可以**作为 carry-forward 的候选
 ```text
 Frame（一个可检验问题 + Logic|UI）
   → Research（宿主 / 约束 / 就绪评分）
-    → 门禁 → Build（throwaway，一条命令可跑）
+    → 门禁 → Build（throwaway：Logic=单 HTML / UI=variants）
       → Play（用户驱动，小步改）
         → 门禁 → Capture（verdict + carry-forward）
-          → 门禁 → 丢弃 | throwaway branch | 暂留
+          → 门禁 → throwaway branch（默认）| 丢弃 | 暂留
             → （可选）handoff → 新 session /develop*
 ```
 
 ### 完成时
 
 - 有书面 **Verdict** 与 **Carry forward**
-- 原型代码已按用户选择丢弃 / 进 throwaway branch / 暂留
+- 原型代码已按用户选择进 throwaway branch / 丢弃 / 暂留；main 无未标记实验代码
 - 若要继续实现：已提示用 `/handoff` + 新 session 的 `/develop` 或 `/develop-grill`，**不要**在本 session 无门禁切去写生产代码

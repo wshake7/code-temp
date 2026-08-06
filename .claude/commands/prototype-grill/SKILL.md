@@ -6,7 +6,7 @@ argument-hint: "<模糊的设计主题 / 想探索的方向>"
 
 # prototype-grill
 
-`/prototype-design` 的访谈加强版：先把「该回答什么问题」磨清楚，再构建 throwaway 原型。仍**不交付生产功能**；答案留下，代码默认可扔。
+`/prototype-design` 的访谈加强版：先把「该回答什么问题」磨清楚，再构建 throwaway 原型。仍**不交付生产功能**；答案留下，原型代码默认作 **primary source** 进 throwaway branch（非 main）。
 
 对齐 ask-matt：Grill 打磨想法 → 需要可运行答案时走 Prototype → 用 `/handoff` 在 session 间桥接 → 结论回到 main flow。
 
@@ -18,6 +18,8 @@ argument-hint: "<模糊的设计主题 / 想探索的方向>"
 | 要正式实现功能 | `/develop` / `/develop-grill` |
 | 只需访谈、不需要可运行物 | `/grill-with-docs`（有 repo）或 `/grill-me`（无 repo） |
 | 路径都看不清的巨大 fog | `/wayfinder` |
+| 缺的知识在别人那里 | `/to-questionnaire` |
+| 刚说的话没听懂 | `/wait-what` |
 
 Research → Grill **无门禁**；Grill 之后进入 Frame/Build 必须走门禁。
 
@@ -34,22 +36,23 @@ Research → Grill **无门禁**；Grill 之后进入 Frame/Build 必须走门�
 | Grill → Frame | 是否已收成可 prototype 的问题？ | `框定并构建 (Recommended)` | `继续访谈` / `不需要原型，结束` |
 | Frame/Research → Build | 问题与分支是否确认？ | `开始构建 (Recommended)` | `需要补充` / `回 Grill` |
 | Play → Capture | 是否已得到可记录的结论？ | `记录结论 (Recommended)` | `继续玩 / 改原型` |
-| Capture → 收尾 | 原型代码怎么处理？ | `丢弃工作区改动，只保留 decision (Recommended)` | `提交到 throwaway branch` / `暂留本地` |
+| Capture → 收尾 | 原型代码怎么处理？ | `提交到 throwaway branch 作 primary source (Recommended)` | `丢弃工作区改动，只保留 decision` / `暂留本地` |
 
 - 禁止软确认跳过门禁
 - Grill 收成「其实纸面已够」时：允许选 `不需要原型，结束`，输出决策摘要即可
 - **禁止**把本 command 滑成 `/develop`（无 Capture、无 throwaway 纪律就写生产代码）
+- **注意**：阶段门禁「一次一问」；**Grill 访谈**按 frontier 轮次（一轮可多问）
 
 ### Context hygiene
 
-1. Research → Grill → Frame：同一 window，不中途 compact
-2. 接近 smart zone：`/handoff` 后在新 session 从 Frame 或 Build 继续
-3. Capture 后若进实现：再 `/handoff`，**新 session** 跑 `/develop` / `/develop-grill`
+1. Research → Grill → Frame：尽量 **Continue** 同一 window，不中途 compact
+2. 接近 **smart zone（~150k）**：在阶段边界决策（Continue → clear → handoff → subagent → compact）
+3. Capture 后若进实现：`/handoff`（portability），**新 session** 跑 `/develop` / `/develop-grill`
 4. 原型与实现分 session，避免 throwaway 与 production 混写
 
 ### 硬规则
 
-与 `/prototype-design` 相同：throwaway、一问一答、一条命令可跑、默认不持久化、跳过 polish、暴露 state、main 只留 decision。
+与 `/prototype-design` 相同：throwaway、一问一答（一个设计问题）、易启动（Logic=单 HTML / UI=项目 runner）、默认不持久化、跳过 polish、暴露 state、main 只留 decision、原型默认进 throwaway branch 作 primary source。
 
 ---
 
@@ -78,11 +81,19 @@ Research 展示后**直接进入 Grill**（无门禁）。
 
 ### Phase 2: Grill
 
-使用 `/grill-with-docs`（有 codebase）驱动；核心纪律：
+使用 `/grill-with-docs`（有 codebase）驱动；核心纪律对齐更新后的 `/grilling`：
 
-- 一次一问；推荐项加 `(Recommended)`
-- fact 查 codebase；decision 交给用户
-- 每次回答末尾 `notes:`
+- **design tree + frontier 轮次**：一轮抛出整个 frontier（编号题 + 推荐答案），等用户答完再进入下一轮——**不是**永远一次只问一题
+- 题型：
+
+```text
+❓ **Q1** - **<题目标题>**: <题干>
+
+➡️ <推荐答案>
+```
+
+- fact 派 subagent 查 codebase，不阻塞本轮其它就绪问题；decision 交给用户
+- `/domain-modeling`：术语当场进 `CONTEXT.md`，硬权衡才 ADR
 - 重点磨到能 prototype 的粒度，而不是磨成完整 PRD
 
 **Grill 在本 command 的完成标准（与 develop-grill 不同）：**
@@ -112,9 +123,9 @@ Research 展示后**直接进入 Grill**（无门禁）。
 QUESTION: [一句话]
 SUCCESS:  [verdict 判据]
 BRANCH:   Logic | UI
-HOST:     [module 路径 或 页面路由；UI 时注明 sub-shape A/B]
+HOST:     [Logic: HTML 落地路径；UI: module/路由 + sub-shape A/B]
 OUT OF SCOPE: [...]
-RUN (draft): [预期启动方式]
+RUN (draft): [Logic: 打开哪个 HTML；UI: 项目 runner 命令]
 ```
 
 快速就绪检查（不必重做完整生产 Research）：
@@ -137,16 +148,16 @@ RUN (draft): [预期启动方式]
 1. 打开 `/prototype` 的 `SKILL.md`
 2. 在**该 skill 自己的目录**内读分支文件并全量遵守：
 
-- **Logic** → `/prototype` 的 `LOGIC.md`：pure module + 最小 TUI
+- **Logic** → `/prototype` 的 `LOGIC.md`：单文件 HTML + pure module + free-play + guided walkthroughs
 - **UI** → `/prototype` 的 `UI.md`：默认 3 个结构不同的 variants + `?variant=` + 浮动条；优先宿主页
 
-给出 run 命令 → 进入 Play。
+给出启动方式 → 进入 Play。
 
 ---
 
 ### Phase 5: Play
 
-1. 用户按 run 命令驱动；你只做小步修改
+1. 用户按启动方式驱动；你只做小步修改
 2. 记录「惊讶点」与偏好（尤其 UI：选了哪个 variant、要偷哪部分）
 3. 能给出 verdict 后走 **Play → Capture** 门禁
 
@@ -163,8 +174,10 @@ Grill decisions retained: [访谈中仍成立的决策]
 Invalidated by prototype: [跑完后作废的假设]
 Carry forward:
   - [...]
-Discard:
+Discard from main:
   - [...]
+Primary source branch:
+  - prototype/<slug>（默认）
 Next:
   - [ ] /handoff → 新 session /develop 或 /develop-grill
   - [ ] 结论已写入 CONTEXT/ADR（若 Grill 启用了 docs）
@@ -175,8 +188,8 @@ Next:
 
 | 选项 | 行为 |
 |------|------|
-| 丢弃工作区改动，只保留 decision | 默认；decision 进 handoff / ADR / issue |
-| 提交到 throwaway branch | 非 main 分支保留 primary source + 指针 |
+| 提交到 throwaway branch 作 primary source | **默认**；非 main 保留 + issue/handoff 指针 |
+| 丢弃工作区改动，只保留 decision | decision 进 handoff / ADR / issue |
 | 暂留本地 | 不 commit，提醒仍是 throwaway |
 
 若 Grill 写过 `CONTEXT.md` / ADR：把 **Verdict** 与作废假设同步回去，避免文档仍描述未验证设计。
@@ -187,12 +200,12 @@ Next:
 
 ```text
 Research（事实与张力）
-  → Grill（收到一个可检验问题）
+  → Grill（frontier 轮次 → 一个可检验问题）
     → 门禁 → Frame（QUESTION + BRANCH + HOST）
-      → 门禁 → Build（throwaway）
+      → 门禁 → Build（throwaway：Logic HTML / UI variants）
         → Play
           → 门禁 → Capture（verdict）
-            → 门禁 → 丢弃 | throwaway branch | 暂留
+            → 门禁 → throwaway branch（默认）| 丢弃 | 暂留
               → handoff → main flow（可选）
 ```
 
