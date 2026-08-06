@@ -1,7 +1,7 @@
 import { Descriptions, Drawer, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { TaskExecution } from '@/api/rest/types';
-import { statusColor, statusLabelKey } from './shared';
+import { formatDuration, statusColor, statusLabelKey } from './shared';
 
 interface Props {
   open: boolean;
@@ -53,19 +53,11 @@ const TaskExecutionDetailDrawer = ({ open, row, onClose }: Props) => {
           <Descriptions.Item label={t('execStatus')}>
             <Tag color={statusColor(row.status)}>{statusLabel(row.status)}</Tag>
           </Descriptions.Item>
+          <Descriptions.Item label={t('createdAt')}>{dash(row.createdAt)}</Descriptions.Item>
           <Descriptions.Item label={t('startedAt')}>{dash(row.startedAt)}</Descriptions.Item>
           <Descriptions.Item label={t('closedAt')}>{dash(row.closedAt)}</Descriptions.Item>
-          <Descriptions.Item label={t('failureReason')}>
-            {row.failureReason ? (
-              <Typography.Paragraph
-                style={{ marginBottom: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
-                copyable
-              >
-                {row.failureReason}
-              </Typography.Paragraph>
-            ) : (
-              <span style={{ color: '#999' }}>-</span>
-            )}
+          <Descriptions.Item label={t('duration')}>
+            {formatDuration(row.startedAt, row.closedAt)}
           </Descriptions.Item>
           <Descriptions.Item label={t('inputSummary')}>
             <Typography.Paragraph
@@ -81,7 +73,18 @@ const TaskExecutionDetailDrawer = ({ open, row, onClose }: Props) => {
               {formatJson(row.resultSummary)}
             </Typography.Paragraph>
           </Descriptions.Item>
-          <Descriptions.Item label={t('createdAt')}>{dash(row.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label={t('failureReason')}>
+            {row.failureReason ? (
+              <Typography.Paragraph
+                style={{ marginBottom: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
+                copyable
+              >
+                {row.failureReason}
+              </Typography.Paragraph>
+            ) : (
+              <span style={{ color: '#999' }}>-</span>
+            )}
+          </Descriptions.Item>
         </Descriptions>
       ) : null}
     </Drawer>
