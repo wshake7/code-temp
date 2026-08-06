@@ -179,39 +179,8 @@ export function TaskExecutionPanel() {
       width: 200,
       search: false,
       ellipsis: true,
-      render: (_, r) => {
-        if (!r.failureReason) {
-          return <span style={{ color: '#999' }}>-</span>;
-        }
-        return (
-          <a
-            onClick={(e) => {
-              e.stopPropagation();
-              openDetail(r);
-            }}
-          >
-            {r.failureReason}
-          </a>
-        );
-      },
-    },
-    {
-      title: t('action'),
-      valueType: 'option',
-      key: 'option',
-      width: 90,
-      fixed: 'right',
-      render: (_, record) => [
-        <a
-          key="detail"
-          onClick={(e) => {
-            e.stopPropagation();
-            openDetail(record);
-          }}
-        >
-          {t('viewDetail')}
-        </a>,
-      ],
+      render: (_, r) =>
+        r.failureReason || <span style={{ color: '#999' }}>-</span>,
     },
   ];
 
@@ -222,6 +191,11 @@ export function TaskExecutionPanel() {
         rowKey="id"
         columns={columns}
         request={fetchRows}
+        // 与日志审计一致：点击行打开详情
+        onRow={(record) => ({
+          onClick: () => openDetail(record),
+          style: { cursor: 'pointer' },
+        })}
         search={{ labelWidth: 'auto', defaultCollapsed: false }}
         pagination={{ defaultPageSize: 20, showSizeChanger: true }}
         options={{ density: true, reload: true, setting: true }}
