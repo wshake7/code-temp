@@ -2,7 +2,7 @@
 
 ## Good Tests
 
-**Integration-style**：通过真实 interfaces 测试，而不是 mock internal parts。
+**Integration-style**: Test through real interfaces, not mocks of internal parts.
 
 ```typescript
 // GOOD: Tests observable behavior
@@ -14,17 +14,17 @@ test("user can checkout with valid cart", async () => {
 });
 ```
 
-Characteristics：
+Characteristics:
 
-- 测试 users/callers 关心的 behavior
-- 只使用 public API
-- 能承受 internal refactors
-- 描述 WHAT，而不是 HOW
-- 每个 test 一个 logical assertion
+- Tests behavior users/callers care about
+- Uses public API only
+- Survives internal refactors
+- Describes WHAT, not HOW
+- One logical assertion per test
 
 ## Bad Tests
 
-**Implementation-detail tests**：与 internal structure 耦合。
+**Implementation-detail tests**: Coupled to internal structure.
 
 ```typescript
 // BAD: Tests implementation details
@@ -35,14 +35,14 @@ test("checkout calls paymentService.process", async () => {
 });
 ```
 
-Red flags：
+Red flags:
 
 - Mocking internal collaborators
 - Testing private methods
 - Asserting on call counts/order
-- Refactor 但 behavior 未变时 test breaks
-- Test name 描述 HOW 而不是 WHAT
-- 绕过 interface 用外部方式验证
+- Test breaks when refactoring without behavior change
+- Test name describes HOW not WHAT
+- Verifying through external means instead of interface
 
 ```typescript
 // BAD: Bypasses interface to verify
@@ -57,5 +57,21 @@ test("createUser makes user retrievable", async () => {
   const user = await createUser({ name: "Alice" });
   const retrieved = await getUser(user.id);
   expect(retrieved.name).toBe("Alice");
+});
+```
+
+**Tautological tests**: Expected value restates the implementation, so the test passes by construction.
+
+```typescript
+// BAD: Expected value is recomputed the way the code computes it
+test("calculateTotal sums line items", () => {
+  const items = [{ price: 10 }, { price: 5 }];
+  const expected = items.reduce((sum, i) => sum + i.price, 0);
+  expect(calculateTotal(items)).toBe(expected);
+});
+
+// GOOD: Expected value is an independent, known literal
+test("calculateTotal sums line items", () => {
+  expect(calculateTotal([{ price: 10 }, { price: 5 }])).toBe(15);
 });
 ```

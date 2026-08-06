@@ -1,12 +1,22 @@
 ---
 name: grilling
-description: 围绕计划或设计持续追问用户。适用于用户想在构建前压力测试计划，或使用任何 “grill” 触发措辞时。
+description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
 ---
 
-围绕这个计划的每个方面持续访谈我，直到我们达成共同理解。沿着 design tree 的每个分支往下走，逐一解决决策之间的依赖。每个问题都要附上你的推荐答案。
+Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
-一次只问一个问题，并等待我对该问题的反馈后再继续。一次问多个问题会让人失去方向。
+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled — the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 
-如果某个 *fact* 能通过探索 codebase 找到，就直接查找，不要问我。但 *decisions* 属于我；逐个交给我决定，并等待回答。
+Each question should be formatted like so:
 
-在我确认我们已经达成共同理解之前，不要执行这个计划。
+```
+❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
+
+➡️ <your recommended answer>
+```
+
+Each round the user answers reshapes the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
+
+Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent to find it — don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report — ask the rest of the frontier now. The _decisions_ are the user's — put each to them and wait.
+
+The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.

@@ -1,25 +1,25 @@
 # When to Mock
 
-只在 **system boundaries** mock：
+Mock at **system boundaries** only:
 
-- External APIs（payment、email 等）
-- Databases（有时可以；优先 test DB）
+- External APIs (payment, email, etc.)
+- Databases (sometimes - prefer test DB)
 - Time/randomness
-- File system（有时）
+- File system (sometimes)
 
-不要 mock：
+Don't mock:
 
-- 你自己的 classes/modules
+- Your own classes/modules
 - Internal collaborators
-- 任何你控制的东西
+- Anything you control
 
 ## Designing for Mockability
 
-在 system boundaries 处，设计容易 mock 的 interfaces：
+At system boundaries, design interfaces that are easy to mock:
 
 **1. Use dependency injection**
 
-传入 external dependencies，而不是在内部创建：
+Pass external dependencies in rather than creating them internally:
 
 ```typescript
 // Easy to mock
@@ -36,7 +36,7 @@ function processPayment(order) {
 
 **2. Prefer SDK-style interfaces over generic fetchers**
 
-为每个 external operation 创建具体 function，而不是一个带 conditional logic 的泛用 function：
+Create specific functions for each external operation instead of one generic function with conditional logic:
 
 ```typescript
 // GOOD: Each function is independently mockable
@@ -52,9 +52,8 @@ const api = {
 };
 ```
 
-SDK approach 意味着：
-
-- 每个 mock 返回一个具体 shape
-- Test setup 中不需要 conditional logic
-- 更容易看出 test 触发了哪些 endpoints
-- 每个 endpoint 都有 type safety
+The SDK approach means:
+- Each mock returns one specific shape
+- No conditional logic in test setup
+- Easier to see which endpoints a test exercises
+- Type safety per endpoint
