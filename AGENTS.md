@@ -1,6 +1,6 @@
 <!-- style START -->
 
-所有回答,注释,md文档都尽量用中文
+所有回答,注释,md文档,git提交记录都尽量用中文
 
 <!-- style END -->
 
@@ -142,3 +142,17 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes_tool` for code review.
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
+
+## Agent skills
+
+### Issue tracker
+
+Issues 以本地 markdown 形式存放在 `.scratch/<feature>/`。详见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+使用默认五类 triage 标签（needs-triage / needs-info / ready-for-agent / ready-for-human / wontfix）。详见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+multi-context：根目录 `CONTEXT-MAP.md` 指向各上下文的 `CONTEXT.md`。详见 `docs/agents/domain.md`。

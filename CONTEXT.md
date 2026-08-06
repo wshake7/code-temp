@@ -1,57 +1,94 @@
 # Trellis Admin
 
-后台管理（java-admin + 双前端 + mock）共享语言。本文件只记领域术语，不写实现细节。
+后台管理产品（`java-admin` + 双前端 + mock）的共享领域语言。  
+本文件只记**本项目特有**的术语与禁词，不含实现决策（实现决策见 `docs/adr/`）。
+
+**本波范围**：鉴权、用户、角色、菜单、API 资源、字典、国际化、登录日志、API 日志、动态菜单路由。  
+**本波不做**：部门、Temporal 任务调度、demo/test 类接口。
 
 ## Language
 
+### API 契约
+
 **Admin API**：
-后台统一 HTTP 契约面：路径以 `/api` 为前缀（无版本段），响应体为 `code` / `msg` / `data`。
-_Avoid_: `/api/v1`、mock 旧字段 `message` / `error`
+后台统一 HTTP 契约面：路径以 `/api` 为前缀（无版本段），响应体为 `code` / `msg` / `data`。  
+_Avoid_: `/api/v1`；mock 旧字段 `message` / `error`
 
 **Page Result**：
-分页成功时 `data` 为 `{ items, total }`。
+分页成功时 `data` 的形状：`{ items, total }`。  
 _Avoid_: `list` / `records` 作为分页列表字段名
 
 **Access Token**：
-登录成功后下发的会话凭证字段名；前端后续请求携带该 token。
-_Avoid_: 仅写 `token` 作为登录响应对外字段（内部实现可用别名）
+登录成功后下发的会话凭证字段名；后续请求携带该 token。  
+_Avoid_: 登录响应对外字段仅写 `token`（内部别名可保留）
 
-**System Module**：
-本波正式落地的后台能力：鉴权、用户、角色、菜单、API 资源、字典、国际化、登录日志、API 日志，以及动态菜单路由。
-_Avoid_: 部门（已无表）、Temporal 任务调度（本波不做）、demo/test 类接口
-
-**Soft Delete**：
-核心资源删除通过 `deleted_at` 毫秒时间戳标记；`0` 表示未删除。
-_Avoid_: 核心资源物理 DELETE 作为默认语义
+### 身份与访问
 
 **Root User**：
-初始化唯一超级用户；拥有 Casbin 通配策略，保证首登与运维可用。
-_Avoid_: 多套默认管理员账号作为 seed 基线
+初始化唯一超级用户；持有 Casbin 通配策略，保证首登与运维可用。  
+_Avoid_: 多套默认管理员作为 seed 基线
+
+**API Resource**：
+可被授权的后端接口资源（路径 + HTTP 方法等），是角色授权的目标。  
+_Avoid_: 仅用菜单节点代替接口级授权
 
 **Role API Binding**：
-角色与 API 资源的授权关系；变更时同步反映到访问控制策略。
-_Avoid_: 仅改绑定表却不更新可执行策略
+角色与 API Resource 的授权关系；变更须同步到可执行的访问控制策略。  
+_Avoid_: 只改绑定表、不更新策略
 
 **Casbin Policy**：
-按主体（用户）+ 路径 + HTTP 方法 的 ACL 策略；初始化为 Root 通配，业务变更时按用户展开同步。
+按「主体（用户）+ 路径 + HTTP 方法」生效的 ACL 策略；业务变更时按用户展开同步。  
 _Avoid_: 未升级的 role 级 `g` 继承模型（本波不采用）
 
 **ALTCHA Challenge**：
-登录前人机校验挑战；服务端用官方 Java 库校验 payload。
+登录前人机校验挑战；服务端校验 payload 后才允许登录。  
 _Avoid_: 仅前端假校验、跳过服务端验证
 
-**Config Properties**：
-java-admin 配置统一用类型安全的 Properties 类（`@ConfigurationProperties` 按前缀聚合）注入，例如 `AltchaProperties`、`CasbinProperties`、`FlywayMigratorProperties`。
-_Avoid_: 业务或配置代码中直接使用 `@Value` 散落绑定配置键
+### 资源生命周期
 
-**API Response VO**：
-Controller 接口成功体 `Result` / `ObjectResult` 的 `data` 优先使用强类型 VO（`com.wshake.api.vo`），字段名与对外 JSON 契约对齐；批量结果、绑定结果、公钥等小对象也建专用 VO，不手写 `Map.of` / `LinkedHashMap` 拼装。
-_Avoid_: `Result<Map<…>>` 作为业务接口返回类型（除非键集合本身动态、无法稳定建模，如动态路由 `meta` 自由形态；Service/Repository 内部聚合 Map 不在此限）
+**Soft Delete**：
+核心资源删除以 `deleted_at` 毫秒时间戳标记；`0` 表示未删除。  
+_Avoid_: 核心资源默认物理 DELETE
 
-**API Request DTO**：
-Controller `@RequestBody` 入参优先使用强类型 DTO（`com.wshake.api.dto`），字段名与对外 JSON 契约对齐；创建/更新/批量等请求各建专用 Request 类。部分更新需区分「字段未出现」与「显式 null」时，在 DTO 对应字段的 setter 内置 `*Present` 标志（Jackson 仅在 JSON 出现该 key 时调用 setter），再映射到 Command 的 presence 语义。
-_Avoid_: `@RequestBody JsonNode`（含 `com.fasterxml.jackson.databind.JsonNode`：Spring Boot 4 HTTP 层为 Jackson 3/`tools.jackson`，会触发 `HttpMessageConversionException: Type definition error`）；`@RequestBody Map<String, Object>` 作为业务接口请求体（动态键集合、无法稳定建模时除外）
+**is_enabled**：
+资源启停标志，与 Soft Delete 独立：禁用 ≠ 删除。  
+_Avoid_: 用 `deleted_at` 表达「临时停用」
 
-**MapStruct Plus Mapping**：
-java-admin 各层对象映射统一用 mapstruct-plus：字段一一对应的类型转换（如 Request↔Command、Entity↔View、View↔VO、Batch/Result 等）在源或目标类型上声明 `@AutoMapper`，通过 `Converter.convert` 转换；路径参数（如 `id`）与 enrich 字段（如 `typeCode` / `roleNames`）等无法从源对象映射的，由调用方 convert 后再重建；Entity→View 目标为 **record** 时，null→`""`/`0` 等契约默认优先用 **record 紧凑构造器**规范化（勿在 record 上用 `ReverseAutoMapping.defaultValue`，会生成不可编译的 update 方法）；JSON 字符串↔`Map` 等类型不兼容字段（如 Task `retryPolicy`）保留手写映射 + `TaskJsonSupport`。
-_Avoid_: 对同名字段列表手写 `new Xxx(…get…)` / 逐字段 setter 拷贝；对 **presence 语义**（如字段是否在 JSON 中出现、`ParentIdChange` / `MetadataChange`）做朴素 AutoMapper 而丢失「省略 vs 显式 null」语义
+### 系统能力（本波实体）
+
+**User**：
+后台操作者账号（登录名、凭证、启停、软删等）。  
+_Avoid_: 用「员工 / 成员」指代同一概念
+
+**Role**：
+可挂在用户上的权限集合；可有父子层级。  
+_Avoid_: 把菜单树直接当角色模型
+
+**Menu**：
+后台导航与页面入口树；驱动动态菜单路由。  
+_Avoid_: 部门树、权限点树与菜单混称
+
+**Dict**：
+字典类型 + 字典项，供前端下拉与展示取值。  
+_Avoid_: 业务表内硬编码枚举文案作为唯一来源
+
+**i18n Locale / Message**：
+可配置的语言与文案资源，供前端与接口文案解析。  
+_Avoid_: 仅前端本地 JSON、与后端文案体系脱节（本波以可管理文案为准）
+
+**Login Log / API Log**：
+登录行为与 API 访问的审计记录。  
+_Avoid_: 用应用日志文件代替可查询的审计实体
+
+## 相关文档
+
+| 文档                                            | 用途                                             |
+| ----------------------------------------------- | ------------------------------------------------ |
+| `docs/adr/`                                     | 实现与架构决策（读相关 ADR，勿把决策写回本文件） |
+| `docs/adr/0001-typed-http-boundary.md`          | Controller DTO 入 / VO 出                        |
+| `docs/adr/0002-mapstruct-plus-layer-mapping.md` | 层间 mapstruct-plus                              |
+| `docs/adr/0003-configuration-properties.md`     | `@ConfigurationProperties`                       |
+| `backend/db/docs/db-conventions.md`             | 表/字段/软删/审计等 DB 约定                      |
+| `backend/db/docs/tables.md`                     | 表字段速查                                       |
+| `backend/db/docs/er.md`                         | ER 关系                                          |
+| `docs/agents/domain.md`                         | agent 如何消费本文件与 ADR                       |
