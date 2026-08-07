@@ -26,9 +26,14 @@ public class LogCountTickWorkflowImpl implements LogCountTickWorkflow {
                     .build());
 
     @Override
-    public void run(Map<String, Object> input) {
-        long count = activities.incrementAndLog();
+    public Map<String, Object> run(Map<String, Object> input) {
+        Map<String, Object> result = activities.incrementAndLog(input);
+        Object count = result == null ? null : result.get("count");
         Workflow.getLogger(LogCountTickWorkflowImpl.class)
-                .info("LogCountTick done count={} inputKeys={}", count, input == null ? 0 : input.size());
+                .info(
+                        "LogCountTick done count={} inputKeys={}",
+                        count,
+                        input == null ? 0 : input.size());
+        return result;
     }
 }

@@ -8,10 +8,14 @@ import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import com.wshake.service.task.TaskJsonSupport;
 import com.wshake.service.task.TemporalTaskQueue;
 import com.wshake.service.task.TemporalWorkflowType;
+import io.temporal.api.common.v1.Payloads;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
+import io.temporal.api.history.v1.HistoryEvent;
+import io.temporal.api.history.v1.WorkflowExecutionStartedEventAttributes;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionMetadata;
 import io.temporal.client.WorkflowStub;
+import io.temporal.common.converter.DataConverter;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.spring.boot.ActivityImpl;
 import java.time.Duration;
@@ -21,8 +25,10 @@ import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -35,6 +41,13 @@ import org.springframework.stereotype.Component;
  *   <li>① 读库中 PENDING/RUNNING/RETRYING 行，对每条 {@code describe} 推进状态
  *   <li>② 按业务 {@link TemporalWorkflowType#ALL} list Visibility 近 {@link #LOOKBACK} 内 run，
  *       upsert 补建（主要覆盖 Schedule 触发、无种子行）
+ * </ul>
+ *
+ * <p>摘要：
+ * <ul>
+ *   <li>{@code result_summary}：终态 {@code getResult}
+ *   <li>{@code input_summary}：History 首事件 {@code WorkflowExecutionStarted.input}；
+ *       若业务结果 Map 含 {@code input} 键也可兜底回填
  * </ul>
  *
  * @author wshake
@@ -215,7 +228,8 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         row.setStatus(status);
         row.setStartedAt(startedAt);
         row.setClosedAt(toLocal(meta.getCloseTime()));
-        row.setInputSummary(null);
+        // Schedule 触发无 DB 种子行：从 History 拉 Workflow 入参写 input_summary
+        row.setInputSummary(tryFetchInputJson(wfId, runId));
         row.setResultSummary(null);
         row.setFailureReason(null);
         row.setRetryCount(0);
@@ -237,17 +251,28 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         LocalDateTime closedAt = toLocal(meta.getCloseTime());
         String resultJson = null;
         String failure = null;
+        Object rawResult = null;
 
         if (fetchResult && isTerminal(status)) {
             ResultAndFailure rf = tryFetchResult(row.getWorkflowId(), row.getRunId(), row.getWorkflowType(), status);
             resultJson = rf.resultJson();
             failure = rf.failureReason();
+            rawResult = rf.rawResult();
+        }
+
+        String inputJson = null;
+        if (isBlank(row.getInputSummary())) {
+            inputJson = tryFetchInputJson(row.getWorkflowId(), row.getRunId());
+            if (inputJson == null) {
+                inputJson = extractInputFromResult(rawResult);
+            }
         }
 
         // 无变化则跳过写库
         if (status.equals(row.getStatus())
                 && sameTime(row.getClosedAt(), closedAt)
                 && (resultJson == null || resultJson.equals(row.getResultSummary()))
+                && (inputJson == null || inputJson.equals(row.getInputSummary()))
                 && (failure == null || failure.equals(row.getFailureReason()))) {
             return false;
         }
@@ -260,13 +285,21 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                 return false;
             }
             row.setId(reloaded.getId());
+            // 重载后可能已有 input（手动触发种子行）
+            if (isBlank(inputJson) && !isBlank(reloaded.getInputSummary())) {
+                inputJson = null;
+            }
         }
 
         // startedAt：保留种子行已有值，避免 mirror 时钟覆盖手动触发写入的启动时间
         LocalDateTime started = row.getStartedAt() != null ? row.getStartedAt() : startedAt;
-        executionRepository.updateMirror(row.getId(), status, started, closedAt, resultJson, failure, null);
+        executionRepository.updateMirror(
+                row.getId(), status, started, closedAt, resultJson, failure, null, inputJson);
         row.setStatus(status);
         row.setClosedAt(closedAt);
+        if (inputJson != null) {
+            row.setInputSummary(inputJson);
+        }
         if (resultJson != null) {
             row.setResultSummary(resultJson);
         }
@@ -285,22 +318,101 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      */
     private ResultAndFailure tryFetchResult(String workflowId, String runId, String workflowType, String status) {
         if (!"COMPLETED".equals(status) && !"FAILED".equals(status) && !"TIMED_OUT".equals(status)) {
-            return new ResultAndFailure(null, null);
+            return new ResultAndFailure(null, null, null);
         }
         try {
             WorkflowStub stub = workflowClient.newUntypedWorkflowStub(
                     workflowId, java.util.Optional.ofNullable(runId), java.util.Optional.ofNullable(workflowType));
             // 已关闭的执行 getResult 应立即返回；2s 仅防异常挂起
             Object result = stub.getResult(2, TimeUnit.SECONDS, Object.class);
-            return new ResultAndFailure(toResultJson(result), null);
+            return new ResultAndFailure(toResultJson(result), null, result);
         } catch (Exception ex) {
             String msg = rootMessage(ex);
             if ("COMPLETED".equals(status)) {
                 // void 结果或无法反序列化：不记 failure
-                return new ResultAndFailure(null, null);
+                return new ResultAndFailure(null, null, null);
             }
-            return new ResultAndFailure(null, truncate(msg, FAILURE_REASON_MAX));
+            return new ResultAndFailure(null, truncate(msg, FAILURE_REASON_MAX), null);
         }
+    }
+
+    /**
+     * 从 History 读取 Workflow 启动入参，序列化为 input_summary JSON。
+     *
+     * @param workflowId Temporal workflowId
+     * @param runId      Temporal runId（可空则最新 run）
+     * @return JSON 文本；无入参或失败时 null
+     */
+    private String tryFetchInputJson(String workflowId, String runId) {
+        if (workflowId == null || workflowId.isBlank()) {
+            return null;
+        }
+        String effectiveRunId = runId == null || runId.isBlank() ? null : runId;
+        try (Stream<HistoryEvent> stream = workflowClient.streamHistory(workflowId, effectiveRunId)) {
+            Optional<HistoryEvent> started = stream
+                    .filter(HistoryEvent::hasWorkflowExecutionStartedEventAttributes)
+                    .findFirst();
+            if (started.isEmpty()) {
+                return null;
+            }
+            return decodeStartedInput(
+                    started.get().getWorkflowExecutionStartedEventAttributes(), dataConverter());
+        } catch (Exception ex) {
+            log.debug(
+                    "fetch workflow input failed: workflowId={} runId={} reason={}",
+                    workflowId,
+                    effectiveRunId,
+                    ex.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 解码 WorkflowExecutionStarted.input → 摘要 JSON。
+     *
+     * @param attrs     启动事件属性
+     * @param converter Temporal DataConverter
+     * @return JSON；无 payload 时 null
+     */
+    static String decodeStartedInput(WorkflowExecutionStartedEventAttributes attrs, DataConverter converter) {
+        if (attrs == null || !attrs.hasInput() || converter == null) {
+            return null;
+        }
+        Payloads payloads = attrs.getInput();
+        if (payloads.getPayloadsCount() == 0) {
+            return null;
+        }
+        try {
+            Object decoded = converter.fromPayloads(0, Optional.of(payloads), Object.class, Object.class);
+            return toSummaryJson(decoded);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 业务结果 Map 若含 {@code input} 键，可作 input_summary 兜底。
+     *
+     * @param result getResult 反序列化对象
+     * @return JSON；无法提取时 null
+     */
+    static String extractInputFromResult(Object result) {
+        if (!(result instanceof Map<?, ?> map)) {
+            return null;
+        }
+        Object input = map.get("input");
+        if (input == null) {
+            return null;
+        }
+        return toSummaryJson(input);
+    }
+
+    private DataConverter dataConverter() {
+        return workflowClient.getOptions().getDataConverter();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**
@@ -399,13 +511,22 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      * @param result getResult 反序列化对象；Map 原样序列化，其它包 {@code {"value":...}}
      */
     static String toResultJson(Object result) {
-        if (result == null) {
+        return toSummaryJson(result);
+    }
+
+    /**
+     * 业务值 → 摘要 JSON（input/result 共用）。
+     *
+     * @param value 反序列化对象；Map 原样序列化，其它包 {@code {"value":...}}
+     */
+    static String toSummaryJson(Object value) {
+        if (value == null) {
             return null;
         }
-        if (result instanceof Map<?, ?>) {
-            return TaskJsonSupport.toJson(result, "resultSummary");
+        if (value instanceof Map<?, ?>) {
+            return TaskJsonSupport.toJson(value, "summary");
         }
-        return TaskJsonSupport.toJson(Map.of("value", String.valueOf(result)), "resultSummary");
+        return TaskJsonSupport.toJson(Map.of("value", String.valueOf(value)), "summary");
     }
 
     /** @param instant Temporal Instant；null → null */
@@ -489,6 +610,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      *
      * @param resultJson    写入 result_summary 的 JSON；成功且无结果时可为 null
      * @param failureReason 写入 failure_reason；成功时 null
+     * @param rawResult     原始业务结果，供从 result.input 兜底 input_summary
      */
-    private record ResultAndFailure(String resultJson, String failureReason) {}
+    private record ResultAndFailure(String resultJson, String failureReason, Object rawResult) {}
 }
