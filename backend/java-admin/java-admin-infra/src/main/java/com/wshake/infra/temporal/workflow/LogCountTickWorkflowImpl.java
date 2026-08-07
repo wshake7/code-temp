@@ -2,6 +2,7 @@ package com.wshake.infra.temporal.workflow;
 
 import com.wshake.service.task.TemporalTaskQueue;
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import java.time.Duration;
@@ -14,6 +15,9 @@ import java.util.Map;
  * {@code sleep} 死循环，避免与 Schedule 叠多实例或固定 workflowId 挡住后续调度。
  * Worker 注册队列见 {@link TemporalTaskQueue#DEMO}。
  *
+ * <p>Activity 显式重试策略（示例）：有限次数 + 短间隔，便于镜像 tick 观察到
+ * {@code RETRYING}/{@code retry_count}（见 {@link ExecutionMirrorTickActivitiesImpl}）。
+ *
  * @author wshake
  */
 @WorkflowImpl(taskQueues = TemporalTaskQueue.DEMO)
@@ -23,6 +27,12 @@ public class LogCountTickWorkflowImpl implements LogCountTickWorkflow {
             LogCountTickActivities.class,
             ActivityOptions.newBuilder()
                     .setStartToCloseTimeout(Duration.ofSeconds(30))
+                    .setRetryOptions(RetryOptions.newBuilder()
+                            .setMaximumAttempts(5)
+                            .setInitialInterval(Duration.ofSeconds(2))
+                            .setBackoffCoefficient(1.5)
+                            .setMaximumInterval(Duration.ofSeconds(10))
+                            .build())
                     .build());
 
     @Override

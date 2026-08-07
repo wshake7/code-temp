@@ -12,7 +12,10 @@ import io.temporal.api.common.v1.Payloads;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.history.v1.HistoryEvent;
 import io.temporal.api.history.v1.WorkflowExecutionStartedEventAttributes;
+import io.temporal.api.failure.v1.Failure;
+import io.temporal.api.workflow.v1.PendingActivityInfo;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowExecutionMetadata;
 import io.temporal.client.WorkflowStub;
 import io.temporal.common.converter.DataConverter;
@@ -25,6 +28,7 @@ import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +52,14 @@ import org.springframework.stereotype.Component;
  *   <li>{@code result_summary}：终态 {@code getResult}
  *   <li>{@code input_summary}：History 首事件 {@code WorkflowExecutionStarted.input}；
  *       若业务结果 Map 含 {@code input} 键也可兜底回填
+ * </ul>
+ *
+ * <p>重试镜像（Activity 级）：
+ * <ul>
+ *   <li>describe 返回的 {@link WorkflowExecutionDescription} 含 {@code pending_activities}
+ *   <li>Workflow 仍为 RUNNING 时，若 pending 的 attempt 大于 1 或已有 {@code last_failure}，
+ *       映射为业务 status {@code RETRYING}，{@code retry_count = max(0, attempt - 1)}
+ *   <li>Visibility list 元数据无 pending，无法推断重试；开放行由双轨① describe 覆盖
  * </ul>
  *
  * @author wshake
@@ -246,7 +258,9 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      * @return true=执行了 updateMirror；false=与库内一致跳过
      */
     private boolean applySnapshot(TemporalTaskExecution row, WorkflowExecutionMetadata meta, boolean fetchResult) {
-        String status = mapStatus(meta.getStatus());
+        String baseStatus = mapStatus(meta.getStatus());
+        RetrySnapshot retry = extractRetrySnapshot(meta);
+        String status = resolveOpenStatus(baseStatus, retry);
         LocalDateTime startedAt = toLocal(meta.getStartTime() != null ? meta.getStartTime() : meta.getExecutionTime());
         LocalDateTime closedAt = toLocal(meta.getCloseTime());
         String resultJson = null;
@@ -258,6 +272,9 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             resultJson = rf.resultJson();
             failure = rf.failureReason();
             rawResult = rf.rawResult();
+        } else if (!isTerminal(status) && !isBlank(retry.lastFailureMessage())) {
+            // 重试中展示最近一次 Activity 失败原因，便于 UI 观察
+            failure = truncate(retry.lastFailureMessage(), FAILURE_REASON_MAX);
         }
 
         String inputJson = null;
@@ -268,12 +285,14 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             }
         }
 
+        Integer retryCount = retry.retryCount();
         // 无变化则跳过写库
         if (status.equals(row.getStatus())
                 && sameTime(row.getClosedAt(), closedAt)
                 && (resultJson == null || resultJson.equals(row.getResultSummary()))
                 && (inputJson == null || inputJson.equals(row.getInputSummary()))
-                && (failure == null || failure.equals(row.getFailureReason()))) {
+                && (failure == null || failure.equals(row.getFailureReason()))
+                && (retryCount == null || Objects.equals(retryCount, row.getRetryCount()))) {
             return false;
         }
 
@@ -294,7 +313,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         // startedAt：保留种子行已有值，避免 mirror 时钟覆盖手动触发写入的启动时间
         LocalDateTime started = row.getStartedAt() != null ? row.getStartedAt() : startedAt;
         executionRepository.updateMirror(
-                row.getId(), status, started, closedAt, resultJson, failure, null, inputJson);
+                row.getId(), status, started, closedAt, resultJson, failure, retryCount, inputJson);
         row.setStatus(status);
         row.setClosedAt(closedAt);
         if (inputJson != null) {
@@ -302,6 +321,9 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         }
         if (resultJson != null) {
             row.setResultSummary(resultJson);
+        }
+        if (retryCount != null) {
+            row.setRetryCount(retryCount);
         }
         row.setFailureReason(failure);
         return true;
@@ -476,6 +498,81 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
     }
 
     /**
+     * 在 Workflow 仍为 RUNNING 时，结合 Activity pending 信息提升为 {@code RETRYING}。
+     *
+     * @param baseStatus {@link #mapStatus} 结果
+     * @param retry      describe 提取的重试快照；未知时不改 status
+     */
+    static String resolveOpenStatus(String baseStatus, RetrySnapshot retry) {
+        if (retry == null || !retry.known()) {
+            return baseStatus;
+        }
+        if ("RUNNING".equals(baseStatus) && retry.activityRetrying()) {
+            return "RETRYING";
+        }
+        return baseStatus;
+    }
+
+    /**
+     * 从 describe/list 元数据提取 Activity 重试快照。
+     *
+     * <p>仅 {@link WorkflowExecutionDescription}（stub.describe）带 pending_activities；
+     * Visibility list 的 {@link WorkflowExecutionMetadata} 视为未知（不覆盖库内 retry_count）。
+     */
+    static RetrySnapshot extractRetrySnapshot(WorkflowExecutionMetadata meta) {
+        if (!(meta instanceof WorkflowExecutionDescription description)) {
+            return RetrySnapshot.unknown();
+        }
+        List<PendingActivityInfo> pending;
+        try {
+            pending = description.getRawDescription().getPendingActivitiesList();
+        } catch (RuntimeException ex) {
+            return RetrySnapshot.unknown();
+        }
+        if (pending.isEmpty()) {
+            // describe 已知无 pending：非 Activity 重试中；retry_count 不主动清零（保留历史峰值）
+            return RetrySnapshot.notRetrying();
+        }
+        int maxAttempt = 0;
+        String lastFailure = null;
+        for (PendingActivityInfo info : pending) {
+            if (info == null) {
+                continue;
+            }
+            maxAttempt = Math.max(maxAttempt, info.getAttempt());
+            if (info.hasLastFailure()) {
+                String msg = failureMessage(info.getLastFailure());
+                if (!isBlank(msg)) {
+                    lastFailure = msg;
+                }
+            }
+        }
+        int retryCount = retryCountFromAttempt(maxAttempt);
+        // attempt>1：已进入第 N 次执行；attempt=1 但已有 last_failure：首败后等待下一次
+        boolean retrying = maxAttempt > 1 || !isBlank(lastFailure);
+        return new RetrySnapshot(true, retrying, retryCount, lastFailure);
+    }
+
+    /**
+     * Temporal Activity attempt（从 1 起）→ 镜像 retry_count（首次执行为 0）。
+     *
+     * @param attempt pending activity 的 attempt；≤0 视为 0
+     */
+    static int retryCountFromAttempt(int attempt) {
+        return Math.max(0, attempt - 1);
+    }
+
+    /** Failure.message，空则 null。 */
+    static String failureMessage(Failure failure) {
+        if (failure == null) {
+            return null;
+        }
+        // protobuf getter 不返回 null，空串视为无消息
+        String msg = failure.getMessage().trim();
+        return msg.isEmpty() ? null : msg;
+    }
+
+    /**
      * 是否为镜像表终态（非 PENDING/RUNNING/RETRYING）。
      *
      * @param status 镜像 status 字符串
@@ -613,4 +710,24 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      * @param rawResult     原始业务结果，供从 result.input 兜底 input_summary
      */
     private record ResultAndFailure(String resultJson, String failureReason, Object rawResult) {}
+
+    /**
+     * Activity 重试快照（来自 describe pending_activities）。
+     *
+     * @param known               是否来自 describe（false=Visibility list 等未知源）
+     * @param activityRetrying    是否判定为 Activity 重试中
+     * @param retryCount          写入 retry_count；unknown 时为 null（不覆盖库内值）
+     * @param lastFailureMessage  pending last_failure.message；无则 null
+     */
+    record RetrySnapshot(boolean known, boolean activityRetrying, Integer retryCount, String lastFailureMessage) {
+
+        static RetrySnapshot unknown() {
+            return new RetrySnapshot(false, false, null, null);
+        }
+
+        /** describe 已知无 pending：不在 Activity 重试中，且不改 retry_count。 */
+        static RetrySnapshot notRetrying() {
+            return new RetrySnapshot(true, false, null, null);
+        }
+    }
 }
