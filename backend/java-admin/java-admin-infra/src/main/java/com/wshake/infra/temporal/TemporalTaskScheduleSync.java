@@ -2,12 +2,10 @@ package com.wshake.infra.temporal;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
-import com.wshake.infra.temporal.workflow.JobDispatchModels;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
 import com.wshake.service.task.TaskJsonSupport;
-import com.wshake.service.task.TemporalWorkflowType;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.client.WorkflowOptions;
@@ -201,11 +199,10 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                 handle.unpause("enabled in DB on startup sync");
             }
             log.info(
-                    "Temporal schedule updated: scheduleId={} code={} {} dispatch={} businessType={}",
+                    "Temporal schedule updated: scheduleId={} code={} {} businessType={}",
                     scheduleId,
                     config.getCode(),
                     cadence,
-                    TemporalWorkflowType.JOB_DISPATCH,
                     config.getWorkflowType());
             return;
         }
@@ -217,11 +214,10 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                     schedule,
                     ScheduleOptions.newBuilder().setTriggerImmediately(true).build());
             log.info(
-                    "Temporal schedule created: scheduleId={} code={} {} dispatch={} businessType={}",
+                    "Temporal schedule created: scheduleId={} code={} {} businessType={}",
                     scheduleId,
                     config.getCode(),
                     cadence,
-                    TemporalWorkflowType.JOB_DISPATCH,
                     config.getWorkflowType());
         } catch (ScheduleAlreadyRunningException ex) {
             // 并发启动竞态：改 update
@@ -255,12 +251,13 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
 
         // Schedule 动作禁止改 WorkflowIdReusePolicy（须保持 SDK 默认）。
         // workflowId 作前缀即可：每次调度由 Temporal 生成唯一 Id，避免固定 Id 挡住后续拍。
-        WorkflowOptions.Builder options =
-                WorkflowOptions.newBuilder().setWorkflowId("sched-" + code).setTaskQueue(taskQueue);
+        WorkflowOptions.Builder options = WorkflowOptions.newBuilder()
+                .setWorkflowId(TemporalTaskTriggerPort.buildScheduleWorkflowIdPrefix(code))
+                .setTaskQueue(taskQueue)
+                .setMemo(TemporalTaskTriggerPort.buildMemo(config.getId(), code));
 
         if (config.getTimeoutSeconds() != null && config.getTimeoutSeconds() > 0) {
-            long parentSeconds = Math.max(config.getTimeoutSeconds() + 60L, config.getTimeoutSeconds() * 2L);
-            options.setWorkflowExecutionTimeout(Duration.ofSeconds(parentSeconds));
+            options.setWorkflowExecutionTimeout(Duration.ofSeconds(config.getTimeoutSeconds()));
         }
 
         Map<String, Object> retryPolicy = TaskJsonSupport.parseObject(config.getRetryPolicy(), "retryPolicy");
@@ -276,22 +273,11 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
             businessInput.put("configId", config.getId());
         }
 
-        JobDispatchModels.DispatchInput dispatchInput = new JobDispatchModels.DispatchInput(
-                config.getId(),
-                code,
-                businessWorkflowType,
-                taskQueue,
-                code,
-                config.getTimeoutSeconds(),
-                retryPolicy,
-                businessInput,
-                0);
-
-        // 统一走 JobDispatchWorkflow，由 Activity 落库执行记录（对齐 Go temporaljob）
+        // 直启业务 Workflow；执行记录由 ExecutionMirrorTick 镜像
         ScheduleActionStartWorkflow action = ScheduleActionStartWorkflow.newBuilder()
-                .setWorkflowType(TemporalWorkflowType.JOB_DISPATCH)
+                .setWorkflowType(businessWorkflowType)
                 .setOptions(options.build())
-                .setArguments(dispatchInput)
+                .setArguments(businessInput)
                 .build();
 
         ScheduleSpec.Builder specBuilder = ScheduleSpec.newBuilder();

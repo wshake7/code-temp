@@ -11,9 +11,10 @@ import lombok.Data;
 /**
  * Temporal 执行记录镜像（对齐 schema {@code temporal_task_execution}）。
  *
- * <p>派发时 insert {@code PENDING}（{@code startedAt=null}），child 实际启动后 update
- * {@code RUNNING} 并写入 {@code startedAt}，结束后 update 终态（status / result / failure /
- * closedAt）；无软删、无 {@code updated_at}，故不继承 {@link BaseEntity}。
+ * <p>手动触发：start 业务 WF 后立即 insert 种子行（通常 {@code RUNNING} + 真实 workflowId/runId）；
+ * Schedule 触发：由镜像 tick 从 Visibility 发现后 upsert。状态/结果由
+ * {@code ExecutionMirrorTick} 定时对账推进；无软删、无 {@code updated_at}，故不继承
+ * {@link BaseEntity}。
  *
  * @author wshake
  */

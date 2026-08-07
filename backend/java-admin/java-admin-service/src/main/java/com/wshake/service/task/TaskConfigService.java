@@ -5,11 +5,13 @@ import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
 import com.wshake.service.entity.TemporalTaskConfig;
+import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.port.TaskTriggerPort;
 import com.wshake.service.port.TaskTriggerPort.TriggerRequest;
 import com.wshake.service.port.TaskTriggerPort.TriggerResult;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
+import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import com.wshake.service.task.TaskManageModels.CreateTaskConfigCommand;
 import com.wshake.service.task.TaskManageModels.TaskBatchCommand;
 import com.wshake.service.task.TaskManageModels.TaskBatchResult;
@@ -46,6 +48,7 @@ public class TaskConfigService {
     private static final Pattern CODE_RE = Pattern.compile(TaskManageModels.CODE_PATTERN);
 
     private final TemporalTaskConfigRepository configRepository;
+    private final TemporalTaskExecutionRepository executionRepository;
     private final TaskTriggerPort taskTriggerPort;
     private final TaskSchedulePort taskSchedulePort;
 
@@ -217,7 +220,6 @@ public class TaskConfigService {
             List<Long> triggered = new ArrayList<>();
             for (TemporalTaskConfig t : enabled) {
                 TaskExecutionView exec = doTrigger(t);
-                // 记录由 Dispatch Activity 异步写入；同步响应可能尚无 DB id
                 if (exec.id() != null) {
                     executionIds.add(exec.id());
                 }
@@ -257,10 +259,7 @@ public class TaskConfigService {
     }
 
     /**
-     * 启动 JobDispatchWorkflow；执行记录由 Dispatch 内 Activity 异步写入（child 的 workflowId/runId）。
-     *
-     * <p>本方法立即返回的 {@link TaskExecutionView} 仅含派发父 WF 标识与配置快照，
-     * {@code id} 为 null（列表接口刷新后可见完整记录）。
+     * 直启业务 Workflow，并立即插入 RUNNING 种子行；终态由 ExecutionMirrorTick 对账推进。
      */
     private TaskExecutionView doTrigger(TemporalTaskConfig config) {
         Map<String, Object> input = new LinkedHashMap<>();
@@ -281,18 +280,32 @@ public class TaskConfigService {
                 input));
 
         LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
-        // 执行记录由 JobDispatch CreateExecution Activity 落库；此处不写 DB。
-        // 立即返回 PENDING 且 startedAt 为空；child 实际启动后 Activity 写 startedAt 并推进 RUNNING。
+        TemporalTaskExecution row = new TemporalTaskExecution();
+        row.setConfigId(config.getId());
+        row.setWorkflowId(started.workflowId());
+        row.setRunId(started.runId());
+        row.setWorkflowType(config.getWorkflowType());
+        row.setTaskQueue(config.getTaskQueue());
+        row.setStatus("RUNNING");
+        row.setStartedAt(now);
+        row.setClosedAt(null);
+        row.setInputSummary(TaskJsonSupport.toJson(input, "inputSummary"));
+        row.setResultSummary(null);
+        row.setFailureReason(null);
+        row.setRetryCount(0);
+        row.setCreatedAt(now);
+        executionRepository.insert(row);
+
         return new TaskExecutionView(
-                null,
+                row.getId(),
                 config.getId(),
                 config.getName(),
                 started.workflowId(),
                 started.runId(),
                 config.getWorkflowType(),
                 config.getTaskQueue(),
-                "PENDING",
-                null,
+                "RUNNING",
+                now,
                 null,
                 input,
                 null,

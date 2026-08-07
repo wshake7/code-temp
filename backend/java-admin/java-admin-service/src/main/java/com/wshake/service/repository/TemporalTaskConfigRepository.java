@@ -30,6 +30,17 @@ public class TemporalTaskConfigRepository {
                 .firstOrNull();
     }
 
+    /** 按任务编码查活跃配置（镜像挂 config_id 时用）。 */
+    public TemporalTaskConfig findByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        return easyEntityQuery
+                .queryable(TemporalTaskConfig.class)
+                .where(t -> t.code().eq(code.trim()))
+                .firstOrNull();
+    }
+
     public boolean existsByCode(String code, Long excludeId) {
         return easyEntityQuery
                 .queryable(TemporalTaskConfig.class)

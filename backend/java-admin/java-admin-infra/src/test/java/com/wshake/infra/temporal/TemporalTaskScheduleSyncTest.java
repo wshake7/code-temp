@@ -115,10 +115,10 @@ class TemporalTaskScheduleSyncTest {
         assertThat(schedule.getSpec().getCronExpressions()).containsExactly("0 0 2 * * *");
         assertThat(schedule.getAction()).isInstanceOf(ScheduleActionStartWorkflow.class);
         ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) schedule.getAction();
-        assertThat(action.getWorkflowType()).isEqualTo("JobDispatchWorkflow");
+        assertThat(action.getWorkflowType()).isEqualTo("LogCountTickWorkflow");
         assertThat(action.getOptions().getTaskQueue()).isEqualTo("demo");
         assertThat(action.getOptions().getWorkflowId()).isEqualTo("sched-log_count_tick");
-        // EncodedValues 在无 DataConverter 时不便反查；派发类型断言即可
+        assertThat(action.getOptions().getMemo()).containsEntry("configCode", "log_count_tick");
         assertThat(action.getArguments()).isNotNull();
         assertThat(schedule.getSpec().getIntervals()).isNullOrEmpty();
         verify(handle, never()).update(any());

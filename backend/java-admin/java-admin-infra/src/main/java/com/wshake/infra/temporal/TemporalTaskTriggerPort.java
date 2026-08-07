@@ -2,9 +2,7 @@ package com.wshake.infra.temporal;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
-import com.wshake.infra.temporal.workflow.JobDispatchModels;
 import com.wshake.service.port.TaskTriggerPort;
-import com.wshake.service.task.TemporalWorkflowType;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -15,6 +13,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
@@ -23,8 +22,8 @@ import org.slf4j.LoggerFactory;
 /**
  * 基于 Temporal {@link WorkflowClient} 的任务触发实现。
  *
- * <p>启动 {@link TemporalWorkflowType#JOB_DISPATCH} 包装 Workflow（而非直接启动业务类型）；
- * 由 {@link TemporalTaskTriggerConfiguration} 在 Temporal 连接属性启用时注册。
+ * <p>直接启动业务 Workflow（不再经 JobDispatch 包装）；Memo 写入 {@code configId}/{@code configCode}
+ * 供镜像 tick 挂接。由 {@link TemporalTaskTriggerConfiguration} 在 Temporal 连接属性启用时注册。
  *
  * @author wshake
  */
@@ -33,6 +32,11 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
     private static final Logger log = LoggerFactory.getLogger(TemporalTaskTriggerPort.class);
 
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    /** Memo / workflowId 约定字段（与 Schedule / 镜像解析共用）。 */
+    public static final String MEMO_CONFIG_ID = "configId";
+
+    public static final String MEMO_CONFIG_CODE = "configCode";
 
     private final WorkflowClient workflowClient;
     private final AtomicLong seq = new AtomicLong(0);
@@ -50,14 +54,11 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
         String taskQueue = requireNonBlank(request.taskQueue(), "taskQueue");
         String workflowId = buildWorkflowId(request.code());
 
-        // 超时/重试挂在 Dispatch 父 WF；子业务侧在 JobDispatchWorkflow 内再套一份
         WorkflowOptions.Builder options =
                 WorkflowOptions.newBuilder().setWorkflowId(workflowId).setTaskQueue(taskQueue);
 
         if (request.timeoutSeconds() != null && request.timeoutSeconds() > 0) {
-            // 父 WF 需覆盖 child + activity，略放宽
-            long parentSeconds = Math.max(request.timeoutSeconds() + 60L, request.timeoutSeconds() * 2L);
-            options.setWorkflowExecutionTimeout(Duration.ofSeconds(parentSeconds));
+            options.setWorkflowExecutionTimeout(Duration.ofSeconds(request.timeoutSeconds()));
         }
 
         RetryOptions retryOptions = toRetryOptions(request.retryPolicy());
@@ -65,24 +66,15 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
             options.setRetryOptions(retryOptions);
         }
 
+        options.setMemo(buildMemo(request.configId(), request.code()));
+
         Map<String, Object> businessInput = request.input() == null ? Map.of() : request.input();
-        JobDispatchModels.DispatchInput dispatchInput = new JobDispatchModels.DispatchInput(
-                request.configId(),
-                request.code(),
-                businessWorkflowType,
-                taskQueue,
-                request.code(),
-                request.timeoutSeconds(),
-                request.retryPolicy(),
-                businessInput,
-                0);
 
         try {
-            WorkflowStub stub =
-                    workflowClient.newUntypedWorkflowStub(TemporalWorkflowType.JOB_DISPATCH, options.build());
-            WorkflowExecution execution = stub.start(dispatchInput);
+            WorkflowStub stub = workflowClient.newUntypedWorkflowStub(businessWorkflowType, options.build());
+            WorkflowExecution execution = stub.start(businessInput);
             log.info(
-                    "Temporal dispatch started: businessType={} queue={} workflowId={} runId={}",
+                    "Temporal workflow started: type={} queue={} workflowId={} runId={}",
                     businessWorkflowType,
                     taskQueue,
                     execution.getWorkflowId(),
@@ -95,15 +87,67 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
         }
     }
 
-    private String buildWorkflowId(String code) {
+    /**
+     * 手动触发 workflowId：{@code wf-{code}-{yyyyMMddHHmmss}-{seq}}。
+     */
+    public static String buildManualWorkflowId(String code, long seq, LocalDateTime stamp) {
         String safe = code == null || code.isBlank() ? "task" : code.trim();
-        long n = seq.incrementAndGet();
-        String stamp = LocalDateTime.now(ZoneId.systemDefault()).format(STAMP);
-        return "wf-" + safe + "-" + stamp + "-" + n;
+        String ts = stamp.format(STAMP);
+        return "wf-" + safe + "-" + ts + "-" + seq;
     }
 
     /**
-     * 将配置侧 JSON 对象映射为 Temporal {@link RetryOptions}（供 trigger / schedule / dispatch 复用）。
+     * Schedule 动作 workflowId 前缀：{@code sched-{code}}（Temporal 会追加唯一后缀）。
+     */
+    public static String buildScheduleWorkflowIdPrefix(String code) {
+        String safe = code == null || code.isBlank() ? "task" : code.trim();
+        return "sched-" + safe;
+    }
+
+    /**
+     * 从 workflowId 解析 config code（{@code wf-|sched-} 前缀约定）。
+     */
+    public static String parseConfigCodeFromWorkflowId(String workflowId) {
+        if (workflowId == null || workflowId.isBlank()) {
+            return null;
+        }
+        String id = workflowId.trim();
+        String prefix = null;
+        if (id.startsWith("wf-")) {
+            prefix = "wf-";
+        } else if (id.startsWith("sched-")) {
+            prefix = "sched-";
+        }
+        if (prefix == null) {
+            return null;
+        }
+        String rest = id.substring(prefix.length());
+        if (rest.isEmpty()) {
+            return null;
+        }
+        int dash = rest.indexOf('-');
+        String code = dash < 0 ? rest : rest.substring(0, dash);
+        return code.isBlank() ? null : code;
+    }
+
+    public static Map<String, Object> buildMemo(Long configId, String configCode) {
+        Map<String, Object> memo = new LinkedHashMap<>();
+        if (configId != null) {
+            memo.put(MEMO_CONFIG_ID, configId);
+        }
+        if (configCode != null && !configCode.isBlank()) {
+            memo.put(MEMO_CONFIG_CODE, configCode.trim());
+        }
+        return memo;
+    }
+
+    private String buildWorkflowId(String code) {
+        long n = seq.incrementAndGet();
+        return buildManualWorkflowId(code, n, LocalDateTime.now(ZoneId.systemDefault()));
+    }
+
+    /**
+     * 将配置侧 JSON 对象映射为 Temporal {@link RetryOptions}（供 trigger / schedule 复用）。
      *
      * <p>兼容 mock/seed 字段：{@code maxAttempts}、{@code initialInterval}（如 {@code 30s}）、
      * {@code backoff}。

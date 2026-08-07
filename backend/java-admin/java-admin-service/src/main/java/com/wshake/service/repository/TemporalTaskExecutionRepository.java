@@ -4,17 +4,22 @@ import com.easy.query.api.proxy.client.EasyEntityQuery;
 import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.service.entity.TemporalTaskExecution;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * 任务执行记录 Repository（insert + 终态 update + 分页/详情查询）。
+ * 任务执行记录 Repository（种子 insert + 镜像 update + 分页/详情查询）。
  *
  * @author wshake
  */
 @Component
 @RequiredArgsConstructor
 public class TemporalTaskExecutionRepository {
+
+    /** 未终态：镜像 tick 优先 describe 推进。 */
+    public static final List<String> OPEN_STATUSES = List.of("PENDING", "RUNNING", "RETRYING");
 
     private final EasyEntityQuery easyEntityQuery;
 
@@ -23,6 +28,35 @@ public class TemporalTaskExecutionRepository {
                 .queryable(TemporalTaskExecution.class)
                 .where(t -> t.id().eq(id))
                 .firstOrNull();
+    }
+
+    public TemporalTaskExecution findByWorkflowIdAndRunId(String workflowId, String runId) {
+        if (workflowId == null || workflowId.isBlank() || runId == null || runId.isBlank()) {
+            return null;
+        }
+        return easyEntityQuery
+                .queryable(TemporalTaskExecution.class)
+                .where(t -> {
+                    t.workflowId().eq(workflowId.trim());
+                    t.runId().eq(runId.trim());
+                })
+                .firstOrNull();
+    }
+
+    /**
+     * 未终态记录（供镜像 tick 双轨①）。
+     */
+    public List<TemporalTaskExecution> listOpen(int limit) {
+        int size = limit <= 0 ? 200 : Math.min(limit, 500);
+        return easyEntityQuery
+                .queryable(TemporalTaskExecution.class)
+                .where(t -> t.status().in(OPEN_STATUSES))
+                .orderBy(t -> {
+                    t.createdAt().asc();
+                    t.id().asc();
+                })
+                .limit(size)
+                .toList();
     }
 
     public EasyPageResult<TemporalTaskExecution> page(
@@ -55,38 +89,54 @@ public class TemporalTaskExecutionRepository {
     }
 
     /**
-     * 将 PENDING 记录推进为 RUNNING：写入 child 真实 workflowId/runId，并设置 startedAt。
+     * 按主键更新镜像字段（状态 / 摘要 / 时间）。
      *
      * @return 影响行数
      */
-    public long markRunning(Long id, String workflowId, String runId, LocalDateTime startedAt) {
+    public long updateMirror(
+            Long id,
+            String status,
+            LocalDateTime startedAt,
+            LocalDateTime closedAt,
+            String resultSummary,
+            String failureReason,
+            Integer retryCount) {
         return easyEntityQuery
                 .updatable(TemporalTaskExecution.class)
                 .setColumns(t -> {
-                    t.status().set("RUNNING");
-                    t.workflowId().set(workflowId);
-                    t.runId().set(runId);
-                    t.startedAt().set(startedAt);
+                    t.status().set(status);
+                    if (startedAt != null) {
+                        t.startedAt().set(startedAt);
+                    }
+                    t.closedAt().set(closedAt);
+                    if (resultSummary != null) {
+                        t.resultSummary().set(resultSummary);
+                    }
+                    t.failureReason().set(failureReason);
+                    if (retryCount != null) {
+                        t.retryCount().set(retryCount);
+                    }
                 })
                 .where(t -> t.id().eq(id))
                 .executeRows();
     }
 
     /**
-     * 将执行记录更新为终态。
+     * 将执行记录更新为终态（兼容旧调用点；新路径优先 {@link #updateMirror}）。
      *
      * @return 影响行数
      */
     public long complete(Long id, String status, String resultSummary, String failureReason, LocalDateTime closedAt) {
-        return easyEntityQuery
-                .updatable(TemporalTaskExecution.class)
-                .setColumns(t -> {
-                    t.status().set(status);
-                    t.resultSummary().set(resultSummary);
-                    t.failureReason().set(failureReason);
-                    t.closedAt().set(closedAt);
-                })
-                .where(t -> t.id().eq(id))
-                .executeRows();
+        return updateMirror(id, status, null, closedAt, resultSummary, failureReason, null);
+    }
+
+    /** 是否为未终态 status。 */
+    public static boolean isOpenStatus(String status) {
+        return status != null && OPEN_STATUSES.contains(status);
+    }
+
+    /** 是否为已知未终态集合中的任一项（供测试/调用方）。 */
+    public static Collection<String> openStatuses() {
+        return OPEN_STATUSES;
     }
 }

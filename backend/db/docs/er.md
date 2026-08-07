@@ -250,8 +250,10 @@
 
 - admin **不**直接读写 Temporal 内部表
 - admin 通过 Temporal SDK（Go: `go.temporal.io/sdk/client`；Java: `io.temporal.sdk`）调 Temporal Server
-- admin 后端启动一个 listener，从 Temporal SDK 事件流读 execution 状态变化，**异步**镜像到 `temporal_task_execution`
-- 镜像有最终一致性窗口（毫秒~秒级）；admin UI 如需实时状态，调 Temporal SDK 直查
+- admin 后端通过系统 Schedule `sys-execution-mirror`（约 3s / overlap=SKIP）跑 `ExecutionMirrorTickWorkflow`，
+  用 Temporal SDK **list/describe** 将执行状态**异步**镜像到 `temporal_task_execution`
+- 手动触发：start 业务 WF 后立即插入 RUNNING 种子行；Schedule 触发靠 Visibility 发现 upsert
+- 镜像有最终一致性窗口（秒级）；admin UI 如需实时状态，可另调 Temporal SDK 直查
 
 ---
 

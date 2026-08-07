@@ -18,11 +18,11 @@ public final class TemporalWorkflowType {
     public static final String LOG_COUNT_TICK = "LogCountTickWorkflow";
 
     /**
-     * 内部派发包装 Workflow：启动子业务 WF 并落库执行记录。
+     * 系统镜像 tick：定时 list/describe Temporal 执行并 upsert {@code temporal_task_execution}。
      *
-     * <p><b>不进入</b> {@link #ALL}，任务配置 create/update 不可选用。
+     * <p><b>不进入</b> {@link #ALL}，任务配置 create/update 不可选用；由系统 Schedule 驱动。
      */
-    public static final String JOB_DISPATCH = "JobDispatchWorkflow";
+    public static final String EXECUTION_MIRROR_TICK = "ExecutionMirrorTickWorkflow";
 
     /** 全部合法业务 workflow type（任务配置门禁）。 */
     public static final List<String> ALL = List.of(LOG_COUNT_TICK);
