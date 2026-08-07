@@ -2,68 +2,81 @@
 # 取代 Vite+ 的 `vp config` 安装时注入 hook,改为单一版本受控配置;vue-vben-admin 子模块自带 lefthook.yml。
 # Escape hatch: LEFTHOOK=0 git commit / git commit --no-verify
 # Docs: https://lefthook.dev/configuration/
+#
+# 约定:
+# - 设了 root 后,glob / {staged_files}/{push_files} 都相对 root,不要再写 apps/xxx 前缀。
+# - 会改写文件的任务加 stage_fixed;只读校验不要加。
+# - 同路径上「先改写再校验」必须串行(同一 run 或 piped group),不要与 parallel 竞态。
 
 pre-commit:
   parallel: true
-  commands:
-    format:staged:
+  jobs:
+    - name: format:staged
       run: pnpm exec vp staged
       stage_fixed: true
-    lint:react-admin:
+
+    - name: lint:react-admin
       # react-admin 不在根 workspace,单独跑 ESLint。
       root: "apps/react-admin/"
       glob: "**/*.{ts,tsx}"
       run: pnpm eslint --fix {staged_files}
       stage_fixed: true
-    typecheck:react-admin:
-      # glob 限定 react-admin 路径,只在有暂存改动时触发。
+
+    - name: typecheck:react-admin
       root: "apps/react-admin/"
-      glob: "apps/react-admin/**/*.{ts,tsx}"
+      # 与 lint 一致:root 下用相对 glob,否则匹配不到 src/** 永远 skip。
+      glob: "**/*.{ts,tsx}"
       run: pnpm typecheck
-    cspell:staged:
-      glob: "{apps/backend-mock-template/**/*.{ts,tsx},*.md,*.yml}"
-      run: pnpm exec cspell lint --no-progress 'apps/backend-mock-template/**/*.ts' 'apps/backend-mock-template/**/*.tsx' '*.md' '*.yml'
-    secret-scan:
-      # exec 短路确保 gitleaks 失败退出码不被 echo 覆盖成 0;未装则 skip。
-      run: sh -c 'command -v gitleaks >/dev/null 2>&1 && exec gitleaks protect --staged --redact --no-banner; echo skip:gitleaks-not-installed'
-    format:java:
-      # 先语义改写（lambda→方法引用），再 Spotless 格式化；Checkstyle 无法覆盖前者。
+
+    - name: cspell:staged
+      glob:
+        - "apps/backend-mock-template/**/*.{ts,tsx}"
+        - "*.md"
+        - "*.yml"
+      # 只扫本次暂存命中文件;--no-must-find-files 避免空列表时 cspell 非 0。
+      run: pnpm exec cspell lint --no-progress --no-must-find-files {staged_files}
+
+    - name: secret-scan
+      # 已安装 gitleaks 时透传退出码;未安装则 skip(exit 0)。exec 避免后续语句盖掉失败码。
+      run: sh -c 'if command -v gitleaks >/dev/null 2>&1; then exec gitleaks protect --staged --redact --no-banner; else echo skip:gitleaks-not-installed; fi'
+
+    - name: java
+      # 一次 Maven 进程串行:语义改写 → Spotless → Checkstyle。
+      # 比拆成 3 个 parallel 命令更稳(无竞态),也少启动 JVM。
+      # rewrite:run 已应用方法引用,无需再 rewrite:dryRun。
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -q -f backend/java-admin/pom.xml rewrite:run spotless:apply
-      stage_fixed: true
-    check:java-style:
-      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -f backend/java-admin/pom.xml checkstyle:check
-    check:java-method-ref:
-      # 对齐 IDEA “Lambda can be replaced with method reference”；failOnDryRunResults=true
-      glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
-      run: mvn -B -f backend/java-admin/pom.xml rewrite:dryRun
+      run: mvn -B -f backend/java-admin/pom.xml rewrite:run spotless:apply checkstyle:check
       stage_fixed: true
 
 post-merge:
-  parallel: true
-  commands:
-    deps:install:
-      glob: "pnpm-lock.yaml"
+  jobs:
+    - name: deps:install
+      # lock / 清单任一变更都重装,避免只改 package.json 漏装。
+      glob:
+        - "pnpm-lock.yaml"
+        - "package.json"
+        - "pnpm-workspace.yaml"
       run: pnpm install --frozen-lockfile=false
 
 pre-push:
   parallel: true
-  commands:
-    check:full:
+  jobs:
+    - name: check:full
       # 只读 check;--fix 改 working tree 但不进 commit,留给 pre-commit 的 stage_fixed。
       run: pnpm exec vp check
-    lint:react-admin:
+
+    - name: lint:react-admin
       root: "apps/react-admin/"
-      glob: "apps/react-admin/**/*.{ts,tsx}"
+      glob: "**/*.{ts,tsx}"
       run: pnpm eslint {push_files}
-    check:java-types:
-      # WARN 不阻断,ERROR 阻断;`mvn verify` 也跑 compile 做安全网。
+
+    - name: check:java-types
+      # 编译作安全网;WARN 不阻断,ERROR 阻断。
       glob: "backend/java-admin/**/src/{main,test}/java/**/*.java"
       run: mvn -B -q -f backend/java-admin/pom.xml -DskipTests compile
 
 commit-msg:
-  commands:
-    commitlint:
+  jobs:
+    - name: commitlint
       # vue-vben-admin 子目录 commit 时走自己的 .commitlintrc.js,根 commit 走 @commitlint/config-conventional。
       run: pnpm exec commitlint --edit "$1"
