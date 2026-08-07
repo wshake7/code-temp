@@ -8,16 +8,24 @@ import java.util.List;
  * 已注册 Temporal task queue 常量（与 {@code @WorkflowImpl(taskQueues=...)} 对齐）。
  *
  * <p>使用常量类而非枚举，便于注解引用编译期常量；任务配置 create/update 时必须命中
- * {@link #requireCode(String)}。新增队列时在此登记并加入 {@link #ALL}。
+ * {@link #requireCode(String)}（仅校验 {@link #ALL}）。新增<strong>业务</strong>队列时在此登记并加入
+ * {@link #ALL}；系统队列仅声明常量、不进 {@link #ALL}（对齐 {@link TemporalWorkflowType}）。
  *
  * @author wshake
  */
 public final class TemporalTaskQueue {
 
-    /** Demo / 测试队列（LogCountTick 等）。 */
+    /** 业务 / 联调队列（{@code LogCountTick} 等可被任务配置选用）。 */
     public static final String DEMO = "demo";
 
-    /** 全部合法 task queue。 */
+    /**
+     * 系统内部队列（{@code ExecutionMirrorTick} 等）。
+     *
+     * <p><b>不进入</b> {@link #ALL}，任务配置 create/update 不可选用；由系统 Schedule / Worker 注解绑定。
+     */
+    public static final String SYSTEM = "system";
+
+    /** 全部合法<strong>业务</strong> task queue（任务配置门禁与下拉）。 */
     public static final List<String> ALL = List.of(DEMO);
 
     private TemporalTaskQueue() {}

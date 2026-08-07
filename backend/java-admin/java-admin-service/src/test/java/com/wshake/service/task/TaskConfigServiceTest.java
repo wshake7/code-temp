@@ -89,6 +89,27 @@ class TaskConfigServiceTest {
     }
 
     @Test
+    void create_rejectsSystemTaskQueue() {
+        // SYSTEM 仅供系统 Schedule，不进任务配置门禁（对齐 TemporalWorkflowType 系统类型）
+        CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(
+                "log_count_tick",
+                "日志计数",
+                "LogCountTickWorkflow",
+                TemporalTaskQueue.SYSTEM,
+                null,
+                null,
+                null,
+                null,
+                1);
+
+        assertThatThrownBy(() -> service.create(cmd))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("unknown taskQueue");
+        verify(configRepository, never()).insert(any());
+        verify(taskSchedulePort, never()).apply(any());
+    }
+
+    @Test
     void create_rejectsDuplicateCode() {
         when(configRepository.existsByCode("log_count_tick", null)).thenReturn(true);
         CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(

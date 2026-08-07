@@ -89,7 +89,7 @@ public class ExecutionMirrorScheduleBootstrap implements ApplicationRunner {
     private static Schedule buildSchedule() {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(WORKFLOW_ID_PREFIX)
-                .setTaskQueue(TemporalTaskQueue.DEMO)
+                .setTaskQueue(TemporalTaskQueue.SYSTEM)
                 .setWorkflowExecutionTimeout(Duration.ofMinutes(3))
                 .build();
 

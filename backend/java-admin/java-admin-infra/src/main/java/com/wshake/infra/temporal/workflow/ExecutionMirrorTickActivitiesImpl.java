@@ -62,10 +62,12 @@ import org.springframework.stereotype.Component;
  *   <li>Visibility list 元数据无 pending，无法推断重试；开放行由双轨① describe 覆盖
  * </ul>
  *
+ * <p>Worker 注册队列见 {@link TemporalTaskQueue#SYSTEM}（系统队列，与业务 {@code demo} 隔离）。
+ *
  * @author wshake
  */
 @Component
-@ActivityImpl(taskQueues = TemporalTaskQueue.DEMO)
+@ActivityImpl(taskQueues = TemporalTaskQueue.SYSTEM)
 public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickActivities {
 
     private static final Logger log = LoggerFactory.getLogger(ExecutionMirrorTickActivitiesImpl.class);

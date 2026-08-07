@@ -9,9 +9,11 @@ import java.time.Duration;
 /**
  * {@link ExecutionMirrorTickWorkflow} 实现：调用一次镜像 Activity 后结束。
  *
+ * <p>Worker 注册队列见 {@link TemporalTaskQueue#SYSTEM}（系统队列，与业务 {@code demo} 隔离）。
+ *
  * @author wshake
  */
-@WorkflowImpl(taskQueues = TemporalTaskQueue.DEMO)
+@WorkflowImpl(taskQueues = TemporalTaskQueue.SYSTEM)
 public class ExecutionMirrorTickWorkflowImpl implements ExecutionMirrorTickWorkflow {
 
     private final ExecutionMirrorTickActivities activities = Workflow.newActivityStub(

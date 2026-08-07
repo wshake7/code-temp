@@ -13,7 +13,7 @@ import java.util.Map;
  *
  * <p>节拍由 Temporal Schedule（DB {@code cron_expr} / interval）驱动，不再在 Workflow 内
  * {@code sleep} 死循环，避免与 Schedule 叠多实例或固定 workflowId 挡住后续调度。
- * Worker 注册队列见 {@link TemporalTaskQueue#DEMO}。
+ * Worker 注册队列见 {@link TemporalTaskQueue#DEMO}（业务 / 联调队列）。
  *
  * <p>Activity 显式重试策略（示例）：有限次数 + 短间隔，便于镜像 tick 观察到
  * {@code RETRYING}/{@code retry_count}（见 {@link ExecutionMirrorTickActivitiesImpl}）。

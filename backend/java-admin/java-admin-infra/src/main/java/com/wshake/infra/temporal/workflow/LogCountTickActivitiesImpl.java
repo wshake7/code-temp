@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * {@link LogCountTickActivities} 实现：进程内 {@link AtomicLong} 计数。
  *
  * <p>注意：count 仅在当前 JVM Worker 进程有效，多实例/重启会重置。
- * Worker 队列见 {@link TemporalTaskQueue#DEMO}。
+ * Worker 队列见 {@link TemporalTaskQueue#DEMO}（业务 / 联调队列）。
  *
  * <p>返回 Map 供 Workflow 作为业务结果；镜像 tick 会写入执行记录 {@code result_summary}。
  *
