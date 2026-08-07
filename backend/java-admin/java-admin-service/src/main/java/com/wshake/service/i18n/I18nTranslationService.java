@@ -368,7 +368,6 @@ public class I18nTranslationService {
                             "translation_key " + newKey + " already exists for locale " + row.getLocaleId(),
                             row.getLocaleId(),
                             null));
-                    continue;
                 }
             }
             if (!errors.isEmpty()) {

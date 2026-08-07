@@ -30,7 +30,7 @@ public class SecurityProperties {
     /** Encrypt / Sign 安全中间件白名单（免强制加密与独立签名校验的路径）。 */
     private List<String> whitelist = defaultWhitelist();
 
-    /** Sa-Token 认证拦截器（{@code StpUtil.checkLogin()}）排除路径。 */
+    /** Sa-Token 认证拦截器（StpUtil.checkLogin）排除路径。 */
     private List<String> authExcludePaths = defaultAuthExcludePaths();
 
     /** jcasbin 授权拦截器（deny-by-default）排除路径。 */
@@ -93,7 +93,7 @@ public class SecurityProperties {
         /** 是否拒绝重复 X-Request-ID。 */
         private boolean enabled = true;
         /**
-         * Nonce TTL（毫秒）。{@code <= 0} 时使用 {@code timestamp.expireMs * 2}（对齐 Go）。
+         * Nonce TTL（毫秒）。小于等于 0 时使用 timestamp.expireMs * 2（对齐 Go）。
          */
         private long expireMs = 0;
     }

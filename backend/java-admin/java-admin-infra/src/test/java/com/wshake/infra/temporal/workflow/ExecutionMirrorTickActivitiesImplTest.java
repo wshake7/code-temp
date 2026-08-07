@@ -21,31 +21,39 @@ class ExecutionMirrorTickActivitiesImplTest {
 
     @Test
     void mapStatus_coversTerminalAndRunning() {
-        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED))
+        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(
+                        WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED))
                 .isEqualTo("COMPLETED");
-        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED))
+        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(
+                        WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED))
                 .isEqualTo("FAILED");
-        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_CANCELED))
+        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(
+                        WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_CANCELED))
                 .isEqualTo("CANCELLED");
-        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TIMED_OUT))
+        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(
+                        WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TIMED_OUT))
                 .isEqualTo("TIMED_OUT");
-        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING))
+        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(
+                        WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING))
                 .isEqualTo("RUNNING");
-        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_PAUSED))
+        assertThat(ExecutionMirrorTickActivitiesImpl.mapStatus(
+                        WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_PAUSED))
                 .isEqualTo("RUNNING");
     }
 
     @Test
     void resolveOpenStatus_promotesRunningToRetryingWhenActivityRetrying() {
         RetrySnapshot retrying = new RetrySnapshot(true, true, 2, "boom");
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", retrying)).isEqualTo("RETRYING");
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("FAILED", retrying)).isEqualTo("FAILED");
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus(
-                        "RUNNING", RetrySnapshot.notRetrying()))
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", retrying))
+                .isEqualTo("RETRYING");
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("FAILED", retrying))
+                .isEqualTo("FAILED");
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", RetrySnapshot.notRetrying()))
                 .isEqualTo("RUNNING");
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", RetrySnapshot.unknown()))
                 .isEqualTo("RUNNING");
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", null)).isEqualTo("RUNNING");
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", null))
+                .isEqualTo("RUNNING");
     }
 
     @Test
@@ -59,7 +67,8 @@ class ExecutionMirrorTickActivitiesImplTest {
     @Test
     void failureMessage_trimsAndNullSafe() {
         assertThat(ExecutionMirrorTickActivitiesImpl.failureMessage(null)).isNull();
-        assertThat(ExecutionMirrorTickActivitiesImpl.failureMessage(Failure.getDefaultInstance())).isNull();
+        assertThat(ExecutionMirrorTickActivitiesImpl.failureMessage(Failure.getDefaultInstance()))
+                .isNull();
         assertThat(ExecutionMirrorTickActivitiesImpl.failureMessage(
                         Failure.newBuilder().setMessage("  activity failed  ").build()))
                 .isEqualTo("activity failed");
@@ -68,7 +77,8 @@ class ExecutionMirrorTickActivitiesImplTest {
     @Test
     void extractRetrySnapshot_visibilityMetadataIsUnknown() {
         WorkflowExecutionInfo info = WorkflowExecutionInfo.newBuilder()
-                .setExecution(WorkflowExecution.newBuilder().setWorkflowId("wf-1").setRunId("run-1"))
+                .setExecution(
+                        WorkflowExecution.newBuilder().setWorkflowId("wf-1").setRunId("run-1"))
                 .setType(WorkflowType.newBuilder().setName("LogCountTickWorkflow"))
                 .setStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING)
                 .setTaskQueue("demo")
@@ -106,8 +116,11 @@ class ExecutionMirrorTickActivitiesImplTest {
                         Map.of("count", 1L, "input", Map.of("trigger", "manual"))))
                 .contains("\"trigger\"")
                 .contains("manual");
-        assertThat(ExecutionMirrorTickActivitiesImpl.extractInputFromResult(Map.of("count", 1L))).isNull();
-        assertThat(ExecutionMirrorTickActivitiesImpl.extractInputFromResult(null)).isNull();
-        assertThat(ExecutionMirrorTickActivitiesImpl.decodeStartedInput(null, null)).isNull();
+        assertThat(ExecutionMirrorTickActivitiesImpl.extractInputFromResult(Map.of("count", 1L)))
+                .isNull();
+        assertThat(ExecutionMirrorTickActivitiesImpl.extractInputFromResult(null))
+                .isNull();
+        assertThat(ExecutionMirrorTickActivitiesImpl.decodeStartedInput(null, null))
+                .isNull();
     }
 }

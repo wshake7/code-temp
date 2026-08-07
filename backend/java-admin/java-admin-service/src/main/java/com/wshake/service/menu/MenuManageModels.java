@@ -73,7 +73,7 @@ public final class MenuManageModels {
             String icon,
             String redirect,
             String permissionCode,
-            /** 特殊：present=true 才改；value 可为 null。 */
+            /* 特殊：present=true 才改；value 可为 null。 */
             MetadataChange metadata,
             Integer sort,
             Integer isHidden,

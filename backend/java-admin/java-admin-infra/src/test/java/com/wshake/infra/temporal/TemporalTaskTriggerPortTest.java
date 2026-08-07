@@ -65,7 +65,7 @@ class TemporalTaskTriggerPortTest {
         WorkflowOptions options = optionsCap.getValue();
         assertThat(options.getTaskQueue()).isEqualTo("demo");
         assertThat(options.getWorkflowId()).startsWith("wf-log_count_tick-");
-        assertThat(options.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofSeconds(3600));
+        assertThat(options.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofHours(1));
         assertThat(options.getRetryOptions()).isNotNull();
         assertThat(options.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
         assertThat(options.getMemo()).containsEntry(TemporalTaskTriggerPort.MEMO_CONFIG_ID, 1L);
@@ -129,6 +129,7 @@ class TemporalTaskTriggerPortTest {
                 .isEqualTo("log_count_tick");
         assertThat(TemporalTaskTriggerPort.parseConfigCodeFromWorkflowId("sched-log_count_tick-xyz"))
                 .isEqualTo("log_count_tick");
-        assertThat(TemporalTaskTriggerPort.parseConfigCodeFromWorkflowId("other")).isNull();
+        assertThat(TemporalTaskTriggerPort.parseConfigCodeFromWorkflowId("other"))
+                .isNull();
     }
 }

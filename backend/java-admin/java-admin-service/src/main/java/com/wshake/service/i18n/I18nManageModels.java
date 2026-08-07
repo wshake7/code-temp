@@ -1,5 +1,6 @@
 package com.wshake.service.i18n;
 
+import com.google.common.base.Splitter;
 import com.wshake.service.entity.I18nLocale;
 import com.wshake.service.entity.I18nTranslation;
 import io.github.linpeilie.annotations.AutoMapper;
@@ -17,6 +18,8 @@ import java.util.Map;
 public final class I18nManageModels {
 
     private I18nManageModels() {}
+
+    private static final Splitter KEY_SEGMENTS = Splitter.on('.');
 
     /** BCP-47 风格：如 zh-CN / en-US / ja-JP。 */
     public static final String LOCALE_CODE_PATTERN = "^[A-Za-z]{2,3}(-[A-Za-z]{2,4})?$";
@@ -273,10 +276,10 @@ public final class I18nManageModels {
         for (Map.Entry<String, String> e : entries) {
             String key = e.getKey();
             String value = e.getValue();
-            String[] parts = key.split("\\.");
+            List<String> parts = KEY_SEGMENTS.splitToList(key);
             Map<String, Object> cur = out;
-            for (int i = 0; i < parts.length - 1; i++) {
-                String p = parts[i];
+            for (int i = 0; i < parts.size() - 1; i++) {
+                String p = parts.get(i);
                 Object next = cur.get(p);
                 if (!(next instanceof Map<?, ?>)) {
                     Map<String, Object> child = new LinkedHashMap<>();
@@ -288,7 +291,7 @@ public final class I18nManageModels {
                     cur = child;
                 }
             }
-            cur.put(parts[parts.length - 1], value);
+            cur.put(parts.get(parts.size() - 1), value);
         }
         return out;
     }

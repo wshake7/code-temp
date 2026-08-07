@@ -5,6 +5,7 @@ import com.wshake.service.entity.SysLoginLog;
 import com.wshake.service.repository.SysLoginLogRepository;
 import com.wshake.service.support.geo.IpLocationResolver;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -52,7 +53,7 @@ public class LoginLogger {
         LoginClientMeta meta = clientMeta == null ? LoginClientMeta.empty() : clientMeta;
         String safeUsername = username == null ? "" : username;
         String safeReason = reason == null ? "" : reason;
-        LocalDateTime loginTime = LocalDateTime.now();
+        LocalDateTime loginTime = LocalDateTime.now(ZoneId.systemDefault());
 
         loginLogExecutor.execute(
                 () -> insertQuietly(safeUsername, userId, statusCode, success, safeReason, meta, loginTime));

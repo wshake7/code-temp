@@ -1,10 +1,13 @@
 package com.wshake.service.support.geo;
 
+import com.google.common.base.Splitter;
 import jakarta.annotation.PreDestroy;
 import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.lionsoul.ip2region.xdb.LongByteArray;
@@ -27,6 +30,8 @@ public final class IpLocationResolver {
 
     private static final String XDB_V4 = "ip2region/ip2region_v4.xdb";
     private static final String XDB_V6 = "ip2region/ip2region_v6.xdb";
+    private static final Splitter PIPE = Splitter.on('|');
+    private static final Splitter DOT = Splitter.on('.');
 
     private final Searcher v4Searcher;
     private final Searcher v6Searcher;
@@ -147,21 +152,21 @@ public final class IpLocationResolver {
         if (region == null || region.isBlank() || "0".equals(region)) {
             return "";
         }
-        String[] parts = region.split("\\|");
+        List<String> parts = PIPE.splitToList(region);
         String country;
         String province;
         String city;
         String isp;
-        if (parts.length >= 5) {
-            country = clean(parts[0]);
-            province = clean(parts[2]);
-            city = clean(parts[3]);
-            isp = clean(parts[4]);
-        } else if (parts.length >= 4) {
-            country = clean(parts[0]);
-            province = clean(parts[1]);
-            city = clean(parts[2]);
-            isp = clean(parts[3]);
+        if (parts.size() >= 5) {
+            country = clean(parts.get(0));
+            province = clean(parts.get(2));
+            city = clean(parts.get(3));
+            isp = clean(parts.get(4));
+        } else if (parts.size() >= 4) {
+            country = clean(parts.get(0));
+            province = clean(parts.get(1));
+            city = clean(parts.get(2));
+            isp = clean(parts.get(3));
         } else {
             return region;
         }
@@ -216,20 +221,20 @@ public final class IpLocationResolver {
     }
 
     private static boolean isPrivateIpv6Literal(String ip) {
-        String lower = ip.toLowerCase();
+        String lower = ip.toLowerCase(Locale.ROOT);
         return lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80:");
     }
 
     private static boolean isPrivateIpv4(String ip) {
-        String[] parts = ip.split("\\.");
-        if (parts.length != 4) {
+        List<String> parts = DOT.splitToList(ip);
+        if (parts.size() != 4) {
             return false;
         }
         int firstOctet;
         int secondOctet;
         try {
-            firstOctet = Integer.parseInt(parts[0]);
-            secondOctet = Integer.parseInt(parts[1]);
+            firstOctet = Integer.parseInt(parts.get(0));
+            secondOctet = Integer.parseInt(parts.get(1));
         } catch (NumberFormatException ex) {
             return false;
         }

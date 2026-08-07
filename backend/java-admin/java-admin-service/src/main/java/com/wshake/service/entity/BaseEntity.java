@@ -29,7 +29,7 @@ public abstract class BaseEntity {
     /**
      * 软删毫秒时间戳；0=未删；非 0=删除时刻。
      *
-     * <p>策略 {@code DELETE_LONG_TIMESTAMP} 与 schema 一致。
+     * <p>策略为 DELETE_LONG_TIMESTAMP，与 schema 一致。
      */
     @LogicDelete(strategy = LogicDeleteStrategyEnum.DELETE_LONG_TIMESTAMP)
     private Long deletedAt;

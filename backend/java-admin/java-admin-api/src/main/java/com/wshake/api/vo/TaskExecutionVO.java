@@ -36,5 +36,6 @@ public class TaskExecutionVO {
     private String failureReason;
     /** 已发生重试次数；首次为 0。 */
     private Integer retryCount;
+
     private LocalDateTime createdAt;
 }

@@ -56,7 +56,7 @@ public final class UserManageModels {
             String languageCode,
             Integer isEnabled,
             String remark,
-            /** null=不改角色；非 null（可为空列表）=全量替换。 */
+            /* null=不改角色；非 null（可为空列表）=全量替换。 */
             List<Long> roleIds) {}
 
     /**

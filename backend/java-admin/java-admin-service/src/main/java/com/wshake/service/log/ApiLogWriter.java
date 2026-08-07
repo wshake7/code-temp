@@ -8,6 +8,8 @@ import com.wshake.service.repository.ApiLogRepository;
 import com.wshake.service.repository.SysUserRepository;
 import com.wshake.service.support.geo.IpLocationResolver;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +55,7 @@ public class ApiLogWriter {
         if (command == null) {
             return;
         }
-        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime createdAt = LocalDateTime.now(ZoneId.systemDefault());
         apiLogExecutor.execute(() -> insertQuietly(command, createdAt));
     }
 
@@ -88,7 +90,7 @@ public class ApiLogWriter {
 
             ApiLog row = new ApiLog();
             row.setMethod(
-                    nullToEmpty(cmd.method()).isBlank() ? "GET" : cmd.method().toUpperCase());
+                    nullToEmpty(cmd.method()).isBlank() ? "GET" : cmd.method().toUpperCase(Locale.ROOT));
             row.setModule(nullToEmpty(cmd.module()));
             row.setPath(nullToEmpty(cmd.path()));
             row.setStatusCode(statusCode);

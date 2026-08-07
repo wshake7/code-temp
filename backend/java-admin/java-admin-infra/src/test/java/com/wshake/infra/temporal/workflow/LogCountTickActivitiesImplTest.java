@@ -1,9 +1,7 @@
 package com.wshake.infra.temporal.workflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.wshake.common.exception.BizException;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,23 +19,17 @@ class LogCountTickActivitiesImplTest {
     }
 
     @Test
-    void incrementAndLog_increasesThenFailsForRetryDemo() {
-        // 当前实现故意失败以联调 Activity 重试镜像；count 在抛错前已递增
-        assertThatThrownBy(() -> activities.incrementAndLog(Map.of("trigger", "manual")))
-                .isInstanceOf(BizException.class)
-                .hasMessageContaining("log_count_tick demo fail");
+    void incrementAndLog_increasesCountAndReturnsBusinessMap() {
+        Map<String, Object> first = activities.incrementAndLog(Map.of("trigger", "manual"));
         assertThat(LogCountTickActivitiesImpl.COUNT.get()).isEqualTo(1L);
+        assertThat(first.get("count")).isEqualTo(1L);
+        assertThat(first.get("message")).isEqualTo("log_count_tick ok");
+        assertThat(first.get("input")).isEqualTo(Map.of("trigger", "manual"));
 
-        assertThatThrownBy(() -> activities.incrementAndLog(null)).isInstanceOf(BizException.class);
+        Map<String, Object> second = activities.incrementAndLog(null);
         assertThat(LogCountTickActivitiesImpl.COUNT.get()).isEqualTo(2L);
-    }
-
-    @Test
-    void successResult_buildsBusinessMap() {
-        Map<String, Object> result =
-                LogCountTickActivitiesImpl.successResult(9L, Map.of("trigger", "manual"));
-        assertThat(result.get("count")).isEqualTo(9L);
-        assertThat(result.get("message")).isEqualTo("log_count_tick ok");
-        assertThat(result.get("input")).isEqualTo(Map.of("trigger", "manual"));
+        assertThat(second.get("count")).isEqualTo(2L);
+        assertThat(second.get("message")).isEqualTo("log_count_tick ok");
+        assertThat(second.get("input")).isEqualTo(Map.of());
     }
 }

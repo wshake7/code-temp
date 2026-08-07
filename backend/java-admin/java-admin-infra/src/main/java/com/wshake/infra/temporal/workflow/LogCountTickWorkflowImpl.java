@@ -40,10 +40,7 @@ public class LogCountTickWorkflowImpl implements LogCountTickWorkflow {
         Map<String, Object> result = activities.incrementAndLog(input);
         Object count = result == null ? null : result.get("count");
         Workflow.getLogger(LogCountTickWorkflowImpl.class)
-                .info(
-                        "LogCountTick done count={} inputKeys={}",
-                        count,
-                        input == null ? 0 : input.size());
+                .info("LogCountTick done count={} inputKeys={}", count, input == null ? 0 : input.size());
         return result;
     }
 }

@@ -39,9 +39,7 @@ public class DictData extends BaseEntity implements ProxyEntityAvailable<DictDat
     /** 是否该类型默认值。 */
     private Integer isDefault;
 
-    /**
-     * 归属平台：{@code general} / {@code react-admin} / {@code vue-admin}。
-     */
+    /** 归属平台：general、react-admin、vue-admin。 */
     private String platform;
 
     /**

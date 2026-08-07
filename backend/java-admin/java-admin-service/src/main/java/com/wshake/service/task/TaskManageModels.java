@@ -182,7 +182,7 @@ public final class TaskManageModels {
             Map<String, Object> inputSummary,
             Map<String, Object> resultSummary,
             String failureReason,
-            /** 已发生重试次数；首次为 0。 */
+            /* 已发生重试次数；首次为 0。 */
             Integer retryCount,
             LocalDateTime createdAt) {}
 

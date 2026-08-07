@@ -7,6 +7,7 @@ import com.wshake.service.entity.SysRoleMenu;
 import com.wshake.service.entity.proxy.SysApiProxy;
 import com.wshake.service.entity.proxy.SysMenuApiProxy;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -102,7 +103,7 @@ public class SysMenuApiRepository {
         if (apiIds == null || apiIds.isEmpty()) {
             return List.of();
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
         List<SysMenuApi> rows = new ArrayList<>(apiIds.size());
         for (Long apiId : apiIds) {
             SysMenuApi row = new SysMenuApi();

@@ -10,9 +10,9 @@ import com.wshake.service.task.TemporalTaskQueue;
 import com.wshake.service.task.TemporalWorkflowType;
 import io.temporal.api.common.v1.Payloads;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
+import io.temporal.api.failure.v1.Failure;
 import io.temporal.api.history.v1.HistoryEvent;
 import io.temporal.api.history.v1.WorkflowExecutionStartedEventAttributes;
-import io.temporal.api.failure.v1.Failure;
 import io.temporal.api.workflow.v1.PendingActivityInfo;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionDescription;
@@ -156,8 +156,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                             touched++;
                         }
                     } catch (RuntimeException ex) {
-                        log.warn(
-                                "mirror visibility row failed: workflowId={} reason={}", wfId, ex.getMessage());
+                        log.warn("mirror visibility row failed: workflowId={} reason={}", wfId, ex.getMessage());
                     }
                 }
             } catch (RuntimeException ex) {
@@ -371,14 +370,12 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         }
         String effectiveRunId = runId == null || runId.isBlank() ? null : runId;
         try (Stream<HistoryEvent> stream = workflowClient.streamHistory(workflowId, effectiveRunId)) {
-            Optional<HistoryEvent> started = stream
-                    .filter(HistoryEvent::hasWorkflowExecutionStartedEventAttributes)
+            Optional<HistoryEvent> started = stream.filter(HistoryEvent::hasWorkflowExecutionStartedEventAttributes)
                     .findFirst();
             if (started.isEmpty()) {
                 return null;
             }
-            return decodeStartedInput(
-                    started.get().getWorkflowExecutionStartedEventAttributes(), dataConverter());
+            return decodeStartedInput(started.get().getWorkflowExecutionStartedEventAttributes(), dataConverter());
         } catch (Exception ex) {
             log.debug(
                     "fetch workflow input failed: workflowId={} runId={} reason={}",
@@ -578,9 +575,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      * @param status 镜像 status 字符串
      */
     static boolean isTerminal(String status) {
-        return status != null
-                && !TemporalTaskExecutionRepository.isOpenStatus(status)
-                && !"PENDING".equals(status);
+        return status != null && !TemporalTaskExecutionRepository.isOpenStatus(status) && !"PENDING".equals(status);
     }
 
     /**

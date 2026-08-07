@@ -242,7 +242,6 @@ public final class EncryptFilter extends OncePerRequestFilter {
         response.getWriter().write(OBJECT_MAPPER.writeValueAsString(error));
     }
 
-    /** 缓存解密后的 body，供下游重复读取。 */
     /** 供同模块 SignFilter 等复用：缓存 body 供多次读取。 */
     public static final class CachedBodyRequestWrapper extends HttpServletRequestWrapper {
         private final byte[] body;
@@ -259,6 +258,11 @@ public final class EncryptFilter extends OncePerRequestFilter {
                 @Override
                 public int read() {
                     return bis.read();
+                }
+
+                @Override
+                public int read(byte[] b, int off, int len) {
+                    return bis.read(b, off, len);
                 }
 
                 @Override

@@ -9,6 +9,7 @@ import com.easy.query.core.expression.sql.builder.EntityUpdateExpressionBuilder;
 import com.wshake.infra.satoken.SaTokenConfigure;
 import com.wshake.service.entity.BaseEntity;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
@@ -45,7 +46,7 @@ public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSe
     public void configureInsert(
             Class<?> entityClass, EntityInsertExpressionBuilder entityInsertExpressionBuilder, Object entity) {
         BaseEntity baseEntity = (BaseEntity) entity;
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
         Long operatorId = currentOperatorId();
 
         if (baseEntity.getDeletedAt() == null) {
@@ -69,7 +70,7 @@ public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSe
     public void configureUpdate(
             Class<?> entityClass, EntityUpdateExpressionBuilder entityUpdateExpressionBuilder, Object entity) {
         BaseEntity baseEntity = (BaseEntity) entity;
-        baseEntity.setUpdatedAt(LocalDateTime.now());
+        baseEntity.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
         baseEntity.setUpdatedBy(currentOperatorId());
     }
 
@@ -86,7 +87,7 @@ public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSe
             return updatedAt.isInSegment() && updatedBy.isInSegment();
         });
         if (!updatedAt.isInSegment()) {
-            columnSetter.set("updatedAt", LocalDateTime.now());
+            columnSetter.set("updatedAt", LocalDateTime.now(ZoneId.systemDefault()));
         }
         if (!updatedBy.isInSegment()) {
             columnSetter.set("updatedBy", currentOperatorId());

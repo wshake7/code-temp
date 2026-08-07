@@ -1,16 +1,14 @@
 package com.wshake.infra.temporal.workflow;
 
 import com.wshake.common.exception.BizException;
-import com.wshake.common.result.ResultCode;
 import com.wshake.service.task.TemporalTaskQueue;
 import io.temporal.spring.boot.ActivityImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 /**
  * {@link LogCountTickActivities} 实现：进程内 {@link AtomicLong} 计数。
@@ -20,9 +18,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p>返回 Map 供 Workflow 作为业务结果；镜像 tick 会写入执行记录 {@code result_summary}。
  *
- * <p><b>联调示例（当前故意失败）</b>：末尾抛 {@link BizException}，触发 Activity 重试；
- * {@link ExecutionMirrorTickActivitiesImpl} 应将执行记录推为 {@code RETRYING} 并递增
- * {@code retry_count}。验证完后恢复 {@code return result} 即可。
+ * <p>联调 Activity 重试时，可在返回前临时抛 {@link BizException}，使
+ * {@link ExecutionMirrorTickActivitiesImpl} 将执行记录推为 {@code RETRYING} 并递增
+ * {@code retry_count}；验证完后恢复 {@code return result} 即可。
  *
  * @author wshake
  */

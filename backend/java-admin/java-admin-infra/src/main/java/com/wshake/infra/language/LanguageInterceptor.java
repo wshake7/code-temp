@@ -71,7 +71,8 @@ public final class LanguageInterceptor implements HandlerInterceptor {
         if (acceptLanguage == null || acceptLanguage.isBlank()) {
             return null;
         }
-        String first = acceptLanguage.split(",")[0].trim();
+        int comma = acceptLanguage.indexOf(',');
+        String first = (comma >= 0 ? acceptLanguage.substring(0, comma) : acceptLanguage).trim();
         int semi = first.indexOf(';');
         if (semi >= 0) {
             first = first.substring(0, semi).trim();

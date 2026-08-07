@@ -2,6 +2,7 @@ package com.wshake.infra.log;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 import com.wshake.common.constant.MdcKeys;
 import com.wshake.common.request.RequestContext;
 import com.wshake.infra.satoken.SaTokenConfigure;
@@ -50,6 +51,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Aspect
 @Component
 public class RequestLogAspect {
+
+    private static final Splitter PATH_SEGMENTS = Splitter.on('/');
 
     private static final int MAX_LOG_LENGTH = 500;
 
@@ -198,16 +201,16 @@ public class RequestLogAspect {
             return "";
         }
         String p = path.startsWith("/") ? path.substring(1) : path;
-        String[] parts = p.split("/");
+        List<String> parts = PATH_SEGMENTS.splitToList(p);
         // api / system / <module> / ...
-        if (parts.length >= 3 && "api".equals(parts[0]) && "system".equals(parts[1])) {
-            return parts[2];
+        if (parts.size() >= 3 && "api".equals(parts.get(0)) && "system".equals(parts.get(1))) {
+            return parts.get(2);
         }
         // api / <module> / ...
-        if (parts.length >= 2 && "api".equals(parts[0])) {
-            return parts[1];
+        if (parts.size() >= 2 && "api".equals(parts.get(0))) {
+            return parts.get(1);
         }
-        return parts.length > 0 ? parts[0] : "";
+        return parts.isEmpty() ? "" : parts.get(0);
     }
 
     private static int resolveErrorStatus(Throwable error) {
@@ -372,10 +375,6 @@ public class RequestLogAspect {
             return json.substring(0, max) + "...(truncated)";
         }
         return json;
-    }
-
-    private static String truncate(String json) {
-        return truncate(json, MAX_LOG_LENGTH);
     }
 
     private static String truncateForStore(String json) {

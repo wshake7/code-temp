@@ -1,5 +1,6 @@
 package com.wshake.service.menu;
 
+import com.google.common.base.Splitter;
 import com.wshake.service.entity.SysMenu;
 import com.wshake.service.menu.MenuManageModels.RuntimeMenuRoute;
 import java.util.ArrayList;
@@ -8,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -26,6 +28,8 @@ public final class RuntimeMenuProjector {
     private static final Pattern NUMBER_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
     private static final Pattern BOOL_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(true|false)");
     private static final Pattern STRING_ARRAY_FIELD = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\\[([^\\]]*)]");
+    private static final Splitter PATH_SEGMENTS = Splitter.on('/');
+    private static final Splitter WHITESPACE = Splitter.onPattern("\\s+").omitEmptyStrings();
 
     private RuntimeMenuProjector() {}
 
@@ -75,7 +79,7 @@ public final class RuntimeMenuProjector {
                 .filter(m -> allowedIds.contains(m.getId()))
                 .filter(m -> !MenuManageModels.TYPE_BUTTON.equals(m.getType()))
                 .filter(m -> isRuntimeMenuEligible(m, menuById))
-                .sorted(Comparator.comparing((SysMenu m) -> m.getSort() == null ? 0 : m.getSort())
+                .sorted(Comparator.comparingInt((SysMenu m) -> m.getSort() == null ? 0 : m.getSort())
                         .thenComparing(SysMenu::getId))
                 .toList();
 
@@ -88,7 +92,6 @@ public final class RuntimeMenuProjector {
             byId.put(
                     menu.getId(),
                     new MutableNode(
-                            menu.getId(),
                             menu.getParentId(),
                             route.name(),
                             route.path(),
@@ -121,7 +124,7 @@ public final class RuntimeMenuProjector {
         Map<String, Object> metaBag = parseMetadata(menu.getMetadata());
         String path = trimToEmpty(menu.getPath());
         if (path.isEmpty() && MenuManageModels.TYPE_DIR.equals(menu.getType())) {
-            path = "/" + routeNameFromPath(null, menu.getName()).toLowerCase();
+            path = "/" + routeNameFromPath(null, menu.getName()).toLowerCase(Locale.ROOT);
         }
         if (path.isEmpty()) {
             return null;
@@ -217,17 +220,13 @@ public final class RuntimeMenuProjector {
     public static String routeNameFromPath(String path, String fallback) {
         String cleaned = path == null ? "" : path;
         cleaned = cleaned.replaceFirst("^/", "").replaceAll("(?i)/index$", "");
-        String[] segs = cleaned.split("/");
         List<String> parts = new ArrayList<>();
-        for (String seg : segs) {
+        for (String seg : PATH_SEGMENTS.split(cleaned)) {
             if (seg == null || seg.isBlank()) {
                 continue;
             }
             String normalized = seg.replaceAll("[^a-zA-Z0-9]+", " ").trim();
-            for (String word : normalized.split("\\s+")) {
-                if (word.isBlank()) {
-                    continue;
-                }
+            for (String word : WHITESPACE.split(normalized)) {
                 parts.add(Character.toUpperCase(word.charAt(0)) + word.substring(1));
             }
         }
@@ -356,7 +355,6 @@ public final class RuntimeMenuProjector {
     }
 
     private static final class MutableNode {
-        final Long id;
         final Long parentId;
         final String name;
         final String path;
@@ -366,7 +364,6 @@ public final class RuntimeMenuProjector {
         final List<MutableNode> children;
 
         MutableNode(
-                Long id,
                 Long parentId,
                 String name,
                 String path,
@@ -374,7 +371,6 @@ public final class RuntimeMenuProjector {
                 String redirect,
                 Map<String, Object> meta,
                 List<MutableNode> children) {
-            this.id = id;
             this.parentId = parentId;
             this.name = name;
             this.path = path;

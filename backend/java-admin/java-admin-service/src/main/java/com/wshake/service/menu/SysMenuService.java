@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -453,7 +454,8 @@ public class SysMenuService {
         if (query.permissionCode() != null) {
             String code = m.getPermissionCode();
             if (code == null
-                    || !code.toLowerCase().contains(query.permissionCode().toLowerCase())) {
+                    || !code.toLowerCase(Locale.ROOT)
+                            .contains(query.permissionCode().toLowerCase(Locale.ROOT))) {
                 return false;
             }
         }
@@ -515,7 +517,7 @@ public class SysMenuService {
     }
 
     private static Comparator<SysMenu> menuOrder() {
-        return Comparator.comparing((SysMenu m) -> m.getSort() == null ? 0 : m.getSort())
+        return Comparator.comparingInt((SysMenu m) -> m.getSort() == null ? 0 : m.getSort())
                 .thenComparing(SysMenu::getId);
     }
 

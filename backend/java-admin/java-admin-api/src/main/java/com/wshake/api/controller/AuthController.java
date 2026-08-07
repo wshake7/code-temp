@@ -152,7 +152,8 @@ public class AuthController {
     private static String clientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+            int comma = xff.indexOf(',');
+            return (comma >= 0 ? xff.substring(0, comma) : xff).trim();
         }
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isBlank()) {

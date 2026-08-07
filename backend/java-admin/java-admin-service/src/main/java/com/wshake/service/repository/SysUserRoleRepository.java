@@ -12,10 +12,12 @@ import com.wshake.service.entity.proxy.SysUserProxy;
 import com.wshake.service.entity.proxy.SysUserRoleProxy;
 import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -130,7 +132,7 @@ public class SysUserRoleRepository {
         if (roleIds == null || roleIds.isEmpty()) {
             return;
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
         List<SysUserRole> rows = new ArrayList<>(roleIds.size());
         for (Long roleId : roleIds) {
             SysUserRole ur = new SysUserRole();
@@ -251,7 +253,7 @@ public class SysUserRoleRepository {
                     || api.getMethod().isBlank()) {
                 continue;
             }
-            policies.add(new ApiPolicy(api.getPath(), api.getMethod().toUpperCase()));
+            policies.add(new ApiPolicy(api.getPath(), api.getMethod().toUpperCase(Locale.ROOT)));
         }
         return policies;
     }
