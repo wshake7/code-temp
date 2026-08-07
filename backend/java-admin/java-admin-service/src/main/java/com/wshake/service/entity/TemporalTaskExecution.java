@@ -37,7 +37,8 @@ public class TemporalTaskExecution implements ProxyEntityAvailable<TemporalTaskE
     private String taskQueue;
 
     /**
-     * PENDING / RUNNING / COMPLETED / FAILED / CANCELLED / TERMINATED / TIMED_OUT / CONTINUED_AS_NEW。
+     * PENDING / RUNNING / RETRYING / COMPLETED / FAILED / CANCELLED / TERMINATED / TIMED_OUT /
+     * CONTINUED_AS_NEW。
      */
     private String status;
 
@@ -54,6 +55,11 @@ public class TemporalTaskExecution implements ProxyEntityAvailable<TemporalTaskE
     private String resultSummary;
 
     private String failureReason;
+
+    /**
+     * 已发生重试次数；首次执行为 0（非剩余次数）。写路径尚未镜像 Temporal 自动 retry 时恒为 0。
+     */
+    private Integer retryCount;
 
     private LocalDateTime createdAt;
 }

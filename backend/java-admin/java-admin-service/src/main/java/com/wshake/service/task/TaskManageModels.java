@@ -20,7 +20,15 @@ public final class TaskManageModels {
     public static final String CODE_PATTERN = "^[a-z][a-z0-9_]{0,63}$";
 
     public static final Set<String> EXECUTION_STATUSES = Set.of(
-            "PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED", "TERMINATED", "TIMED_OUT", "CONTINUED_AS_NEW");
+            "PENDING",
+            "RUNNING",
+            "RETRYING",
+            "COMPLETED",
+            "FAILED",
+            "CANCELLED",
+            "TERMINATED",
+            "TIMED_OUT",
+            "CONTINUED_AS_NEW");
 
     public static final Set<String> BATCH_ACTIONS = Set.of("enable", "disable", "delete", "trigger");
 
@@ -174,6 +182,8 @@ public final class TaskManageModels {
             Map<String, Object> inputSummary,
             Map<String, Object> resultSummary,
             String failureReason,
+            /** 已发生重试次数；首次为 0。 */
+            Integer retryCount,
             LocalDateTime createdAt) {}
 
     // ---------- helpers ----------

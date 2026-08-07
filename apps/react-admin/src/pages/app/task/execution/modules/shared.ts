@@ -4,6 +4,7 @@ export function statusColor(status: string): string {
     case 'COMPLETED':
       return 'success';
     case 'RUNNING':
+    case 'RETRYING':
       return 'processing';
     case 'PENDING':
       return 'default';

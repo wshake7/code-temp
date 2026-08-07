@@ -64,6 +64,7 @@ class TaskExecutionControllerTest {
                 Map.of("date", "2026-06-20"),
                 Map.of("rows", 1280),
                 null,
+                0,
                 now);
     }
 }

@@ -15,6 +15,7 @@ import { isoNow } from "./shared";
 export type TaskExecutionStatus =
   | "PENDING"
   | "RUNNING"
+  | "RETRYING"
   | "COMPLETED"
   | "FAILED"
   | "CANCELLED"
@@ -57,6 +58,8 @@ export interface TemporalTaskExecution {
   input_summary: Record<string, unknown> | null;
   result_summary: Record<string, unknown> | null;
   failure_reason: string | null;
+  /** 已发生重试次数；首次执行为 0 */
+  retry_count: number;
   created_at: string;
 }
 
@@ -229,6 +232,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: { date: "2026-06-20" },
       result_summary: { rows: 1280 },
       failure_reason: null,
+      retry_count: 0,
       created_at: "2026-06-20T02:00:00.000Z",
     },
     {
@@ -244,6 +248,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: null,
       result_summary: { settled: 42 },
       failure_reason: null,
+      retry_count: 0,
       created_at: "2026-06-20T01:00:00.000Z",
     },
     {
@@ -259,6 +264,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: null,
       result_summary: null,
       failure_reason: "connection timeout to archive-db",
+      retry_count: 0,
       created_at: "2026-06-20T03:00:00.000Z",
     },
     {
@@ -274,6 +280,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: { date: "2026-06-19" },
       result_summary: { rows: 1199 },
       failure_reason: null,
+      retry_count: 0,
       created_at: "2026-06-19T02:00:00.000Z",
     },
     {
@@ -289,6 +296,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: null,
       result_summary: { settled: 38 },
       failure_reason: null,
+      retry_count: 0,
       created_at: "2026-06-19T01:00:00.000Z",
     },
     {
@@ -304,6 +312,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: { keys: ["home", "catalog"] },
       result_summary: null,
       failure_reason: null,
+      retry_count: 0,
       created_at: "2026-06-20T08:14:00.000Z",
     },
     {
@@ -319,6 +328,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: null,
       result_summary: null,
       failure_reason: "timeout 300s exceeded",
+      retry_count: 0,
       created_at: "2026-06-20T09:30:00.000Z",
     },
     {
@@ -334,6 +344,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       input_summary: { date: "2026-06-18" },
       result_summary: { rows: 1305 },
       failure_reason: null,
+      retry_count: 0,
       created_at: "2026-06-18T02:00:00.000Z",
     },
   ];
@@ -348,7 +359,10 @@ export function appendMockTaskExecution(
   const stamp = now.replace(/[-:TZ.]/g, "").slice(0, 14);
   const id = nextTaskExecutionId();
   const status = opts?.status ?? "PENDING";
-  const closed = status === "PENDING" || status === "RUNNING" ? null : now;
+  const closed =
+    status === "PENDING" || status === "RUNNING" || status === "RETRYING"
+      ? null
+      : now;
   const row: TemporalTaskExecution = {
     id,
     config_id: config.id,
@@ -362,6 +376,7 @@ export function appendMockTaskExecution(
     input_summary: { trigger: "manual", configCode: config.code },
     result_summary: status === "COMPLETED" ? { ok: true } : null,
     failure_reason: opts?.failureReason ?? null,
+    retry_count: 0,
     created_at: now,
   };
   mockTemporalTaskExecutionList.unshift(row);

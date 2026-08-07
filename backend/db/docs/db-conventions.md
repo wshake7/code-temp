@@ -235,7 +235,8 @@ ALTER TABLE sys_role
 - 操作日志 source：`AUTO` / `EXPLICIT`
 - 数据权限 subject_type：`USER` / `ROLE` / `ANY_USER` / `ANY_ROLE`
 - 数据权限 scope_type：`all` / `none` / `include` / `exclude` / `custom`
-- Temporal status：`PENDING` / `RUNNING` / `COMPLETED` / `FAILED` / `CANCELLED` / `TERMINATED` / `TIMED_OUT` / `CONTINUED_AS_NEW`
+- Temporal status：`PENDING` / `RUNNING` / `RETRYING` / `COMPLETED` / `FAILED` / `CANCELLED` / `TERMINATED` / `TIMED_OUT` / `CONTINUED_AS_NEW`
+- Temporal 执行 `retry_count`：已发生重试次数（首次执行为 `0`，非剩余次数）
 - 字典项平台（`dict_data.platform`，v8+）：`general` / `react-admin` / `vue-admin`
 - 字典项样式（`dict_data.tag_type`，v9+）：`default` / `primary` / `success` / `warning` / `error` / `processing` / `magenta` / `red` / `volcano` / `orange` / `gold` / `lime` / `green` / `cyan` / `blue` / `geekblue` / `purple`
 

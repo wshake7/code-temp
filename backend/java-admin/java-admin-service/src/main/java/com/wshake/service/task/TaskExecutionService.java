@@ -88,6 +88,7 @@ public class TaskExecutionService {
                 TaskJsonSupport.parseObject(e.getInputSummary(), "inputSummary"),
                 TaskJsonSupport.parseObject(e.getResultSummary(), "resultSummary"),
                 e.getFailureReason(),
+                e.getRetryCount() == null ? 0 : e.getRetryCount(),
                 e.getCreatedAt());
     }
 }

@@ -191,6 +191,7 @@ class TaskConfigControllerTest {
                 Map.of("trigger", "manual"),
                 null,
                 null,
+                0,
                 now);
     }
 }

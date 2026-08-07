@@ -14,6 +14,7 @@ import { formatDuration, statusColor, statusLabelKey } from './modules/shared';
 const STATUS_OPTIONS: TaskExecutionStatus[] = [
   'PENDING',
   'RUNNING',
+  'RETRYING',
   'COMPLETED',
   'FAILED',
   'CANCELLED',
@@ -146,6 +147,13 @@ export function TaskExecutionPanel() {
       render: (_, r) => (
         <Tag color={statusColor(r.status)}>{statusLabel(r.status)}</Tag>
       ),
+    },
+    {
+      title: t('retryCount'),
+      dataIndex: 'retryCount',
+      width: 90,
+      search: false,
+      render: (_, r) => r.retryCount ?? 0,
     },
     {
       title: t('startedAt'),

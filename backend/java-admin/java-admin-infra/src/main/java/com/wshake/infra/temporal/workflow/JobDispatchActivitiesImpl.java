@@ -59,6 +59,7 @@ public class JobDispatchActivitiesImpl implements JobDispatchActivities {
         row.setInputSummary(TaskJsonSupport.toJson(input.input(), "inputSummary"));
         row.setResultSummary(null);
         row.setFailureReason(null);
+        row.setRetryCount(0);
         row.setCreatedAt(now);
         executionRepository.insert(row);
         log.info(

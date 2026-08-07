@@ -856,6 +856,7 @@ export interface ApiLogListQuery {
 export type TaskExecutionStatus =
   | 'PENDING'
   | 'RUNNING'
+  | 'RETRYING'
   | 'COMPLETED'
   | 'FAILED'
   | 'CANCELLED'
@@ -967,6 +968,8 @@ export interface TaskExecution {
   inputSummary: Record<string, unknown> | null;
   resultSummary: Record<string, unknown> | null;
   failureReason: string | null;
+  /** 已发生重试次数；首次执行为 0 */
+  retryCount: number;
   createdAt: string;
 }
 

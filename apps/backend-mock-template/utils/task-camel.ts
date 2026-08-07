@@ -23,6 +23,7 @@ const TO_CAMEL: Record<string, string> = {
   input_summary: "inputSummary",
   result_summary: "resultSummary",
   failure_reason: "failureReason",
+  retry_count: "retryCount",
 };
 
 const TO_SNAKE: Record<string, string> = Object.fromEntries(

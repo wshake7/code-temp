@@ -58,6 +58,7 @@ class JobDispatchActivitiesImplTest {
         assertThat(row.getCreatedAt()).isNotNull();
         assertThat(row.getInputSummary()).contains("manual");
         assertThat(row.getClosedAt()).isNull();
+        assertThat(row.getRetryCount()).isEqualTo(0);
     }
 
     @Test

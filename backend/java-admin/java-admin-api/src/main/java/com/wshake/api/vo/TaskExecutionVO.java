@@ -34,5 +34,7 @@ public class TaskExecutionVO {
     private Map<String, Object> inputSummary;
     private Map<String, Object> resultSummary;
     private String failureReason;
+    /** 已发生重试次数；首次为 0。 */
+    private Integer retryCount;
     private LocalDateTime createdAt;
 }

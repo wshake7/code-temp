@@ -22,7 +22,7 @@ public final class JobDispatchModels {
      * @param timeoutSeconds    子 WF 执行超时秒（可空）
      * @param retryPolicy       子 WF 重试策略（可空；字段同任务配置）
      * @param input             业务入参（可空）
-     * @param retryCount        业务重试次数（仅镜像/预留，表无该列）
+     * @param retryCount        业务已发生重试次数（与 execution.retry_count 语义一致；写路径未镜像时恒 0）
      */
     public record DispatchInput(
             Long configId,
