@@ -57,6 +57,11 @@ spring:
     # 需 ≤ spring.lifecycle.timeout-per-shutdown-phase（默认 30s）
     worker:
       shutdown-await-seconds: ${TEMPORAL_WORKER_SHUTDOWN_AWAIT_SECONDS:30}
+    workers:
+      - task-queue: demo
+        capacity:
+          # 进程内同时执行的生图 Activity 上限（≈ 同时在飞的火山 API 请求数；多图在单 Activity 内串行）
+          max-concurrent-activity-executors: 1
 
   # SmartLifecycle 停机超时：覆盖 Temporal Worker await，避免相位超时后仍关 Channel
   lifecycle:
