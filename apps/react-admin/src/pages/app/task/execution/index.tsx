@@ -175,6 +175,13 @@ export function TaskExecutionPanel() {
       render: (_, r) => r.closedAt || <span style={{ color: '#999' }}>-</span>,
     },
     {
+      title: t('waitDuration'),
+      dataIndex: 'waitDuration',
+      width: 100,
+      search: false,
+      render: (_, r) => formatDuration(r.pendingAt, r.startedAt),
+    },
+    {
       title: t('duration'),
       dataIndex: 'duration',
       width: 100,

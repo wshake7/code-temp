@@ -94,6 +94,7 @@
   "pendingAt": "Pending At",
   "startedAt": "Started At",
   "closedAt": "Closed",
+  "waitDuration": "Wait Duration",
   "duration": "Duration",
   "failureReason": "Failure Reason",
   "inputSummary": "Input Summary",
