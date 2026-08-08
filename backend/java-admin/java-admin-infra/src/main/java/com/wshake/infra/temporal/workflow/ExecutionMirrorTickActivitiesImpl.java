@@ -67,11 +67,13 @@ import org.springframework.stereotype.Component;
  *       </ul>
  *   <li>时间字段（优先 Temporal pending_activities，首次写入后不覆盖）：
  *       <ul>
- *         <li>{@code pendingAt} ← Activity {@code scheduled_time}（进入排队/等待）
+ *         <li>{@code pendingAt} ← Activity {@code scheduled_time}（进入排队/等待）；
+ *             无 scheduled 时回退 workflow 启动时间 / now——<b>所有任务都应有值</b>
  *         <li>{@code startedAt} ← Activity {@code last_started_time}（真正开始执行）；
  *             PENDING 时保持 null
  *       </ul>
- *   <li>Visibility list 元数据无 pending，无法推断细粒度；开放行由双轨① describe 覆盖
+ *   <li>Visibility list 元数据无 pending：pendingAt 先用 workflow StartTime 占位，
+ *       开放行由双轨① describe 用 scheduled_time 精化（库内已有则不覆盖）
  * </ul>
  *
  * <p>Worker 注册队列见 {@link TemporalTaskQueue#SYSTEM}（系统队列，与业务 {@code demo} 隔离）。
@@ -249,14 +251,14 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         row.setWorkflowType(nullToEmpty(meta.getWorkflowType()));
         row.setTaskQueue(nullToEmpty(meta.getTaskQueue()));
         row.setStatus(status);
-        // Visibility 粗状态无 pending_activities：无法区分排队与开跑；
-        // pendingAt 留给后续 describe 用 scheduled_time 补齐，避免与 startedAt 写死成同一时刻
+        // Visibility 无 pending_activities：pendingAt 用 workflow 时间占位（保证非空）；
+        // 后续 describe 若库内已有 pendingAt 则不覆盖；有 scheduled_time 且库内为空才精化
+        LocalDateTime queueStart = temporalStart != null ? temporalStart : now;
+        row.setPendingAt(queueStart);
         if ("PENDING".equals(status)) {
-            row.setPendingAt(temporalStart != null ? temporalStart : now);
             row.setStartedAt(null);
         } else {
-            row.setPendingAt(null);
-            row.setStartedAt(temporalStart != null ? temporalStart : now);
+            row.setStartedAt(queueStart);
         }
         row.setClosedAt(toLocal(meta.getCloseTime()));
         // Schedule 触发无 DB 种子行：从 History 拉 Workflow 入参写 input_summary
@@ -285,7 +287,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                 toLocal(meta.getExecutionTime() != null ? meta.getExecutionTime() : meta.getStartTime());
         LocalDateTime closedAt = toLocal(meta.getCloseTime());
         // pendingAt / startedAt：优先 pending_activities 的 scheduled_time / last_started_time
-        LocalDateTime pendingAt = resolvePendingAt(row, status, retry, temporalStart, now);
+        LocalDateTime pendingAt = resolvePendingAt(row, retry, temporalStart, now);
         LocalDateTime startedAt = resolveStartedAt(row, status, retry, temporalStart, now);
         String resultJson = null;
         String failure = null;
@@ -335,7 +337,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                 inputJson = null;
             }
             // 重载后以库内时间为准再解析，避免丢失种子 pendingAt
-            pendingAt = resolvePendingAt(reloaded, status, retry, temporalStart, now);
+            pendingAt = resolvePendingAt(reloaded, retry, temporalStart, now);
             startedAt = resolveStartedAt(reloaded, status, retry, temporalStart, now);
         }
 
@@ -363,17 +365,14 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
     }
 
     /**
-     * 进入等待时间：库内已有值不覆盖；否则优先 Temporal Activity {@code scheduled_time}。
+     * 进入等待时间：库内已有值不覆盖；否则优先 Temporal Activity {@code scheduled_time}；
+     * 再退到 workflow 启动时间 / now。
      *
-     * <p>RUNNING/RETRYING 时 pending 仍常带 scheduled_time，可补齐从未写过的 pendingAt。
-     * 非 PENDING 且无 scheduled_time 时不回填 workflow 启动时间（避免与 startedAt 同源重合）。
+     * <p>所有任务都应有 pendingAt。无细粒度 scheduled_time 时与 startedAt 可能同源（排队时长为 0），
+     * 仍优于 UI 空白；开放态后续 tick 若仍无库内值且 describe 带回 scheduled_time 可精化。
      */
     static LocalDateTime resolvePendingAt(
-            TemporalTaskExecution row,
-            String status,
-            RetrySnapshot retry,
-            LocalDateTime temporalStart,
-            LocalDateTime now) {
+            TemporalTaskExecution row, RetrySnapshot retry, LocalDateTime temporalStart, LocalDateTime now) {
         if (row.getPendingAt() != null) {
             return row.getPendingAt();
         }
@@ -381,10 +380,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         if (scheduled != null) {
             return scheduled;
         }
-        if ("PENDING".equals(status)) {
-            return temporalStart != null ? temporalStart : now;
-        }
-        return null;
+        return temporalStart != null ? temporalStart : now;
     }
 
     /**

@@ -85,24 +85,25 @@ class ExecutionMirrorTickActivitiesImplTest {
         LocalDateTime lastStarted = LocalDateTime.of(2026, 6, 20, 8, 0, 10);
         TemporalTaskExecution empty = new TemporalTaskExecution();
         RetrySnapshot unknown = RetrySnapshot.unknown();
-        RetrySnapshot withTimes =
-                new RetrySnapshot(true, false, false, 0, null, scheduled, lastStarted);
+        RetrySnapshot withTimes = new RetrySnapshot(true, false, false, 0, null, scheduled, lastStarted);
 
-        // PENDING 无 Activity 时间 → workflow start 兜底；startedAt 仍 null
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, "PENDING", unknown, temporal, now))
+        // 无 Activity 时间 → workflow start 兜底；PENDING 时 startedAt 仍 null
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, unknown, temporal, now))
                 .isEqualTo(temporal);
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveStartedAt(empty, "PENDING", unknown, temporal, now))
                 .isNull();
 
-        // RUNNING 且有 scheduled_time / last_started_time → 分别写入，互不相等
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, "RUNNING", withTimes, temporal, now))
+        // 有 scheduled_time / last_started_time → 分别写入，互不相等
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, withTimes, temporal, now))
                 .isEqualTo(scheduled);
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveStartedAt(empty, "RUNNING", withTimes, temporal, now))
                 .isEqualTo(lastStarted);
 
-        // RUNNING 无 Activity 时间：pendingAt 不回填（避免与 startedAt 同源）；startedAt 用 temporal
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, "RUNNING", unknown, temporal, now))
-                .isNull();
+        // 无 Activity 时间：pendingAt 回退 workflow start / now（保证非空）；startedAt 同逻辑
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, unknown, temporal, now))
+                .isEqualTo(temporal);
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(empty, unknown, null, now))
+                .isEqualTo(now);
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveStartedAt(empty, "RUNNING", unknown, temporal, now))
                 .isEqualTo(temporal);
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveStartedAt(empty, "RETRYING", unknown, null, now))
@@ -112,7 +113,7 @@ class ExecutionMirrorTickActivitiesImplTest {
         TemporalTaskExecution seeded = new TemporalTaskExecution();
         seeded.setPendingAt(now.minusMinutes(1));
         seeded.setStartedAt(now.minusSeconds(30));
-        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(seeded, "RUNNING", withTimes, temporal, now))
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolvePendingAt(seeded, withTimes, temporal, now))
                 .isEqualTo(now.minusMinutes(1));
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveStartedAt(seeded, "PENDING", withTimes, temporal, now))
                 .isEqualTo(now.minusSeconds(30));
@@ -148,7 +149,8 @@ class ExecutionMirrorTickActivitiesImplTest {
         assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
                         PendingActivityState.PENDING_ACTIVITY_STATE_UNSPECIFIED))
                 .isFalse();
-        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(null)).isFalse();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(null))
+                .isFalse();
     }
 
     @Test
