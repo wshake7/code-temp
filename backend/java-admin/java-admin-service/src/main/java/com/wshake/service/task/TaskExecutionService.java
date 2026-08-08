@@ -83,6 +83,7 @@ public class TaskExecutionService {
                 e.getWorkflowType(),
                 e.getTaskQueue(),
                 e.getStatus(),
+                e.getPendingAt(),
                 e.getStartedAt(),
                 e.getClosedAt(),
                 TaskJsonSupport.parseObject(e.getInputSummary(), "inputSummary"),

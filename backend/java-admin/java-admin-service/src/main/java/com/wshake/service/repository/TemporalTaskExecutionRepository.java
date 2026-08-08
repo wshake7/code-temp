@@ -77,7 +77,7 @@ public class TemporalTaskExecutionRepository {
                     t.workflowType().eq(workflowType != null, workflowType);
                 })
                 .orderBy(t -> {
-                    // PENDING 的 startedAt 为 null，按创建时间保证「最新派发优先」
+                    // PENDING 的 startedAt 可能为 null，按创建时间保证「最新派发优先」
                     t.createdAt().desc();
                     t.id().desc();
                 })
@@ -98,12 +98,14 @@ public class TemporalTaskExecutionRepository {
     public long updateMirror(
             Long id,
             String status,
+            LocalDateTime pendingAt,
             LocalDateTime startedAt,
             LocalDateTime closedAt,
             String resultSummary,
             String failureReason,
             Integer retryCount) {
-        return updateMirror(id, status, startedAt, closedAt, resultSummary, failureReason, retryCount, null);
+        return updateMirror(
+                id, status, pendingAt, startedAt, closedAt, resultSummary, failureReason, retryCount, null);
     }
 
     /**
@@ -114,6 +116,7 @@ public class TemporalTaskExecutionRepository {
     public long updateMirror(
             Long id,
             String status,
+            LocalDateTime pendingAt,
             LocalDateTime startedAt,
             LocalDateTime closedAt,
             String resultSummary,
@@ -124,6 +127,9 @@ public class TemporalTaskExecutionRepository {
                 .updatable(TemporalTaskExecution.class)
                 .setColumns(t -> {
                     t.status().set(status);
+                    if (pendingAt != null) {
+                        t.pendingAt().set(pendingAt);
+                    }
                     if (startedAt != null) {
                         t.startedAt().set(startedAt);
                     }
@@ -149,7 +155,7 @@ public class TemporalTaskExecutionRepository {
      * @return 影响行数
      */
     public long complete(Long id, String status, String resultSummary, String failureReason, LocalDateTime closedAt) {
-        return updateMirror(id, status, null, closedAt, resultSummary, failureReason, null, null);
+        return updateMirror(id, status, null, null, closedAt, resultSummary, failureReason, null, null);
     }
 
     /** 是否为未终态 status。 */

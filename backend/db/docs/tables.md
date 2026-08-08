@@ -473,7 +473,8 @@
 | `workflow_type`  | VARCHAR(128)    | 是   | -              |                                              |
 | `task_queue`     | VARCHAR(128)    | 是   | -              |                                              |
 | `status`         | VARCHAR(32)     | 是   | -              | PENDING / RUNNING / RETRYING / COMPLETED / FAILED / ... |
-| `started_at`     | TIMESTAMP       | 否   | NULL           | 真正启动时间（NULL=PENDING 尚未运行）        |
+| `pending_at`     | TIMESTAMP       | 否   | NULL           | 进入等待中（PENDING）的时间                  |
+| `started_at`     | TIMESTAMP       | 否   | NULL           | 真正运行开始时间（NULL=尚未真正运行）        |
 | `closed_at`      | TIMESTAMP       | 否   | NULL           | 关闭时间（NULL=仍在运行/未启动）             |
 | `input_summary`  | JSON            | 否   | NULL           |                                              |
 | `result_summary` | JSON            | 否   | NULL           |                                              |

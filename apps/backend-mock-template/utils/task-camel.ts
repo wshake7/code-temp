@@ -18,6 +18,7 @@ const TO_CAMEL: Record<string, string> = {
   config_id: "configId",
   workflow_id: "workflowId",
   run_id: "runId",
+  pending_at: "pendingAt",
   started_at: "startedAt",
   closed_at: "closedAt",
   input_summary: "inputSummary",

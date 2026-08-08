@@ -177,6 +177,9 @@ public final class TaskManageModels {
             String workflowType,
             String taskQueue,
             String status,
+            /** 进入等待中的时间；可空。 */
+            LocalDateTime pendingAt,
+            /** 真正运行开始时间；尚未真正运行时为 null。 */
             LocalDateTime startedAt,
             LocalDateTime closedAt,
             Map<String, Object> inputSummary,

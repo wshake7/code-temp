@@ -29,6 +29,9 @@ public class TaskExecutionVO {
     private String workflowType;
     private String taskQueue;
     private String status;
+    /** 进入等待中的时间。 */
+    private LocalDateTime pendingAt;
+    /** 真正运行开始时间；尚未真正运行时为 null。 */
     private LocalDateTime startedAt;
     private LocalDateTime closedAt;
     private Map<String, Object> inputSummary;

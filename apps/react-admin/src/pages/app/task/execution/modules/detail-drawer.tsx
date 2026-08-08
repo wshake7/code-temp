@@ -55,6 +55,7 @@ const TaskExecutionDetailDrawer = ({ open, row, onClose }: Props) => {
           </Descriptions.Item>
           <Descriptions.Item label={t('retryCount')}>{row.retryCount ?? 0}</Descriptions.Item>
           <Descriptions.Item label={t('createdAt')}>{dash(row.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label={t('pendingAt')}>{dash(row.pendingAt)}</Descriptions.Item>
           <Descriptions.Item label={t('startedAt')}>{dash(row.startedAt)}</Descriptions.Item>
           <Descriptions.Item label={t('closedAt')}>{dash(row.closedAt)}</Descriptions.Item>
           <Descriptions.Item label={t('duration')}>

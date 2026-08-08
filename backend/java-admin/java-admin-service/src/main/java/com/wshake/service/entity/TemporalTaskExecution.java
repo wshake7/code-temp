@@ -11,10 +11,10 @@ import lombok.Data;
 /**
  * Temporal 执行记录镜像（对齐 schema {@code temporal_task_execution}）。
  *
- * <p>手动触发：start 业务 WF 后立即 insert 种子行（通常 {@code RUNNING} + 真实 workflowId/runId）；
- * Schedule 触发：由镜像 tick 从 Visibility 发现后 upsert。状态/结果由
- * {@code ExecutionMirrorTick} 定时对账推进；无软删、无 {@code updated_at}，故不继承
- * {@link BaseEntity}。
+ * <p>手动触发：start 业务 WF 后立即 insert 种子行（通常 {@code PENDING} + 真实 workflowId/runId，
+ * {@code pendingAt} 有值、{@code startedAt} 为空）；Schedule 触发：由镜像 tick 从 Visibility
+ * 发现后 upsert。状态/结果由 {@code ExecutionMirrorTick} 定时对账推进；无软删、无
+ * {@code updated_at}，故不继承 {@link BaseEntity}。
  *
  * @author wshake
  */
@@ -43,7 +43,10 @@ public class TemporalTaskExecution implements ProxyEntityAvailable<TemporalTaskE
      */
     private String status;
 
-    /** 真正启动时间；PENDING 时为 null。 */
+    /** 进入等待中（PENDING）的时间；首次进入等待时写入，之后不覆盖。 */
+    private LocalDateTime pendingAt;
+
+    /** 真正运行开始时间；尚未真正运行（含排队 PENDING）时为 null；首次非 PENDING 时写入。 */
     private LocalDateTime startedAt;
 
     /** 关闭时间；null=仍在运行或尚未启动。 */

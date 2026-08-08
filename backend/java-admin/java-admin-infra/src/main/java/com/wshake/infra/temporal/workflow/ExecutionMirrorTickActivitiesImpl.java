@@ -65,6 +65,12 @@ import org.springframework.stereotype.Component;
  *             （state 均为 SCHEDULED / PAUSED / UNSPECIFIED 等）
  *         <li>{@code RUNNING}：任一 pending 已 STARTED（或取消/暂停请求中）
  *       </ul>
+ *   <li>时间字段（优先 Temporal pending_activities，首次写入后不覆盖）：
+ *       <ul>
+ *         <li>{@code pendingAt} ← Activity {@code scheduled_time}（进入排队/等待）
+ *         <li>{@code startedAt} ← Activity {@code last_started_time}（真正开始执行）；
+ *             PENDING 时保持 null
+ *       </ul>
  *   <li>Visibility list 元数据无 pending，无法推断细粒度；开放行由双轨① describe 覆盖
  * </ul>
  *
@@ -233,10 +239,8 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         String runId = meta.getExecution().getRunId();
         Long configId = resolveConfigId(meta, wfId);
         LocalDateTime now = LocalDateTime.now(ZONE);
-        LocalDateTime startedAt = toLocal(meta.getStartTime() != null ? meta.getStartTime() : meta.getExecutionTime());
-        if (startedAt == null) {
-            startedAt = now;
-        }
+        LocalDateTime temporalStart =
+                toLocal(meta.getStartTime() != null ? meta.getStartTime() : meta.getExecutionTime());
         String status = mapStatus(meta.getStatus());
         TemporalTaskExecution row = new TemporalTaskExecution();
         row.setConfigId(configId);
@@ -245,7 +249,15 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         row.setWorkflowType(nullToEmpty(meta.getWorkflowType()));
         row.setTaskQueue(nullToEmpty(meta.getTaskQueue()));
         row.setStatus(status);
-        row.setStartedAt(startedAt);
+        // Visibility 粗状态无 pending_activities：无法区分排队与开跑；
+        // pendingAt 留给后续 describe 用 scheduled_time 补齐，避免与 startedAt 写死成同一时刻
+        if ("PENDING".equals(status)) {
+            row.setPendingAt(temporalStart != null ? temporalStart : now);
+            row.setStartedAt(null);
+        } else {
+            row.setPendingAt(null);
+            row.setStartedAt(temporalStart != null ? temporalStart : now);
+        }
         row.setClosedAt(toLocal(meta.getCloseTime()));
         // Schedule 触发无 DB 种子行：从 History 拉 Workflow 入参写 input_summary
         row.setInputSummary(tryFetchInputJson(wfId, runId));
@@ -268,8 +280,13 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         String baseStatus = mapStatus(meta.getStatus());
         RetrySnapshot retry = extractRetrySnapshot(meta);
         String status = resolveOpenStatus(baseStatus, retry);
-        LocalDateTime startedAt = toLocal(meta.getStartTime() != null ? meta.getStartTime() : meta.getExecutionTime());
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        LocalDateTime temporalStart =
+                toLocal(meta.getExecutionTime() != null ? meta.getExecutionTime() : meta.getStartTime());
         LocalDateTime closedAt = toLocal(meta.getCloseTime());
+        // pendingAt / startedAt：优先 pending_activities 的 scheduled_time / last_started_time
+        LocalDateTime pendingAt = resolvePendingAt(row, status, retry, temporalStart, now);
+        LocalDateTime startedAt = resolveStartedAt(row, status, retry, temporalStart, now);
         String resultJson = null;
         String failure = null;
         Object rawResult = null;
@@ -296,6 +313,8 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         // 无变化则跳过写库
         if (status.equals(row.getStatus())
                 && sameTime(row.getClosedAt(), closedAt)
+                && sameTime(row.getPendingAt(), pendingAt)
+                && sameTime(row.getStartedAt(), startedAt)
                 && (resultJson == null || resultJson.equals(row.getResultSummary()))
                 && (inputJson == null || inputJson.equals(row.getInputSummary()))
                 && (failure == null || failure.equals(row.getFailureReason()))
@@ -315,13 +334,20 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             if (isBlank(inputJson) && !isBlank(reloaded.getInputSummary())) {
                 inputJson = null;
             }
+            // 重载后以库内时间为准再解析，避免丢失种子 pendingAt
+            pendingAt = resolvePendingAt(reloaded, status, retry, temporalStart, now);
+            startedAt = resolveStartedAt(reloaded, status, retry, temporalStart, now);
         }
 
-        // startedAt：保留种子行已有值，避免 mirror 时钟覆盖手动触发写入的启动时间
-        LocalDateTime started = row.getStartedAt() != null ? row.getStartedAt() : startedAt;
         executionRepository.updateMirror(
-                row.getId(), status, started, closedAt, resultJson, failure, retryCount, inputJson);
+                row.getId(), status, pendingAt, startedAt, closedAt, resultJson, failure, retryCount, inputJson);
         row.setStatus(status);
+        if (pendingAt != null) {
+            row.setPendingAt(pendingAt);
+        }
+        if (startedAt != null) {
+            row.setStartedAt(startedAt);
+        }
         row.setClosedAt(closedAt);
         if (inputJson != null) {
             row.setInputSummary(inputJson);
@@ -334,6 +360,54 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         }
         row.setFailureReason(failure);
         return true;
+    }
+
+    /**
+     * 进入等待时间：库内已有值不覆盖；否则优先 Temporal Activity {@code scheduled_time}。
+     *
+     * <p>RUNNING/RETRYING 时 pending 仍常带 scheduled_time，可补齐从未写过的 pendingAt。
+     * 非 PENDING 且无 scheduled_time 时不回填 workflow 启动时间（避免与 startedAt 同源重合）。
+     */
+    static LocalDateTime resolvePendingAt(
+            TemporalTaskExecution row,
+            String status,
+            RetrySnapshot retry,
+            LocalDateTime temporalStart,
+            LocalDateTime now) {
+        if (row.getPendingAt() != null) {
+            return row.getPendingAt();
+        }
+        LocalDateTime scheduled = retry != null ? retry.earliestScheduledAt() : null;
+        if (scheduled != null) {
+            return scheduled;
+        }
+        if ("PENDING".equals(status)) {
+            return temporalStart != null ? temporalStart : now;
+        }
+        return null;
+    }
+
+    /**
+     * 真正运行开始：库内已有值不覆盖；PENDING 保持 null；
+     * 否则优先 Temporal Activity {@code last_started_time}，再退到 workflow 时间 / now。
+     */
+    static LocalDateTime resolveStartedAt(
+            TemporalTaskExecution row,
+            String status,
+            RetrySnapshot retry,
+            LocalDateTime temporalStart,
+            LocalDateTime now) {
+        if (row.getStartedAt() != null) {
+            return row.getStartedAt();
+        }
+        if ("PENDING".equals(status)) {
+            return null;
+        }
+        LocalDateTime lastStarted = retry != null ? retry.earliestLastStartedAt() : null;
+        if (lastStarted != null) {
+            return lastStarted;
+        }
+        return temporalStart != null ? temporalStart : now;
     }
 
     /**
@@ -549,6 +623,9 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         int maxAttempt = 0;
         String lastFailure = null;
         boolean anyStarted = false;
+        // scheduled_time = 进入排队；last_started_time = Worker 真正开跑（多 Activity 取最早）
+        LocalDateTime earliestScheduled = null;
+        LocalDateTime earliestLastStarted = null;
         for (PendingActivityInfo info : pending) {
             if (info == null) {
                 continue;
@@ -563,13 +640,20 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             if (isActivityStartedState(info.getState())) {
                 anyStarted = true;
             }
+            if (info.hasScheduledTime()) {
+                earliestScheduled = minTime(earliestScheduled, toLocal(info.getScheduledTime()));
+            }
+            if (info.hasLastStartedTime()) {
+                earliestLastStarted = minTime(earliestLastStarted, toLocal(info.getLastStartedTime()));
+            }
         }
         int retryCount = retryCountFromAttempt(maxAttempt);
         // attempt>1：已进入第 N 次执行；attempt=1 但已有 last_failure：首败后等待下一次
         boolean retrying = maxAttempt > 1 || !isBlank(lastFailure);
         // 仅 SCHEDULED/PAUSED 等、且非重试 → 业务「等待中」
         boolean waiting = !retrying && !anyStarted;
-        return new RetrySnapshot(true, retrying, waiting, retryCount, lastFailure);
+        return new RetrySnapshot(
+                true, retrying, waiting, retryCount, lastFailure, earliestScheduled, earliestLastStarted);
     }
 
     /**
@@ -669,6 +753,29 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
     }
 
     /**
+     * protobuf Timestamp → 本地时间；缺省/零值视为 null。
+     *
+     * @param ts {@link com.google.protobuf.Timestamp}；null 或 epoch0 → null
+     */
+    static LocalDateTime toLocal(com.google.protobuf.Timestamp ts) {
+        if (ts == null || (ts.getSeconds() == 0 && ts.getNanos() == 0)) {
+            return null;
+        }
+        return LocalDateTime.ofInstant(Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()), ZONE);
+    }
+
+    /** 取较早非 null 时间。 */
+    static LocalDateTime minTime(LocalDateTime a, LocalDateTime b) {
+        if (a == null) {
+            return b;
+        }
+        if (b == null) {
+            return a;
+        }
+        return a.isBefore(b) ? a : b;
+    }
+
+    /**
      * @param a 库内 closedAt
      * @param b Temporal closeTime
      */
@@ -751,26 +858,30 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
     /**
      * Activity pending 快照（来自 describe pending_activities）。
      *
-     * @param known               是否来自 describe（false=Visibility list 等未知源）
-     * @param activityRetrying    是否判定为 Activity 重试中
-     * @param activityWaiting     是否仅排队等待（SCHEDULED/PAUSED 等，且非重试）
-     * @param retryCount          写入 retry_count；unknown 时为 null（不覆盖库内值）
-     * @param lastFailureMessage  pending last_failure.message；无则 null
+     * @param known                  是否来自 describe（false=Visibility list 等未知源）
+     * @param activityRetrying       是否判定为 Activity 重试中
+     * @param activityWaiting        是否仅排队等待（SCHEDULED/PAUSED 等，且非重试）
+     * @param retryCount             写入 retry_count；unknown 时为 null（不覆盖库内值）
+     * @param lastFailureMessage     pending last_failure.message；无则 null
+     * @param earliestScheduledAt    各 pending Activity {@code scheduled_time} 最早值（进入等待）
+     * @param earliestLastStartedAt  各 pending Activity {@code last_started_time} 最早值（真正开跑）
      */
     record RetrySnapshot(
             boolean known,
             boolean activityRetrying,
             boolean activityWaiting,
             Integer retryCount,
-            String lastFailureMessage) {
+            String lastFailureMessage,
+            LocalDateTime earliestScheduledAt,
+            LocalDateTime earliestLastStartedAt) {
 
         static RetrySnapshot unknown() {
-            return new RetrySnapshot(false, false, false, null, null);
+            return new RetrySnapshot(false, false, false, null, null, null, null);
         }
 
         /** describe 已知无 pending：非等待/重试，且不改 retry_count。 */
         static RetrySnapshot notRetrying() {
-            return new RetrySnapshot(true, false, false, null, null);
+            return new RetrySnapshot(true, false, false, null, null, null, null);
         }
     }
 }

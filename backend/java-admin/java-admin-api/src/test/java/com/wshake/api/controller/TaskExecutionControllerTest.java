@@ -60,6 +60,7 @@ class TaskExecutionControllerTest {
                 "demo",
                 "COMPLETED",
                 now,
+                now,
                 now.plusMinutes(8),
                 Map.of("date", "2026-06-20"),
                 Map.of("rows", 1280),

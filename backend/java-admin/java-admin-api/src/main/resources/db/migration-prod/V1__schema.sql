@@ -734,7 +734,8 @@ CREATE TABLE temporal_task_execution (
     task_queue      VARCHAR(128)    NOT NULL,
     status          VARCHAR(32)     NOT NULL
                                     COMMENT 'PENDING/RUNNING/RETRYING/COMPLETED/FAILED/CANCELLED/TERMINATED/TIMED_OUT/CONTINUED_AS_NEW',
-    started_at      TIMESTAMP       NULL DEFAULT NULL  COMMENT '真正启动时间(NULL=PENDING 尚未运行)',
+    pending_at      TIMESTAMP       NULL DEFAULT NULL  COMMENT '进入等待中(PENDING)的时间',
+    started_at      TIMESTAMP       NULL DEFAULT NULL  COMMENT '真正运行开始时间(NULL=尚未真正运行)',
     closed_at       TIMESTAMP       NULL DEFAULT NULL  COMMENT '关闭时间(NULL=仍在运行/未启动)',
     input_summary   JSON            DEFAULT NULL  COMMENT '输入摘要(避免存大对象)',
     result_summary  JSON            DEFAULT NULL  COMMENT '结果摘要',

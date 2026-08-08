@@ -206,7 +206,7 @@ class TaskConfigServiceTest {
     }
 
     @Test
-    void trigger_startsBusinessWorkflow_andInsertsRunningSeed() {
+    void trigger_startsBusinessWorkflow_andInsertsPendingSeed() {
         TemporalTaskConfig config = activeConfig(1L, "log_count_tick", 1);
         when(configRepository.findById(1L)).thenReturn(config);
         when(taskTriggerPort.start(any())).thenReturn(new TriggerResult("wf-1", "run-1"));
@@ -214,14 +214,20 @@ class TaskConfigServiceTest {
         TaskTriggerResult result = service.trigger(1L);
 
         assertThat(result.config().code()).isEqualTo("log_count_tick");
-        assertThat(result.execution().status()).isEqualTo("RUNNING");
-        assertThat(result.execution().startedAt()).isNotNull();
+        assertThat(result.execution().status()).isEqualTo("PENDING");
+        assertThat(result.execution().pendingAt()).isNotNull();
+        assertThat(result.execution().startedAt()).isNull();
         assertThat(result.execution().id()).isEqualTo(99L);
         assertThat(result.execution().workflowId()).isEqualTo("wf-1");
         assertThat(result.execution().runId()).isEqualTo("run-1");
         assertThat(result.execution().inputSummary()).containsEntry("trigger", "manual");
         verify(taskTriggerPort).start(any());
-        verify(executionRepository).insert(any(TemporalTaskExecution.class));
+        ArgumentCaptor<TemporalTaskExecution> rowCap = ArgumentCaptor.forClass(TemporalTaskExecution.class);
+        verify(executionRepository).insert(rowCap.capture());
+        TemporalTaskExecution inserted = rowCap.getValue();
+        assertThat(inserted.getStatus()).isEqualTo("PENDING");
+        assertThat(inserted.getPendingAt()).isNotNull();
+        assertThat(inserted.getStartedAt()).isNull();
         verify(taskSchedulePort, never()).apply(any());
     }
 

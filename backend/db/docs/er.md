@@ -233,7 +233,8 @@
 │  │  - workflow_id              │ │    │                                  │
 │  │  - run_id                   │ │    │                                  │
 │  │  - status                   │ │    │                                  │
-│  │  - started_at / closed_at   │ │    │                                  │
+│  │  - pending_at / started_at  │ │    │                                  │
+│  │  - closed_at                │ │    │                                  │
 │  │  - input/result summary     │ │    │                                  │
 │  │  - 仅 created_at（记录型）  │ │    │                                  │
 │  │                             │ │    │                                  │

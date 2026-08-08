@@ -52,7 +52,9 @@ export interface TemporalTaskExecution {
   workflow_type: string;
   task_queue: string;
   status: TaskExecutionStatus;
-  /** PENDING 尚未真正启动时为 null/省略 */
+  /** 进入等待中的时间 */
+  pending_at: string | null;
+  /** 真正运行开始时间；尚未真正运行时为 null */
   started_at: string | null;
   closed_at: string | null;
   input_summary: Record<string, unknown> | null;
@@ -227,6 +229,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "ReportDailyWorkflow",
       task_queue: "reports",
       status: "COMPLETED",
+      pending_at: "2026-06-20T02:00:00.000Z",
       started_at: "2026-06-20T02:00:00.000Z",
       closed_at: "2026-06-20T02:08:42.000Z",
       input_summary: { date: "2026-06-20" },
@@ -243,6 +246,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "OrderSettlementWorkflow",
       task_queue: "finance",
       status: "COMPLETED",
+      pending_at: "2026-06-20T01:00:00.000Z",
       started_at: "2026-06-20T01:00:00.000Z",
       closed_at: "2026-06-20T01:32:11.000Z",
       input_summary: null,
@@ -259,6 +263,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "DataArchiveWorkflow",
       task_queue: "maintenance",
       status: "FAILED",
+      pending_at: "2026-06-20T03:00:00.000Z",
       started_at: "2026-06-20T03:00:00.000Z",
       closed_at: "2026-06-20T03:05:21.000Z",
       input_summary: null,
@@ -275,6 +280,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "ReportDailyWorkflow",
       task_queue: "reports",
       status: "COMPLETED",
+      pending_at: "2026-06-19T02:00:00.000Z",
       started_at: "2026-06-19T02:00:00.000Z",
       closed_at: "2026-06-19T02:07:55.000Z",
       input_summary: { date: "2026-06-19" },
@@ -291,6 +297,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "OrderSettlementWorkflow",
       task_queue: "finance",
       status: "COMPLETED",
+      pending_at: "2026-06-19T01:00:00.000Z",
       started_at: "2026-06-19T01:00:00.000Z",
       closed_at: "2026-06-19T01:28:43.000Z",
       input_summary: null,
@@ -307,6 +314,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "CacheWarmupWorkflow",
       task_queue: "maintenance",
       status: "RUNNING",
+      pending_at: "2026-06-20T08:14:00.000Z",
       started_at: "2026-06-20T08:14:00.000Z",
       closed_at: null,
       input_summary: { keys: ["home", "catalog"] },
@@ -323,6 +331,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "SessionCleanupWorkflow",
       task_queue: "maintenance",
       status: "TIMED_OUT",
+      pending_at: "2026-06-20T09:30:00.000Z",
       started_at: "2026-06-20T09:30:00.000Z",
       closed_at: "2026-06-20T09:35:00.000Z",
       input_summary: null,
@@ -339,6 +348,7 @@ function buildTemporalTaskExecutionSeeds(): TemporalTaskExecution[] {
       workflow_type: "ReportDailyWorkflow",
       task_queue: "reports",
       status: "COMPLETED",
+      pending_at: "2026-06-18T02:00:00.000Z",
       started_at: "2026-06-18T02:00:00.000Z",
       closed_at: "2026-06-18T02:08:12.000Z",
       input_summary: { date: "2026-06-18" },
@@ -371,7 +381,8 @@ export function appendMockTaskExecution(
     workflow_type: config.workflow_type,
     task_queue: config.task_queue,
     status,
-    started_at: now,
+    pending_at: now,
+    started_at: status === "PENDING" ? null : now,
     closed_at: closed,
     input_summary: { trigger: "manual", configCode: config.code },
     result_summary: status === "COMPLETED" ? { ok: true } : null,
