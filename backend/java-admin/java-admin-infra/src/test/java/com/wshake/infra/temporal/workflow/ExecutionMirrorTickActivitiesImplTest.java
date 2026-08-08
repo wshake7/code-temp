@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.wshake.infra.temporal.workflow.ExecutionMirrorTickActivitiesImpl.RetrySnapshot;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.common.v1.WorkflowType;
+import io.temporal.api.enums.v1.PendingActivityState;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.failure.v1.Failure;
 import io.temporal.api.workflow.v1.WorkflowExecutionInfo;
@@ -43,7 +44,7 @@ class ExecutionMirrorTickActivitiesImplTest {
 
     @Test
     void resolveOpenStatus_promotesRunningToRetryingWhenActivityRetrying() {
-        RetrySnapshot retrying = new RetrySnapshot(true, true, 2, "boom");
+        RetrySnapshot retrying = new RetrySnapshot(true, true, false, 2, "boom");
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", retrying))
                 .isEqualTo("RETRYING");
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("FAILED", retrying))
@@ -54,6 +55,47 @@ class ExecutionMirrorTickActivitiesImplTest {
                 .isEqualTo("RUNNING");
         assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", null))
                 .isEqualTo("RUNNING");
+    }
+
+    @Test
+    void resolveOpenStatus_promotesRunningToPendingWhenActivityWaiting() {
+        RetrySnapshot waiting = new RetrySnapshot(true, false, true, 0, null);
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", waiting))
+                .isEqualTo("PENDING");
+        // 重试优先于等待
+        RetrySnapshot retryWhileScheduled = new RetrySnapshot(true, true, true, 1, "boom");
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", retryWhileScheduled))
+                .isEqualTo("RETRYING");
+        // 已真正执行：保持 RUNNING
+        RetrySnapshot started = new RetrySnapshot(true, false, false, 0, null);
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("RUNNING", started))
+                .isEqualTo("RUNNING");
+        // 终态不降级
+        assertThat(ExecutionMirrorTickActivitiesImpl.resolveOpenStatus("COMPLETED", waiting))
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void isActivityStartedState_distinguishesScheduledFromStarted() {
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
+                        PendingActivityState.PENDING_ACTIVITY_STATE_STARTED))
+                .isTrue();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
+                        PendingActivityState.PENDING_ACTIVITY_STATE_CANCEL_REQUESTED))
+                .isTrue();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
+                        PendingActivityState.PENDING_ACTIVITY_STATE_PAUSE_REQUESTED))
+                .isTrue();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
+                        PendingActivityState.PENDING_ACTIVITY_STATE_SCHEDULED))
+                .isFalse();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
+                        PendingActivityState.PENDING_ACTIVITY_STATE_PAUSED))
+                .isFalse();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(
+                        PendingActivityState.PENDING_ACTIVITY_STATE_UNSPECIFIED))
+                .isFalse();
+        assertThat(ExecutionMirrorTickActivitiesImpl.isActivityStartedState(null)).isFalse();
     }
 
     @Test

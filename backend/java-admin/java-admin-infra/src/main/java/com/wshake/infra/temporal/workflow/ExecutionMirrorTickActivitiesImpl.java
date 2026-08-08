@@ -9,6 +9,7 @@ import com.wshake.service.task.TaskJsonSupport;
 import com.wshake.service.task.TemporalTaskQueue;
 import com.wshake.service.task.TemporalWorkflowType;
 import io.temporal.api.common.v1.Payloads;
+import io.temporal.api.enums.v1.PendingActivityState;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.failure.v1.Failure;
 import io.temporal.api.history.v1.HistoryEvent;
@@ -54,12 +55,17 @@ import org.springframework.stereotype.Component;
  *       若业务结果 Map 含 {@code input} 键也可兜底回填
  * </ul>
  *
- * <p>重试镜像（Activity 级）：
+ * <p>开放态 Activity 镜像（describe {@code pending_activities}）：
  * <ul>
- *   <li>describe 返回的 {@link WorkflowExecutionDescription} 含 {@code pending_activities}
- *   <li>Workflow 仍为 RUNNING 时，若 pending 的 attempt 大于 1 或已有 {@code last_failure}，
- *       映射为业务 status {@code RETRYING}，{@code retry_count = max(0, attempt - 1)}
- *   <li>Visibility list 元数据无 pending，无法推断重试；开放行由双轨① describe 覆盖
+ *   <li>Workflow 仍为 RUNNING 时，结合 pending 提升/细化业务 status：
+ *       <ul>
+ *         <li>{@code RETRYING}：attempt &gt; 1 或已有 {@code last_failure}；
+ *             {@code retry_count = max(0, attempt - 1)}
+ *         <li>{@code PENDING}（等待中）：存在 pending 且尚未真正执行
+ *             （state 均为 SCHEDULED / PAUSED / UNSPECIFIED 等）
+ *         <li>{@code RUNNING}：任一 pending 已 STARTED（或取消/暂停请求中）
+ *       </ul>
+ *   <li>Visibility list 元数据无 pending，无法推断细粒度；开放行由双轨① describe 覆盖
  * </ul>
  *
  * <p>Worker 注册队列见 {@link TemporalTaskQueue#SYSTEM}（系统队列，与业务 {@code demo} 隔离）。
@@ -497,26 +503,34 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
     }
 
     /**
-     * 在 Workflow 仍为 RUNNING 时，结合 Activity pending 信息提升为 {@code RETRYING}。
+     * 在 Workflow 仍为 RUNNING 时，结合 Activity pending 信息细化开放态。
+     *
+     * <p>优先序：{@code RETRYING} &gt; {@code PENDING}（仅等待领取/暂停）&gt; 保持 {@code baseStatus}。
      *
      * @param baseStatus {@link #mapStatus} 结果
-     * @param retry      describe 提取的重试快照；未知时不改 status
+     * @param retry      describe 提取的 pending 快照；未知时不改 status
      */
     static String resolveOpenStatus(String baseStatus, RetrySnapshot retry) {
         if (retry == null || !retry.known()) {
             return baseStatus;
         }
-        if ("RUNNING".equals(baseStatus) && retry.activityRetrying()) {
+        if (!"RUNNING".equals(baseStatus)) {
+            return baseStatus;
+        }
+        if (retry.activityRetrying()) {
             return "RETRYING";
+        }
+        if (retry.activityWaiting()) {
+            return "PENDING";
         }
         return baseStatus;
     }
 
     /**
-     * 从 describe/list 元数据提取 Activity 重试快照。
+     * 从 describe/list 元数据提取 Activity pending 快照。
      *
      * <p>仅 {@link WorkflowExecutionDescription}（stub.describe）带 pending_activities；
-     * Visibility list 的 {@link WorkflowExecutionMetadata} 视为未知（不覆盖库内 retry_count）。
+     * Visibility list 的 {@link WorkflowExecutionMetadata} 视为未知（不覆盖库内 retry_count / 细粒度状态）。
      */
     static RetrySnapshot extractRetrySnapshot(WorkflowExecutionMetadata meta) {
         if (!(meta instanceof WorkflowExecutionDescription description)) {
@@ -529,11 +543,12 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             return RetrySnapshot.unknown();
         }
         if (pending.isEmpty()) {
-            // describe 已知无 pending：非 Activity 重试中；retry_count 不主动清零（保留历史峰值）
+            // describe 已知无 pending：非 Activity 等待/重试中；retry_count 不主动清零（保留历史峰值）
             return RetrySnapshot.notRetrying();
         }
         int maxAttempt = 0;
         String lastFailure = null;
+        boolean anyStarted = false;
         for (PendingActivityInfo info : pending) {
             if (info == null) {
                 continue;
@@ -545,11 +560,36 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                     lastFailure = msg;
                 }
             }
+            if (isActivityStartedState(info.getState())) {
+                anyStarted = true;
+            }
         }
         int retryCount = retryCountFromAttempt(maxAttempt);
         // attempt>1：已进入第 N 次执行；attempt=1 但已有 last_failure：首败后等待下一次
         boolean retrying = maxAttempt > 1 || !isBlank(lastFailure);
-        return new RetrySnapshot(true, retrying, retryCount, lastFailure);
+        // 仅 SCHEDULED/PAUSED 等、且非重试 → 业务「等待中」
+        boolean waiting = !retrying && !anyStarted;
+        return new RetrySnapshot(true, retrying, waiting, retryCount, lastFailure);
+    }
+
+    /**
+     * pending Activity 是否已真正在 Worker 上执行（相对「排队等待领取」）。
+     *
+     * @param state Temporal {@link PendingActivityState}；null/未识别视为未启动
+     */
+    static boolean isActivityStartedState(PendingActivityState state) {
+        if (state == null) {
+            return false;
+        }
+        return switch (state) {
+            case PENDING_ACTIVITY_STATE_STARTED,
+                    PENDING_ACTIVITY_STATE_CANCEL_REQUESTED,
+                    PENDING_ACTIVITY_STATE_PAUSE_REQUESTED -> true;
+            case PENDING_ACTIVITY_STATE_SCHEDULED,
+                    PENDING_ACTIVITY_STATE_PAUSED,
+                    PENDING_ACTIVITY_STATE_UNSPECIFIED,
+                    UNRECOGNIZED -> false;
+        };
     }
 
     /**
@@ -709,22 +749,28 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
     private record ResultAndFailure(String resultJson, String failureReason, Object rawResult) {}
 
     /**
-     * Activity 重试快照（来自 describe pending_activities）。
+     * Activity pending 快照（来自 describe pending_activities）。
      *
      * @param known               是否来自 describe（false=Visibility list 等未知源）
      * @param activityRetrying    是否判定为 Activity 重试中
+     * @param activityWaiting     是否仅排队等待（SCHEDULED/PAUSED 等，且非重试）
      * @param retryCount          写入 retry_count；unknown 时为 null（不覆盖库内值）
      * @param lastFailureMessage  pending last_failure.message；无则 null
      */
-    record RetrySnapshot(boolean known, boolean activityRetrying, Integer retryCount, String lastFailureMessage) {
+    record RetrySnapshot(
+            boolean known,
+            boolean activityRetrying,
+            boolean activityWaiting,
+            Integer retryCount,
+            String lastFailureMessage) {
 
         static RetrySnapshot unknown() {
-            return new RetrySnapshot(false, false, null, null);
+            return new RetrySnapshot(false, false, false, null, null);
         }
 
-        /** describe 已知无 pending：不在 Activity 重试中，且不改 retry_count。 */
+        /** describe 已知无 pending：非等待/重试，且不改 retry_count。 */
         static RetrySnapshot notRetrying() {
-            return new RetrySnapshot(true, false, null, null);
+            return new RetrySnapshot(true, false, false, null, null);
         }
     }
 }
