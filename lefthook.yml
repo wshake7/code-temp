@@ -58,6 +58,15 @@ post-merge:
         - "pnpm-workspace.yaml"
       run: pnpm install --frozen-lockfile=false
 
+# 分支切换: 先串行清理,再异步 vp install(不阻塞 checkout)。
+# git 参数: $1=prev HEAD $2=new HEAD $3=1 分支切换 / 0 文件检出。
+# Escape hatch: LEFTHOOK=0 git switch <branch>
+# 安装日志: .scratch/hooks/vp-install-{root,vben,react}.log
+post-checkout:
+  jobs:
+    - name: clean:mvn
+      run: mvn -B -q -f backend/java-admin/pom.xml clean
+
 pre-push:
   parallel: true
   jobs:
