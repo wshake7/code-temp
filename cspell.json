@@ -5,6 +5,7 @@
   "allowCompoundWords": true,
   "words": [
     "pycache",
+    "ABAC",
     "antd",
     "antdv",
     "antdv-next",
@@ -31,6 +32,8 @@
     "PresetColorType",
     "PresetStatusColorType",
     "pro-workflow",
+    "ptype",
+    "referer",
     "rolldown",
     "rollup",
     "smart-search",

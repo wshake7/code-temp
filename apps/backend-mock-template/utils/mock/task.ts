@@ -369,10 +369,7 @@ export function appendMockTaskExecution(
   const stamp = now.replace(/[-:TZ.]/g, "").slice(0, 14);
   const id = nextTaskExecutionId();
   const status = opts?.status ?? "PENDING";
-  const closed =
-    status === "PENDING" || status === "RUNNING" || status === "RETRYING"
-      ? null
-      : now;
+  const closed = status === "PENDING" || status === "RUNNING" || status === "RETRYING" ? null : now;
   const row: TemporalTaskExecution = {
     id,
     config_id: config.id,
