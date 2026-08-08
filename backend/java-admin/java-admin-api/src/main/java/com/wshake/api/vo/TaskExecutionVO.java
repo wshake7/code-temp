@@ -33,6 +33,7 @@ public class TaskExecutionVO {
     private LocalDateTime pendingAt;
     /** 真正运行开始时间；尚未真正运行时为 null。 */
     private LocalDateTime startedAt;
+
     private LocalDateTime closedAt;
     private Map<String, Object> inputSummary;
     private Map<String, Object> resultSummary;

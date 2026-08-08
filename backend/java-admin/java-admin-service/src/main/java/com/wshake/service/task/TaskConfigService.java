@@ -259,8 +259,8 @@ public class TaskConfigService {
     }
 
     /**
-     * 直启业务 Workflow，并立即插入 PENDING 种子行（pendingAt=now，startedAt 为空）；
-     * 真正运行开始与终态由 ExecutionMirrorTick 对账推进。
+     * 直启业务 Workflow，并立即插入 PENDING 种子行（pendingAt/startedAt 均为空）；
+     * 进入等待时间与真正运行开始由 ExecutionMirrorTick 从 Temporal pending_activities 对账写入。
      */
     private TaskExecutionView doTrigger(TemporalTaskConfig config) {
         Map<String, Object> input = new LinkedHashMap<>();
@@ -288,7 +288,7 @@ public class TaskConfigService {
         row.setWorkflowType(config.getWorkflowType());
         row.setTaskQueue(config.getTaskQueue());
         row.setStatus("PENDING");
-        row.setPendingAt(now);
+        row.setPendingAt(null);
         row.setStartedAt(null);
         row.setClosedAt(null);
         row.setInputSummary(TaskJsonSupport.toJson(input, "inputSummary"));
@@ -307,7 +307,7 @@ public class TaskConfigService {
                 config.getWorkflowType(),
                 config.getTaskQueue(),
                 "PENDING",
-                now,
+                null,
                 null,
                 null,
                 input,

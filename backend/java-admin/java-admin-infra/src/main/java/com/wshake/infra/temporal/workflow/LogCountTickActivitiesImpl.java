@@ -37,7 +37,7 @@ public class LogCountTickActivitiesImpl implements LogCountTickActivities {
     public Map<String, Object> incrementAndLog(Map<String, Object> input) {
         long value = COUNT.incrementAndGet();
         try {
-            Thread.sleep(1000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
@@ -49,7 +49,6 @@ public class LogCountTickActivitiesImpl implements LogCountTickActivities {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("count", value);
         result.put("message", "log_count_tick ok");
-        result.put("input", safeInput);
         return result;
     }
 

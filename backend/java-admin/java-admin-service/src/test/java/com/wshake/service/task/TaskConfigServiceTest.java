@@ -92,15 +92,7 @@ class TaskConfigServiceTest {
     void create_rejectsSystemTaskQueue() {
         // SYSTEM 仅供系统 Schedule，不进任务配置门禁（对齐 TemporalWorkflowType 系统类型）
         CreateTaskConfigCommand cmd = new CreateTaskConfigCommand(
-                "log_count_tick",
-                "日志计数",
-                "LogCountTickWorkflow",
-                TemporalTaskQueue.SYSTEM,
-                null,
-                null,
-                null,
-                null,
-                1);
+                "log_count_tick", "日志计数", "LogCountTickWorkflow", TemporalTaskQueue.SYSTEM, null, null, null, null, 1);
 
         assertThatThrownBy(() -> service.create(cmd))
                 .isInstanceOf(BizException.class)
@@ -215,7 +207,8 @@ class TaskConfigServiceTest {
 
         assertThat(result.config().code()).isEqualTo("log_count_tick");
         assertThat(result.execution().status()).isEqualTo("PENDING");
-        assertThat(result.execution().pendingAt()).isNotNull();
+        // 种子行不写 pendingAt：由 ExecutionMirrorTick 用 Activity scheduled_time 补齐
+        assertThat(result.execution().pendingAt()).isNull();
         assertThat(result.execution().startedAt()).isNull();
         assertThat(result.execution().id()).isEqualTo(99L);
         assertThat(result.execution().workflowId()).isEqualTo("wf-1");
@@ -226,7 +219,7 @@ class TaskConfigServiceTest {
         verify(executionRepository).insert(rowCap.capture());
         TemporalTaskExecution inserted = rowCap.getValue();
         assertThat(inserted.getStatus()).isEqualTo("PENDING");
-        assertThat(inserted.getPendingAt()).isNotNull();
+        assertThat(inserted.getPendingAt()).isNull();
         assertThat(inserted.getStartedAt()).isNull();
         verify(taskSchedulePort, never()).apply(any());
     }

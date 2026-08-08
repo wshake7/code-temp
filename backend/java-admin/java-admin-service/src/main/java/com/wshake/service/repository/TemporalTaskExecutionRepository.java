@@ -104,8 +104,7 @@ public class TemporalTaskExecutionRepository {
             String resultSummary,
             String failureReason,
             Integer retryCount) {
-        return updateMirror(
-                id, status, pendingAt, startedAt, closedAt, resultSummary, failureReason, retryCount, null);
+        return updateMirror(id, status, pendingAt, startedAt, closedAt, resultSummary, failureReason, retryCount, null);
     }
 
     /**
