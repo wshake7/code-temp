@@ -3,8 +3,8 @@
 后台管理产品（`java-admin` + 双前端 + mock）的共享领域语言。  
 本文件只记**本项目特有**的术语与禁词，不含实现决策（实现决策见 `docs/adr/`）。
 
-**本波范围**：鉴权、用户、角色、菜单、API 资源、字典、国际化、登录日志、API 日志、动态菜单路由。  
-**本波不做**：部门、Temporal 任务调度、demo/test 类接口。
+**本波范围**：鉴权、用户、角色、菜单、API 资源、字典、国际化、登录日志、API 日志、动态菜单路由、访问黑名单（Blacklist）。  
+**本波不做**：部门、Temporal 任务调度、demo/test 类接口；Blacklist 的 DEVICE 运行时拦截与 CIDR（见 `.scratch/sys-blacklist/spec.md`）。
 
 ## Language
 
@@ -79,6 +79,14 @@ _Avoid_: 仅前端本地 JSON、与后端文案体系脱节（本波以可管理
 **Login Log / API Log**：
 登录行为与 API 访问的审计记录。  
 _Avoid_: 用应用日志文件代替可查询的审计实体
+
+**Blacklist**：
+访问黑名单条目：按 IP / USER / DEVICE 多态 target，配合 scope（LOGIN / API / ALL）与时间窗限制访问；与用户 `is_enabled`、Casbin 正交。  
+_Avoid_: 用「禁用用户」或 Casbin deny 代替临时/多维访问限制；本波运行时不查 DEVICE
+
+**Access Blocked**：
+因 Blacklist 命中被拒绝时的专用结果（错误码 + 固定文案）；`reason` 仅服务端可见。  
+_Avoid_: 与 `AUTH_FORBIDDEN`（无权限）或凭证错误混用；不要把内部 `reason` 回传客户端
 
 ## 相关文档
 

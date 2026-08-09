@@ -245,9 +245,16 @@ VALUES
     (79, '任务执行分页', 'GET', '/api/system/task-execution/list', 'task:execution:list', '任务调度', '', 1, 0, 0, 0),
     (80, '任务执行详情', 'GET', '/api/system/task-execution/:id', 'task:execution:list__system_task-execution__id', '任务调度', '', 1, 0, 0, 0),
     (81, '工作流类型选项', 'GET', '/api/system/task-config/workflow-types', 'task:config:list__system_task-config_workflow-types', '任务调度', '', 1, 0, 0, 0),
-    (82, '任务队列选项', 'GET', '/api/system/task-config/task-queues', 'task:config:list__system_task-config_task-queues', '任务调度', '', 1, 0, 0, 0);
+    (82, '任务队列选项', 'GET', '/api/system/task-config/task-queues', 'task:config:list__system_task-config_task-queues', '任务调度', '', 1, 0, 0, 0),
+    (83, '黑名单分页', 'GET', '/api/system/blacklist/list', 'system:blacklist:list', '访问黑名单', '', 1, 0, 0, 0),
+    (84, '黑名单全量', 'GET', '/api/system/blacklist/all', 'system:blacklist:list__system_blacklist_all', '访问黑名单', '', 1, 0, 0, 0),
+    (85, '黑名单详情', 'GET', '/api/system/blacklist/:id', 'system:blacklist:list__system_blacklist__id', '访问黑名单', '', 1, 0, 0, 0),
+    (86, '创建黑名单', 'POST', '/api/system/blacklist', 'system:blacklist:create', '访问黑名单', '', 1, 0, 0, 0),
+    (87, '更新黑名单', 'PUT', '/api/system/blacklist/:id', 'system:blacklist:update', '访问黑名单', '', 1, 0, 0, 0),
+    (88, '删除黑名单', 'DELETE', '/api/system/blacklist/:id', 'system:blacklist:delete', '访问黑名单', '', 1, 0, 0, 0),
+    (89, '批量操作黑名单', 'POST', '/api/system/blacklist/batch', 'system:blacklist:batch', '访问黑名单', '', 1, 0, 0, 0);
 
-ALTER TABLE sys_api AUTO_INCREMENT = 83;
+ALTER TABLE sys_api AUTO_INCREMENT = 90;
 
 -- ============================================================
 -- Section 4: sys_menu（对齐 mock buildSysMenuSeeds，固定 id 便于 tree_path / 授权）
@@ -273,6 +280,7 @@ VALUES
     (2053, 205, '删除菜单', 'BUTTON', NULL, NULL, '', '', 'system:menu:delete', '/200/205/2053/', NULL, 3, 0, 1, 0, '', 0, 0),
     (206, 200, 'system.api.title', 'MENU', '/system/api', '/system/api/index', 'lucide:terminal', '', 'system:api:list', '/200/206/', '{"routeName":"SystemApi","order":6}', 6, 0, 1, 0, '', 0, 0),
     (2061, 206, '同步接口', 'BUTTON', NULL, NULL, '', '', 'system:api:sync', '/200/206/2061/', NULL, 1, 0, 1, 0, '', 0, 0),
+    (207, 200, 'system.blacklist.title', 'MENU', '/system/blacklist', '/system/blacklist/index', 'lucide:shield-ban', '', 'system:blacklist:list', '/200/207/', '{"routeName":"SystemBlacklist","order":7}', 7, 0, 1, 0, '', 0, 0),
     (300, NULL, 'log.title', 'MENU', '/log', '/log/index', 'lucide:logs', '', NULL, '/300/', '{"routeName":"Log","order":2004,"fullPathKey":false}', 2004, 0, 1, 0, '', 0, 0),
     (301, 300, 'log.loginLog.title', 'BUTTON', NULL, NULL, '', '', 'log:login-log:list', '/300/301/', NULL, 1, 0, 1, 0, '', 0, 0),
     (302, 300, 'log.apiLog.title', 'BUTTON', NULL, NULL, '', '', 'log:api-log:list', '/300/302/', NULL, 2, 0, 1, 0, '', 0, 0),
@@ -336,7 +344,8 @@ INSERT INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 2052),
     (1, 2053),
     (1, 206),
-    (1, 2061);
+    (1, 2061),
+    (1, 207);
 
 -- ============================================================
 -- Section 9: sys_role_api（root 全量接口）
@@ -424,7 +433,14 @@ INSERT INTO sys_role_api (role_id, api_id) VALUES
     (1, 79),
     (1, 80),
     (1, 81),
-    (1, 82);
+    (1, 82),
+    (1, 83),
+    (1, 84),
+    (1, 85),
+    (1, 86),
+    (1, 87),
+    (1, 88),
+    (1, 89);
 
 -- ============================================================
 -- Section 10: sys_menu_api（菜单-接口快捷绑定）
@@ -438,6 +454,7 @@ INSERT INTO sys_menu_api (menu_id, api_id, created_by) VALUES
     (205, 20, 0),
     (206, 30, 0),
     (206, 37, 0),
+    (207, 83, 0),
     (301, 70, 0),
     (302, 71, 0),
     (401, 72, 0),

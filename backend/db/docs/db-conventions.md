@@ -566,8 +566,8 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 ### 18.6 本波边界
 
-- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
-- **未**交付：Flyway 迁移、Java Filter、管理端 CRUD
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md` + Flyway `V1` 表 + `V2` 菜单/API seed + 管理端 CRUD
+- **未**交付：运行时 Filter / 登录链路拦截（见 `.scratch/sys-blacklist`）
 
 ---
 
@@ -579,6 +579,6 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 - Casbin policy 文件（`model.conf` / `policy.csv`）
 - 全量业务 Seed 之外的数据（日志 / i18n 翻译文案 / Temporal 任务配置等；`schema_data.sql` 已含字典 + RBAC 最小可登录种子）
 - 数据库 Docker 编排
-- `sys_blacklist` 运行时拦截与管理端（见 §18.6）
+- `sys_blacklist` 运行时拦截（见 §18.6；管理 CRUD 与 Flyway 由 java-admin 交付）
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

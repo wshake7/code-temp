@@ -63,7 +63,7 @@
 --        — 支持同类型同 value 在不同 platform 各有一条活跃行(配合 v8 平台过滤)
 -- v11 (仅 sys_blacklist):
 --   1. 新增核心表 sys_blacklist：多态 target(IP/USER/DEVICE) + scope(LOGIN/API/ALL)
---        + 生效窗 starts_at/expires_at；弱唯一含 deleted_at；无 Flyway 本波不同步
+--        + 生效窗 starts_at/expires_at；弱唯一含 deleted_at；Flyway V1 同步本表
 -- ============================================================
 
 SET NAMES utf8mb4;
