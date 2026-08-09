@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v10)
+# 后台管理 DB 约定 (v11)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -47,7 +47,7 @@
 
 ## 4. 审计 + 启停 + 软删字段（核心表）
 
-每张**核心表**（共 10 张）必须包含以下 **7 个字段**，**顺序固定**：
+每张**核心表**（共 11 张）必须包含以下 **7 个字段**，**顺序固定**：
 
 ```sql
 remark          VARCHAR(512)    NOT NULL DEFAULT ''                -- 管理员备注
@@ -91,12 +91,12 @@ updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0                  -- 0=系统�
 
 ### 4.4 不同表的覆盖
 
-| 表类                                                                                                                                                                               | 字段                                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 核心表 10 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission`） | 上述 7 字段全有                                                                                                                  |
-| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                 | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
-| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                              | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
-| 归档表 3 张（`*_archive`）                                                                                                                                                         | 镜像热表（多 `archived_at`）                                                                                                     |
+| 表类                                                                                                                                                                                                 | 字段                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 核心表 11 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist`） | 上述 7 字段全有                                                                                                                  |
+| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                   | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
+| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
+| 归档表 3 张（`*_archive`）                                                                                                                                                                           | 镜像热表（多 `archived_at`）                                                                                                     |
 
 ---
 
@@ -126,7 +126,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 - 软删：`UPDATE ... SET deleted_at = UNIX_TIMESTAMP() * 1000 WHERE id = ?`
 - 重建：直接 `INSERT` 即可（同 `username, deleted_at=0` 的活跃行已被软删让位）
 
-**覆盖范围**（v4+ 起 10 张表的 UNIQUE 全部软删感知）：
+**覆盖范围**（v4+ 起核心表 UNIQUE 全部软删感知；v11+ 含 blacklist）：
 
 - `sys_user.username`
 - `sys_role.code`
@@ -137,6 +137,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 - `dict_data.(type_id, value, platform)`（v10+；平台是隔离维度）
 - `temporal_task_config.code`
 - `sys_data_permission.(subject_type, subject_id, resource_table, action_key)`
+- `sys_blacklist.(target_type, target_value, scope, starts_at, expires_at)`（v11+；弱唯一，见 §18；允许多条不同时间窗）
 
 ---
 
@@ -192,13 +193,14 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 ### 7.2 不建外键（软引用，`NULL` 或 `0` 占位）
 
-| 引用                                                                | 类型                 | 原因                                                              |
-| ------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------- |
-| `created_by` / `updated_by` → `sys_user.id`                         | `NOT NULL DEFAULT 0` | 0=系统操作；用户删除时不应级联清空历史                            |
-| `sys_user.language_code` → `i18n_locale.code`                       | `NULL`               | 同上（i18n_locale.code 软引用）                                   |
-| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`    | `NOT NULL DEFAULT 0` | 多态主体（`ANY_*` 时为 0），无法 FK                               |
-| `temporal_task_execution.config_id` → `temporal_task_config.id`     | `NULL`               | 执行可能先于配置存在                                              |
-| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id` | `NULL`               | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| 引用                                                                   | 类型                     | 原因                                                              |
+| ---------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| `created_by` / `updated_by` → `sys_user.id`                            | `NOT NULL DEFAULT 0`     | 0=系统操作；用户删除时不应级联清空历史                            |
+| `sys_user.language_code` → `i18n_locale.code`                          | `NULL`                   | 同上（i18n_locale.code 软引用）                                   |
+| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`       | `NOT NULL DEFAULT 0`     | 多态主体（`ANY_*` 时为 0），无法 FK                               |
+| `sys_blacklist.target_value`（当 `target_type='USER'`）→ `sys_user.id` | `VARCHAR` 存十进制字符串 | 多态 target，无法 FK；IP/DEVICE 无实体引用                        |
+| `temporal_task_execution.config_id` → `temporal_task_config.id`        | `NULL`                   | 执行可能先于配置存在                                              |
+| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`    | `NULL`                   | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ### 7.3 自引用外键
 
@@ -239,6 +241,8 @@ ALTER TABLE sys_role
 - Temporal 执行 `retry_count`：已发生重试次数（首次执行为 `0`，非剩余次数）
 - 字典项平台（`dict_data.platform`，v8+）：`general` / `react-admin` / `vue-admin`
 - 字典项样式（`dict_data.tag_type`，v9+）：`default` / `primary` / `success` / `warning` / `error` / `processing` / `magenta` / `red` / `volcano` / `orange` / `gold` / `lime` / `green` / `cyan` / `blue` / `geekblue` / `purple`
+- 黑名单目标类型（`sys_blacklist.target_type`，v11+）：`IP` / `USER` / `DEVICE`
+- 黑名单限制范围（`sys_blacklist.scope`，v11+）：`LOGIN` / `API` / `ALL`
 
 ---
 
@@ -500,7 +504,74 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 
 ---
 
-## 18. 不在本任务范围
+## 18. 访问黑名单 (`sys_blacklist`，v11+)
+
+### 18.1 多态 target
+
+| `target_type` | `target_value` 存法                                      | 匹配                        |
+| ------------- | -------------------------------------------------------- | --------------------------- |
+| `IP`          | 规范化 IP 文本（建议应用层统一 IPv6 小写、去端口）；≤128 | **精确等值**（本波无 CIDR） |
+| `USER`        | `sys_user.id` 的十进制字符串（软引用，不建 FK）          | 等值                        |
+| `DEVICE`      | 客户端上报 deviceId **原样**（utf8mb4 比较，大小写敏感） | 等值                        |
+
+应用层校验 `target_type` 合法性；`USER` 时校验用户存在性（可选，封禁可保留已删用户 id）。
+
+### 18.2 scope
+
+| 值      | 含义             |
+| ------- | ---------------- |
+| `LOGIN` | 仅限制登录       |
+| `API`   | 仅限制已认证 API |
+| `ALL`   | 全部（默认）     |
+
+请求侧命中条件：`scope IN (:request_scope, 'ALL')`。  
+例：登录检查传入 `LOGIN`，则 `LOGIN` 与 `ALL` 行均可命中。
+
+### 18.3 生效判定
+
+```sql
+SELECT 1 FROM sys_blacklist
+WHERE target_type = ?
+  AND target_value = ?
+  AND scope IN (?, 'ALL')   -- 第二参为 LOGIN 或 API
+  AND deleted_at = 0
+  AND is_enabled = 1
+  AND starts_at <= CURRENT_TIMESTAMP
+  AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+LIMIT 1;
+```
+
+- `starts_at`：`NOT NULL DEFAULT CURRENT_TIMESTAMP`（含边界）
+- `expires_at`：`NULL` = 永不过期；非 NULL 时为**不含**边界（`>` 比较）
+- 多条命中：**OR**（任一命中即限制）
+- `reason`：对用户/审计可见原因（可 `''`）；`remark`：内部备注
+
+### 18.4 弱唯一与时间窗
+
+```sql
+UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
+```
+
+- **允许**同一 target 多条活跃行（不同时间窗 / 不同 scope）
+- **禁止**完全相同的 `(target, scope, starts_at, expires_at)` 活跃重复行
+- **不**在 DB 层检测区间重叠；重叠时命中 OR，或由管理端创建前查询提醒
+- **MySQL 注意**：`expires_at` 为 `NULL` 时，UNIQUE 视 NULL 互不相等，多条「永久」且同 `starts_at` 的活跃行可能并存——应用层对永久封应先查再插，或保证 `starts_at` 唯一
+
+### 18.5 与用户禁用 / Casbin 边界
+
+- `sys_user.is_enabled=0`：账号禁用（用户实体生命周期）
+- `sys_blacklist`：按 IP/USER/DEVICE 的访问限制（可临时、可多维）
+- Casbin：角色能否调用 endpoint
+- 三者正交；运行时拦截顺序建议：黑名单 → 鉴权 → 数据权限（实现波次另定）
+
+### 18.6 本波边界
+
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
+- **未**交付：Flyway 迁移、Java Filter、管理端 CRUD
+
+---
+
+## 19. 不在本任务范围
 
 - ORM model 代码（Go struct / Java entity）
 - 迁移工具集成（仅交付独立 .sql；`schema.sql` + `schema_data.sql` 可独立执行）
@@ -508,5 +579,6 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 - Casbin policy 文件（`model.conf` / `policy.csv`）
 - 全量业务 Seed 之外的数据（日志 / i18n 翻译文案 / Temporal 任务配置等；`schema_data.sql` 已含字典 + RBAC 最小可登录种子）
 - 数据库 Docker 编排
+- `sys_blacklist` 运行时拦截与管理端（见 §18.6）
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

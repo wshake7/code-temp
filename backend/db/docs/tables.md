@@ -1,8 +1,8 @@
-# 表字段速查 (v10)
+# 表字段速查 (v11)
 
 > 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 22 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10（`platform` / `tag_type` / UNIQUE 含 platform）。
+> 共 23 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11。
 
 ---
 
@@ -311,6 +311,35 @@
 **索引**：`PRIMARY(id)` / `UNIQUE(subject_type, subject_id, resource_table, action_key, deleted_at)` / `idx_subject` / `idx_subject_resource` / `idx_resource` / `idx_is_enabled` / `idx_deleted_at`
 
 **外键**：无（多态主体，无法 FK）
+
+---
+
+## 6b. 访问黑名单模块（v11）
+
+### 6b.1 `sys_blacklist` — 访问黑名单
+
+| 字段           | 类型            | 必填 | 默认              | 说明                                                     |
+| -------------- | --------------- | ---- | ----------------- | -------------------------------------------------------- |
+| `id`           | BIGINT UNSIGNED | 是   | AUTO_INCREMENT    | 主键                                                     |
+| `target_type`  | VARCHAR(16)     | 是   | -                 | `IP` / `USER` / `DEVICE`                                 |
+| `target_value` | VARCHAR(128)    | 是   | -                 | IP 文本；USER=`sys_user.id` 字符串；DEVICE=deviceId 原样 |
+| `scope`        | VARCHAR(16)     | 是   | `'ALL'`           | `LOGIN` / `API` / `ALL`                                  |
+| `reason`       | VARCHAR(512)    | 是   | `''`              | 封禁原因（对用户/审计可见）                              |
+| `starts_at`    | TIMESTAMP       | 是   | CURRENT_TIMESTAMP | 生效开始（含）                                           |
+| `expires_at`   | TIMESTAMP       | 否   | NULL              | 生效结束（不含）；NULL=永不过期                          |
+| `remark`       | VARCHAR(512)    | 是   | `''`              | 管理员内部备注                                           |
+| `is_enabled`   | TINYINT(1)      | 是   | 1                 | 启用/禁用                                                |
+| `deleted_at`   | BIGINT UNSIGNED | 是   | 0                 | 软删时间戳（毫秒）                                       |
+| `created_at`   | TIMESTAMP       | 是   | NOW()             |                                                          |
+| `updated_at`   | TIMESTAMP       | 是   | NOW()             |                                                          |
+| `created_by`   | BIGINT UNSIGNED | 是   | 0                 |                                                          |
+| `updated_by`   | BIGINT UNSIGNED | 是   | 0                 |                                                          |
+
+**索引**：`PRIMARY(id)` / `UNIQUE(target_type, target_value, scope, starts_at, expires_at, deleted_at)` / `idx_target(target_type, target_value)` / `idx_expires_at` / `idx_is_enabled` / `idx_deleted_at`
+
+**外键**：无（`USER` 为软引用；IP/DEVICE 无实体）
+
+> 生效：`deleted_at=0 AND is_enabled=1 AND starts_at<=NOW() AND (expires_at IS NULL OR expires_at>NOW())`；请求侧再 `scope IN (场景, 'ALL')`。多行 OR。详见 `db-conventions.md` §18。
 
 ---
 

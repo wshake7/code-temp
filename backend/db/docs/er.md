@@ -1,4 +1,4 @@
-# ER 关系与基数 (v10)
+# ER 关系与基数 (v11)
 
 > 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 
@@ -39,6 +39,13 @@
 │                ┌──────┴───────┐                                            │
 │                │ sys_menu_api │  (M:N 菜单↔API, 快捷绑定, 非授权)          │
 │                └──────────────┘                                            │
+│                                                                             │
+│                       访问黑名单 (v11)                                        │
+│                                                                             │
+│   ┌────────────────┐  soft ref when target_type=USER                        │
+│   │ sys_blacklist  │ ··············► sys_user.id (target_value 字符串)     │
+│   │ IP/USER/DEVICE │  IP/DEVICE 无 FK；scope=LOGIN/API/ALL                  │
+│   └────────────────┘                                                        │
 │                                                                             │
 │                          I18n                                               │
 │                                                                             │
@@ -99,15 +106,16 @@
 
 ### 2.2 1:N（一对多）
 
-| 父                     | 子                        | 外键                                     | 备注                   |
-| ---------------------- | ------------------------- | ---------------------------------------- | ---------------------- |
-| `sys_menu`             | `sys_menu`                | `parent_id`                              | 自引用树形（v1+）      |
-| `sys_role`             | `sys_role`                | `parent_id`                              | 自引用角色层级（v4+）  |
-| `i18n_locale`          | `i18n_translation`        | `locale_id`                              | FK                     |
-| `dict_type`            | `dict_data`               | `type_id`                                | FK                     |
-| `temporal_task_config` | `temporal_task_execution` | `config_id`                              | **软外键**（不建 FK）  |
-| `sys_role`             | `sys_data_permission`     | `subject_id`（当 `subject_type='ROLE'`） | **软关联**（多态主体） |
-| `sys_user`             | `sys_data_permission`     | `subject_id`（当 `subject_type='USER'`） | **软关联**             |
+| 父                     | 子                        | 外键                                      | 备注                    |
+| ---------------------- | ------------------------- | ----------------------------------------- | ----------------------- |
+| `sys_menu`             | `sys_menu`                | `parent_id`                               | 自引用树形（v1+）       |
+| `sys_role`             | `sys_role`                | `parent_id`                               | 自引用角色层级（v4+）   |
+| `i18n_locale`          | `i18n_translation`        | `locale_id`                               | FK                      |
+| `dict_type`            | `dict_data`               | `type_id`                                 | FK                      |
+| `temporal_task_config` | `temporal_task_execution` | `config_id`                               | **软外键**（不建 FK）   |
+| `sys_role`             | `sys_data_permission`     | `subject_id`（当 `subject_type='ROLE'`）  | **软关联**（多态主体）  |
+| `sys_user`             | `sys_data_permission`     | `subject_id`（当 `subject_type='USER'`）  | **软关联**              |
+| `sys_user`             | `sys_blacklist`           | `target_value`（当 `target_type='USER'`） | **软关联**（字符串 id） |
 
 ### 2.3 1:1 / 0..1
 
@@ -119,9 +127,10 @@
 
 | 字段                        | 表                          | 类型                 | 软引用目标                    | 原因                                                          |
 | --------------------------- | --------------------------- | -------------------- | ----------------------------- | ------------------------------------------------------------- |
-| `created_by` / `updated_by` | 所有 10 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）   | 用户删除时不应级联清空历史                                    |
+| `created_by` / `updated_by` | 所有 11 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）   | 用户删除时不应级联清空历史                                    |
 | `language_code`             | `sys_user`                  | `NULL`               | `i18n_locale.code`            | i18n_locale.code 软引用                                       |
 | `subject_id`                | `sys_data_permission`       | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id` | 多态主体（`ANY_*` 时为 0）                                    |
+| `target_value`              | `sys_blacklist`             | `VARCHAR(128)`       | `sys_user.id`（仅 `USER`）    | 多态 target；IP/DEVICE 无实体引用（v11+）                     |
 | `config_id`                 | `temporal_task_execution`   | `NULL`               | `temporal_task_config.id`     | 执行可能先于配置存在                                          |
 | `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`               | `sys_user.id`                 | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
@@ -282,6 +291,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 | ------------------------------------------------ | -------- | ------------------------------------------- |
 | `sys_user_role` 等关联表                         | 强一致   | 事务内                                      |
 | `sys_data_permission`                            | 强一致   | 同上                                        |
+| `sys_blacklist`                                  | 强一致   | 管理端 CRUD；运行时读（实现波次另定）       |
 | `temporal_task_execution` ↔ Temporal Server      | 最终一致 | 异步镜像                                    |
 | `casbin_rule` ↔ `sys_role_api` / `sys_role_menu` | 弱一致   | 两套独立写，admin 写 role 时应同步刷 casbin |
 | 日志 `_archive` ↔ 热表                           | 最终一致 | 每日 TTL 作业                               |
@@ -292,7 +302,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 
 ## 10. 软删时间戳 `deleted_at` 模式
 
-所有核心表（10 张）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
+所有核心表（11 张，含 v11 `sys_blacklist`）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
 
 - `0` = 活跃行
 - `> 0` = 软删时刻（毫秒 Unix 时间戳）

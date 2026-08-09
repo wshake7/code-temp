@@ -1,12 +1,12 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_0900_ai_ci
 -- 引擎:       InnoDB
 -- 版本要求:   MySQL 8.0.13+ （使用 JSON 类型 / TEXT 默认值表达式）
--- 表数:       22 张
---             核心 13（含 sys_data_permission）
+-- 表数:       23 张
+--             核心 11（含 sys_data_permission / sys_blacklist）
 --             关联 4（sys_user_role / sys_role_api / sys_role_menu / sys_menu_api）
 --             记录 4（3 张日志 + temporal_task_execution）
 --             归档 3（api_log_archive / sys_login_log_archive / operation_log_archive）
@@ -61,6 +61,9 @@
 --   1. dict_data: UNIQUE 由 (type_id, value, deleted_at) 改为
 --        (type_id, value, platform, deleted_at)
 --        — 支持同类型同 value 在不同 platform 各有一条活跃行(配合 v8 平台过滤)
+-- v11 (仅 sys_blacklist):
+--   1. 新增核心表 sys_blacklist：多态 target(IP/USER/DEVICE) + scope(LOGIN/API/ALL)
+--        + 生效窗 starts_at/expires_at；弱唯一含 deleted_at；无 Flyway 本波不同步
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -468,7 +471,46 @@ CREATE TABLE sys_data_permission (
 
 
 -- ============================================================
--- Section 16: API 调用日志 — api_log (v5: 字段扩充对齐 PG sys_api_log)
+-- Section 16: 访问黑名单 — sys_blacklist (v11)
+-- 多态 target(IP/USER/DEVICE) + scope(LOGIN/API/ALL) + 生效窗
+-- 命中语义: deleted_at=0 AND is_enabled=1 AND starts_at<=NOW()
+--           AND (expires_at IS NULL OR expires_at>NOW())
+--           AND scope IN (请求场景, 'ALL')；多行 OR
+-- 弱唯一: 防「同 target+scope+完全相同时间窗」重复行；区间重叠不由 DB 约束
+-- MySQL 注意: UNIQUE 中 expires_at=NULL 时多行可并存(NULL 互不等)，应用层需防永久窗重复
+-- ============================================================
+CREATE TABLE sys_blacklist (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    target_type     VARCHAR(16)     NOT NULL  COMMENT '目标类型: IP / USER / DEVICE',
+    target_value    VARCHAR(128)    NOT NULL  COMMENT '目标值(IP 文本; USER=sys_user.id 十进制字符串软引用; DEVICE=客户端 deviceId 原样)',
+    scope           VARCHAR(16)     NOT NULL DEFAULT 'ALL'
+                                    COMMENT '限制范围: LOGIN=仅登录 / API=仅已认证 API / ALL=全部(命中时 scope IN (场景, ALL))',
+    reason          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '封禁原因(对用户/审计可见;可空串)',
+    starts_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                    COMMENT '生效开始时间(含)',
+    expires_at      TIMESTAMP       NULL DEFAULT NULL
+                                    COMMENT '生效结束时间(不含;NULL=永不过期)',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员内部备注',
+    is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用(独立于 deleted_at 与时间窗)',
+    deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '创建人(0=系统操作;非0=软引用 sys_user.id)',
+    updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
+    PRIMARY KEY (id),
+    -- 弱唯一: 同 (target, scope, 完全相同时间窗) 活跃行至多一条; 区间重叠不检测
+    UNIQUE KEY uniq_sys_blacklist_target_scope_window
+        (target_type, target_value, scope, starts_at, expires_at, deleted_at),
+    INDEX idx_sys_blacklist_target (target_type, target_value),
+    INDEX idx_sys_blacklist_expires_at (expires_at),
+    INDEX idx_sys_blacklist_is_enabled (is_enabled),
+    INDEX idx_sys_blacklist_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='访问黑名单(多态 target + scope + 时间窗;运行时拦截本波未实现)';
+
+
+-- ============================================================
+-- Section 17: API 调用日志 — api_log (v5: 字段扩充对齐 PG sys_api_log)
 -- request_id 全链路串联 api_log ↔ operation_log ↔ 链路追踪
 -- 新增: 客户端指纹 / UA 解析 / IP 解析 / 变更前后 / 头信息
 -- ============================================================
@@ -528,7 +570,7 @@ CREATE TABLE api_log (
 
 
 -- ============================================================
--- Section 17: API 日志归档 — api_log_archive (v5: 与 api_log 同结构)
+-- Section 18: API 日志归档 — api_log_archive (v5: 与 api_log 同结构)
 -- ============================================================
 CREATE TABLE api_log_archive (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -581,7 +623,7 @@ CREATE TABLE api_log_archive (
 
 
 -- ============================================================
--- Section 18: 登录日志 — sys_login_log (v5: 字段扩充对齐 PG sys_login_log)
+-- Section 19: 登录日志 — sys_login_log (v5: 字段扩充对齐 PG sys_login_log)
 -- 新增: MAC / UA 解析 / IP 解析 / 状态码 / 客户端指纹
 -- 移除: device / os / browser / country / province / city
 --       (由 os_name/version + browser_name/version + location + client_* 替代)
@@ -627,7 +669,7 @@ CREATE TABLE sys_login_log (
 
 
 -- ============================================================
--- Section 19: 登录日志归档 — sys_login_log_archive (v5: 与 sys_login_log 同结构)
+-- Section 20: 登录日志归档 — sys_login_log_archive (v5: 与 sys_login_log 同结构)
 -- ============================================================
 CREATE TABLE sys_login_log_archive (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -665,7 +707,7 @@ CREATE TABLE sys_login_log_archive (
 
 
 -- ============================================================
--- Section 20: 操作日志 — operation_log (v2 不变)
+-- Section 21: 操作日志 — operation_log (v2 不变)
 -- ============================================================
 CREATE TABLE operation_log (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -691,7 +733,7 @@ CREATE TABLE operation_log (
 
 
 -- ============================================================
--- Section 21: 操作日志归档 — operation_log_archive (v2 不变)
+-- Section 22: 操作日志归档 — operation_log_archive (v2 不变)
 -- ============================================================
 CREATE TABLE operation_log_archive (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -718,7 +760,7 @@ CREATE TABLE operation_log_archive (
 
 
 -- ============================================================
--- Section 22: Temporal 执行记录 — temporal_task_execution (v2 不变)
+-- Section 23: Temporal 执行记录 — temporal_task_execution (v2 不变)
 -- ============================================================
 CREATE TABLE temporal_task_execution (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -749,7 +791,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 
 -- ============================================================
--- Section 23: 自引用外键后置
+-- Section 24: 自引用外键后置
 -- CREATE TABLE 内无法引用自身,用 ALTER TABLE 补充
 -- ============================================================
 ALTER TABLE sys_menu
@@ -762,5 +804,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11)
 -- ============================================================
