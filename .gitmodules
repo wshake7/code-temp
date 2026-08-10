@@ -1,3 +1,4 @@
 [submodule "apps/vue-vben-admin"]
 	path = apps/vue-vben-admin
-	url = https://github.com/wshake7/vue-vben-admin.git
+	url = https://github.com/wzerf/vue-vben-admin.git
+	ignore = all
