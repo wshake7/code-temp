@@ -13,8 +13,9 @@
  *   mock/login-log      登录日志（SysLoginLog / appendLoginLog）
  *   mock/api-log        API 日志（ApiLog / appendApiLog）
  *   mock/task           Temporal 任务调度（TemporalTaskConfig / Execution）
+ *   mock/blacklist      访问黑名单（SysBlacklist / 命中判定 / CRUD）
  *
- * 83 个 handler 仍从 `~/utils/mock-data` 导入，路径不变；各域模块级单例
+ * handler 仍从 `~/utils/mock-data` 导入，路径不变；各域模块级单例
  * （mockXxxList）由 ES module 语义保证全应用唯一实例，行为与拆分前一致。
  *
  * 注意：原 getMockUserList / mockUserList（空 any[]，无任何引用）已作为死代码删除。
@@ -30,3 +31,4 @@ export * from "./mock/user-role";
 export * from "./mock/login-log";
 export * from "./mock/api-log";
 export * from "./mock/task";
+export * from "./mock/blacklist";

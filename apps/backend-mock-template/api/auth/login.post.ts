@@ -2,8 +2,10 @@ import { defineEventHandler, getHeader, getRequestIP, readBody, setResponseStatu
 import { createSession } from "~/utils/session-utils";
 import { verifyAltchaPayload } from "~/utils/altcha";
 import {
+  accessBlockedBody,
   appendLoginLog,
   ensureUserSeeds,
+  findBlockingHit,
   getMockSysUserList,
   getUserRoleCodes,
 } from "~/utils/mock-data";
@@ -71,6 +73,25 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, 401);
     // 与 java-admin AUTH_INVALID_CREDENTIALS(2002) 对齐
     return useResponseError("Username or password is incorrect.", 2002);
+  }
+
+  // LOGIN + USER：凭证正确后、发 token 前查黑名单（对齐 Java AuthService）
+  const userHit = findBlockingHit("USER", String(sysUser.id), "LOGIN");
+  if (userHit) {
+    console.warn(
+      `[BLACKLIST] Access Blocked targetType=USER targetValue=${sysUser.id} scene=LOGIN hitScope=${userHit.scope} reason=${userHit.reason}`,
+    );
+    appendLoginLog({
+      username: sysUser.username,
+      success: 0,
+      reason: "Access Blocked",
+      statusCode: 403,
+      sysUserId: sysUser.id,
+      loginIp,
+      userAgent,
+    });
+    setResponseStatus(event, 403);
+    return accessBlockedBody();
   }
 
   appendLoginLog({

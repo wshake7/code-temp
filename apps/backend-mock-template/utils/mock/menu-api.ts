@@ -673,6 +673,20 @@ function buildSysMenuSeeds(): SysMenu[] {
       sort: 1,
       ...base,
     },
+    // 访问黑名单 — 对齐 V2 seed id=207
+    {
+      id: 207,
+      parent_id: 200,
+      name: "system.blacklist.title",
+      type: "MENU",
+      path: "/system/blacklist",
+      component: "/system/blacklist/index",
+      icon: "lucide:shield-ban",
+      permission_code: "system:blacklist:list",
+      sort: 7,
+      ...base,
+      metadata: JSON.stringify({ routeName: "SystemBlacklist", order: 7 }),
+    },
     // 日志审计 — 单 MENU 进页；BUTTON 发 list 权限码供页内 Tab 显隐
     {
       id: 300,
@@ -1356,6 +1370,56 @@ export const API_SYNC_MANIFEST = [
     permissionCode: "task:execution:list",
     apiGroup: "任务调度",
   },
+  // —— 访问黑名单 ——
+  {
+    name: "黑名单分页",
+    method: "GET",
+    path: "/api/system/blacklist/list",
+    permissionCode: "system:blacklist:list",
+    apiGroup: "访问黑名单",
+  },
+  {
+    name: "黑名单全量",
+    method: "GET",
+    path: "/api/system/blacklist/all",
+    permissionCode: "system:blacklist:list__system_blacklist_all",
+    apiGroup: "访问黑名单",
+  },
+  {
+    name: "黑名单详情",
+    method: "GET",
+    path: "/api/system/blacklist/:id",
+    permissionCode: "system:blacklist:list__system_blacklist__id",
+    apiGroup: "访问黑名单",
+  },
+  {
+    name: "创建黑名单",
+    method: "POST",
+    path: "/api/system/blacklist",
+    permissionCode: "system:blacklist:create",
+    apiGroup: "访问黑名单",
+  },
+  {
+    name: "更新黑名单",
+    method: "PUT",
+    path: "/api/system/blacklist/:id",
+    permissionCode: "system:blacklist:update",
+    apiGroup: "访问黑名单",
+  },
+  {
+    name: "删除黑名单",
+    method: "DELETE",
+    path: "/api/system/blacklist/:id",
+    permissionCode: "system:blacklist:delete",
+    apiGroup: "访问黑名单",
+  },
+  {
+    name: "批量操作黑名单",
+    method: "POST",
+    path: "/api/system/blacklist/batch",
+    permissionCode: "system:blacklist:batch",
+    apiGroup: "访问黑名单",
+  },
 ] as const;
 
 /** 按 method+path 查找种子接口 id（deleted_at=0） */
@@ -1427,6 +1491,8 @@ export function ensureMenuApiSeeds(): void {
     // 接口管理(206)：列表 + 同步
     bind(206, "GET", "/api/system/api/list");
     bind(206, "POST", "/api/system/api/sync");
+    // 访问黑名单(207)
+    bind(207, "GET", "/api/system/blacklist/list");
     // 登录日志 list 按钮(301)
     bind(301, "GET", "/api/system/login-log/list");
     // API 日志 list 按钮(302)

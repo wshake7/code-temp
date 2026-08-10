@@ -13,6 +13,7 @@ const WRITE_WHITELIST = [
   "/api/system/menu",
   "/api/system/api",
   "/api/system/task-config",
+  "/api/system/blacklist",
 ];
 
 function isWhitelisted(path: string) {
