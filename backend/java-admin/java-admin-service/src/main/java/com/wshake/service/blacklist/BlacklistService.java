@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -174,24 +175,49 @@ public class BlacklistService {
     }
 
     /**
-     * 运行时命中判定入口（S1 支撑；本 ticket 不挂 Filter）。
+     * 运行时命中判定（S1）：是否被拦截。
+     *
+     * <p>本波 DEVICE 不参与运行时；调用方应只查 IP / USER。
      */
     public boolean isBlocked(String targetType, String targetValue, String requestScope, LocalDateTime now) {
+        return findBlockingHit(targetType, targetValue, requestScope, now).isPresent();
+    }
+
+    /**
+     * 查找当前生效命中（S1）；供 Filter / 登录链路写服务端日志（reason 不对客户端暴露）。
+     *
+     * @return 命中时含 target / scope / reason；未命中 empty
+     */
+    public Optional<BlacklistHit> findBlockingHit(
+            String targetType, String targetValue, String requestScope, LocalDateTime now) {
         String type = BlacklistManageModels.normalizeTargetType(targetType);
         String value = BlacklistManageModels.normalizeTargetValue(type, targetValue);
         String scope = BlacklistManageModels.normalizeScope(requestScope);
         if (type == null || value == null || !BlacklistManageModels.TARGET_TYPES.contains(type)) {
-            return false;
+            return Optional.empty();
         }
-        if (!Set.of("LOGIN", "API").contains(scope) && !"ALL".equals(scope)) {
-            // 请求场景仅 LOGIN/API；容错 ALL 时按 ALL 查
-            if (!BlacklistManageModels.SCOPES.contains(scope)) {
-                return false;
-            }
+        // DEVICE 本波不参与运行时拦截（数据可配置，命中判定跳过）
+        if ("DEVICE".equals(type)) {
+            return Optional.empty();
+        }
+        // 请求场景仅 LOGIN/API；容错 ALL
+        if (!Set.of("LOGIN", "API", "ALL").contains(scope)) {
+            return Optional.empty();
         }
         LocalDateTime at = now == null ? LocalDateTime.now() : now;
-        return blacklistRepository.existsActiveHit(type, value, scope, at);
+        SysBlacklist row = blacklistRepository.findActiveHit(type, value, scope, at);
+        if (row == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new BlacklistHit(
+                row.getTargetType(),
+                row.getTargetValue(),
+                row.getScope(),
+                row.getReason() == null ? "" : row.getReason()));
     }
+
+    /** 运行时命中摘要（仅服务端使用）。 */
+    public record BlacklistHit(String targetType, String targetValue, String scope, String reason) {}
 
     private void rejectIfExactDuplicate(
             String targetType,

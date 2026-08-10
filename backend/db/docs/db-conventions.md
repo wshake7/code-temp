@@ -567,7 +567,7 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 ### 18.6 本波边界
 
 - 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md` + Flyway `V1` 表 + `V2` 菜单/API seed + 管理端 CRUD
-- **未**交付：运行时 Filter / 登录链路拦截（见 `.scratch/sys-blacklist`）
+- 已交付（java-admin）：运行时 Filter（LOGIN IP / API IP+session USER）+ 登录链路 USER 拦截（Access Blocked）；DEVICE 运行时仍不查
 
 ---
 

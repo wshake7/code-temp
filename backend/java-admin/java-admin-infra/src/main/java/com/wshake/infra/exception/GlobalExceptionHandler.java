@@ -47,17 +47,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(Result.error(ex.getCode(), ex.getMessage()));
     }
 
-    /** 处理鉴权异常：AUTH_FORBIDDEN → HTTP 403，其余 → HTTP 401。 */
+    /** 处理鉴权异常：AUTH_FORBIDDEN / ACCESS_BLOCKED → HTTP 403，其余 → HTTP 401。 */
     @ExceptionHandler(AuthException.class)
-    @Operation(summary = "鉴权异常", description = "AUTH_FORBIDDEN → HTTP 403;其余 → HTTP 401")
+    @Operation(summary = "鉴权异常", description = "AUTH_FORBIDDEN/ACCESS_BLOCKED → HTTP 403;其余 → HTTP 401")
     @ApiResponse(
             responseCode = "401/403",
             description = "鉴权异常 Result(code 2xxx)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleAuth(AuthException ex) {
         log.warn("[AUTH] code={} msg={}", ex.getCode(), ex.getMessage());
-        HttpStatus status =
-                ex.getCode() == ResultCode.AUTH_FORBIDDEN.getCode() ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED;
+        boolean forbidden = ex.getCode() == ResultCode.AUTH_FORBIDDEN.getCode()
+                || ex.getCode() == ResultCode.ACCESS_BLOCKED.getCode();
+        HttpStatus status = forbidden ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED;
         return ResponseEntity.status(status).body(Result.error(ex.getCode(), ex.getMessage()));
     }
 

@@ -2,10 +2,13 @@ package com.wshake.service.auth;
 
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.ResultCode;
+import com.wshake.service.blacklist.BlacklistService;
+import com.wshake.service.blacklist.BlacklistService.BlacklistHit;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.AuthQueryRepository;
 import com.wshake.service.repository.SysUserRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,8 +17,9 @@ import org.springframework.stereotype.Service;
 /**
  * 鉴权 Service。
  *
- * <p>登录：ALTCHA → 用户名密码（BCrypt）→ 写登录日志 → 返回用户与角色摘要。
- * Sa-Token 登录态由 Controller 写入。登录日志经 {@link LoginLogger} 异步落库。
+ * <p>登录：ALTCHA → 用户名密码（BCrypt）→ USER 黑名单（scope 覆盖 LOGIN）→ 写登录日志 → 返回用户与角色摘要。
+ * Sa-Token 登录态由 Controller 写入（本类在返回前完成 USER 拦截，保证发 token 前拒绝）。
+ * 登录日志经 {@link LoginLogger} 异步落库。
  *
  * @author wshake
  */
@@ -33,6 +37,7 @@ public class AuthService {
     private final AuthQueryRepository authQueryRepository;
     private final AltchaService altchaService;
     private final LoginLogger loginLogger;
+    private final BlacklistService blacklistService;
 
     /**
      * 登录校验（含 ALTCHA 与登录日志）。
@@ -52,6 +57,7 @@ public class AuthService {
         requireCredentials(safeUsername, password, meta);
         SysUser user = requireActiveUser(safeUsername, meta);
         verifyPassword(password, user, safeUsername, meta);
+        rejectIfUserBlacklisted(user, safeUsername, meta);
 
         List<String> roles = authQueryRepository.findRoleCodesByUserId(user.getId());
         loginLogger.recordPwdLogin(safeUsername, user.getId(), 200, true, "", meta);
@@ -122,5 +128,27 @@ public class AuthService {
             loginLogger.recordPwdLogin(username, user.getId(), 401, false, "Username or password is incorrect", meta);
             throw AuthException.invalidCredentials();
         }
+    }
+
+    /**
+     * 用户解析成功且密码正确后、发 token 前：查 USER 黑名单（scope 覆盖 LOGIN）。
+     *
+     * <p>Filter 不解析登录 body，故 USER 拦截落在本链路；IP 由 BlacklistFilter 在 LOGIN 场景处理。
+     */
+    private void rejectIfUserBlacklisted(SysUser user, String username, LoginClientMeta meta) {
+        Optional<BlacklistHit> hit =
+                blacklistService.findBlockingHit("USER", String.valueOf(user.getId()), "LOGIN", null);
+        if (hit.isEmpty()) {
+            return;
+        }
+        BlacklistHit h = hit.get();
+        log.warn(
+                "[AUTH] login Access Blocked username={} userId={} blacklistScope={} reason={}",
+                username,
+                user.getId(),
+                h.scope(),
+                h.reason());
+        loginLogger.recordPwdLogin(username, user.getId(), 403, false, "Access blocked", meta);
+        throw AuthException.accessBlocked();
     }
 }

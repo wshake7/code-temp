@@ -4,13 +4,13 @@
 
 **Blocked by:** 01 — Java 黑名单管理 API + Flyway V1/V2
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 统一 Servlet Filter：按场景（LOGIN / API）查 IP；已登录从 Sa-Token 取 userId 查 USER
-- [ ] 登录链路：Filter 不解析 body；鉴权服务在发 token 前查 USER（scope 覆盖 LOGIN）
-- [ ] 命中语义对齐 DB 约定 §18.3（时间窗、scope IN (场景, ALL)、软删/禁用、多行 OR）
-- [ ] 响应为 Access Blocked；reason 仅服务端日志
-- [ ] 与 Casbin / is_enabled 正交；测试 seam S1 + S2 覆盖关键路径
+- [x] 统一 Servlet Filter：按场景（LOGIN / API）查 IP；已登录从 Sa-Token 取 userId 查 USER
+- [x] 登录链路：Filter 不解析 body；鉴权服务在发 token 前查 USER（scope 覆盖 LOGIN）
+- [x] 命中语义对齐 DB 约定 §18.3（时间窗、scope IN (场景, ALL)、软删/禁用、多行 OR）
+- [x] 响应为 Access Blocked；reason 仅服务端日志
+- [x] 与 Casbin / is_enabled 正交；测试 seam S1 + S2 覆盖关键路径
 
 ## Spec
 

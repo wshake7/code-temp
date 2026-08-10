@@ -51,6 +51,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleAuth_returns403_forAccessBlocked_withFixedMsg() {
+        ResponseEntity<Result<Object>> resp = handler.handleAuth(AuthException.accessBlocked());
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(resp.getBody()).isNotNull();
+        assertThat(resp.getBody().getCode()).isEqualTo(ResultCode.ACCESS_BLOCKED.getCode());
+        assertThat(resp.getBody().getMsg()).isEqualTo("Access Blocked");
+    }
+
+    @Test
     void handleAny_returns500_andHidesRealMessage() {
         ResponseEntity<Result<Object>> resp =
                 handler.handleAny(new RuntimeException("SQL: SELECT * FROM x WHERE id=1"));

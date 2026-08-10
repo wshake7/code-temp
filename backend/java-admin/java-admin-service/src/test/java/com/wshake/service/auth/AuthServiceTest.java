@@ -7,12 +7,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.wshake.common.exception.AuthException;
+import com.wshake.common.result.ResultCode;
+import com.wshake.service.blacklist.BlacklistService;
+import com.wshake.service.blacklist.BlacklistService.BlacklistHit;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.repository.AuthQueryRepository;
 import com.wshake.service.repository.SysUserRepository;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +30,7 @@ import org.mockito.quality.Strictness;
 /**
  * {@link AuthService} 单元测试。
  *
- * <p>隔离 Repository / AltchaService / LoginLogger，不连真实 DB。
+ * <p>隔离 Repository / AltchaService / LoginLogger / BlacklistService，不连真实 DB。
  *
  * @author wshake
  */
@@ -46,6 +50,9 @@ class AuthServiceTest {
     @Mock
     private LoginLogger loginLogger;
 
+    @Mock
+    private BlacklistService blacklistService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -60,6 +67,12 @@ class AuthServiceTest {
     @BeforeEach
     void altchaPassByDefault() {
         when(altchaService.verify(ArgumentMatchers.anyString())).thenReturn(true);
+        when(blacklistService.findBlockingHit(
+                        ArgumentMatchers.anyString(),
+                        ArgumentMatchers.anyString(),
+                        ArgumentMatchers.anyString(),
+                        ArgumentMatchers.any()))
+                .thenReturn(Optional.empty());
     }
 
     @Test
@@ -154,6 +167,26 @@ class AuthServiceTest {
         when(authQueryRepository.findAccessCodesByUserId(1L)).thenReturn(List.of("system:user:list"));
 
         assertThat(authService.listAccessCodes(1L)).containsExactly("system:user:list");
+    }
+
+    @Test
+    void login_userBlacklisted_throwsAccessBlockedBeforeSuccess_andDoesNotExposeReason() {
+        SysUser user = fixture("root", SEED_HASH_123456, "Root", 1);
+        when(sysUserRepository.findByUsername("root")).thenReturn(user);
+        when(blacklistService.findBlockingHit("USER", "1", "LOGIN", null))
+                .thenReturn(Optional.of(new BlacklistHit("USER", "1", "ALL", "secret-internal-reason")));
+
+        assertThatThrownBy(() -> authService.login("root", "123456", "ok", meta))
+                .isInstanceOf(AuthException.class)
+                .satisfies(ex -> {
+                    AuthException ae = (AuthException) ex;
+                    assertThat(ae.getCode()).isEqualTo(ResultCode.ACCESS_BLOCKED.getCode());
+                    assertThat(ae.getMessage()).isEqualTo(ResultCode.ACCESS_BLOCKED.getMsg());
+                    assertThat(ae.getMessage()).doesNotContain("secret-internal-reason");
+                });
+
+        verify(authQueryRepository, never()).findRoleCodesByUserId(ArgumentMatchers.any());
+        verify(loginLogger).recordPwdLogin("root", 1L, 403, false, "Access blocked", meta);
     }
 
     private static SysUser fixture(String username, String passwordHash, String nickname, int isEnabled) {

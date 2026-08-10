@@ -99,9 +99,12 @@ public class SysBlacklistRepository {
     /**
      * 运行时命中判定（S1）：启用 + 时间窗内 + scope 覆盖请求场景。
      *
-     * <p>多行 OR：任意一条命中即 true。DEVICE 调用方可不传。
+     * <p>多行 OR：任意一条命中即返回（LIMIT 1）。软删行由 {@code @LogicDelete} 自动排除。
+     * DEVICE 调用方可不查。
+     *
+     * @return 命中行（含 reason 供服务端日志）；未命中返回 {@code null}
      */
-    public boolean existsActiveHit(String targetType, String targetValue, String requestScope, LocalDateTime now) {
+    public SysBlacklist findActiveHit(String targetType, String targetValue, String requestScope, LocalDateTime now) {
         return easyEntityQuery
                 .queryable(SysBlacklist.class)
                 .where(t -> {
@@ -115,7 +118,12 @@ public class SysBlacklistRepository {
                         t.expiresAt().gt(now);
                     });
                 })
-                .any();
+                .firstOrNull();
+    }
+
+    /** 是否存在生效命中（多行 OR）。 */
+    public boolean existsActiveHit(String targetType, String targetValue, String requestScope, LocalDateTime now) {
+        return findActiveHit(targetType, targetValue, requestScope, now) != null;
     }
 
     /**

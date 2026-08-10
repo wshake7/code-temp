@@ -46,4 +46,9 @@ public class AuthException extends RuntimeException {
     public static AuthException forbidden() {
         return new AuthException(ResultCode.AUTH_FORBIDDEN);
     }
+
+    /** 访问黑名单命中；对外固定文案，不携带内部 reason。 */
+    public static AuthException accessBlocked() {
+        return new AuthException(ResultCode.ACCESS_BLOCKED);
+    }
 }

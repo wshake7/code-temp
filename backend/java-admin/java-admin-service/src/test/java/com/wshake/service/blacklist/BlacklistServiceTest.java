@@ -196,10 +196,45 @@ class BlacklistServiceTest {
 
     @Test
     void isBlocked_delegatesToActiveHitQuery() {
-        when(repo.existsActiveHit("IP", "1.2.3.4", "LOGIN", T1)).thenReturn(true);
+        SysBlacklist hit = row(9L, "IP", "1.2.3.4", "LOGIN", T0, null);
+        hit.setReason("brute force");
+        when(repo.findActiveHit("IP", "1.2.3.4", "LOGIN", T1)).thenReturn(hit);
 
         assertThat(service.isBlocked("IP", "1.2.3.4", "LOGIN", T1)).isTrue();
-        verify(repo).existsActiveHit("IP", "1.2.3.4", "LOGIN", T1);
+        verify(repo).findActiveHit("IP", "1.2.3.4", "LOGIN", T1);
+    }
+
+    @Test
+    void findBlockingHit_returnsReasonForServerLog_notEmptyWhenHit() {
+        SysBlacklist hit = row(9L, "USER", "42", "ALL", T0, null);
+        hit.setReason("account abuse");
+        when(repo.findActiveHit("USER", "42", "LOGIN", T1)).thenReturn(hit);
+
+        var found = service.findBlockingHit("USER", "42", "LOGIN", T1);
+
+        assertThat(found).isPresent();
+        assertThat(found.get().reason()).isEqualTo("account abuse");
+        assertThat(found.get().scope()).isEqualTo("ALL");
+    }
+
+    @Test
+    void findBlockingHit_emptyWhenNoHit() {
+        when(repo.findActiveHit("IP", "8.8.8.8", "API", T1)).thenReturn(null);
+
+        assertThat(service.findBlockingHit("IP", "8.8.8.8", "API", T1)).isEmpty();
+        assertThat(service.isBlocked("IP", "8.8.8.8", "API", T1)).isFalse();
+    }
+
+    @Test
+    void findBlockingHit_normalizesIpAndIgnoresDeviceTypeForInvalidEmpty() {
+        when(repo.findActiveHit("IP", "1.2.3.4", "LOGIN", T1)).thenReturn(null);
+
+        // IPv4:port → strip port then lower
+        assertThat(service.findBlockingHit("IP", "1.2.3.4:8080", "LOGIN", T1)).isEmpty();
+        verify(repo).findActiveHit("IP", "1.2.3.4", "LOGIN", T1);
+
+        assertThat(service.findBlockingHit("DEVICE", "dev-1", "API", T1)).isEmpty();
+        assertThat(service.findBlockingHit("HOST", "x", "API", T1)).isEmpty();
     }
 
     private static SysBlacklist row(
