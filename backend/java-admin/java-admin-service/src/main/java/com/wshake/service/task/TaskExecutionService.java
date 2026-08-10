@@ -45,8 +45,13 @@ public class TaskExecutionService {
                 query.workflowType());
         List<TemporalTaskExecution> rows = page.getData() == null ? List.of() : page.getData();
         Map<Long, String> nameMap = resolveConfigNames(rows);
+        // configId 可空（图片/视频直启 Workflow 种子行无 temporal_task_config）；
+        // ImmutableMap#get 不允许 null key → 须先判空。
         return PageData.of(
-                rows.stream().map(r -> toView(r, nameMap.get(r.getConfigId()))).toList(), page.getTotal());
+                rows.stream()
+                        .map(r -> toView(r, r.getConfigId() == null ? null : nameMap.get(r.getConfigId())))
+                        .toList(),
+                page.getTotal());
     }
 
     public TaskExecutionView getById(Long id) {
