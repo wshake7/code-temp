@@ -10,3 +10,4 @@ export * from './login-log';
 export * from './api-log';
 export * from './task-config';
 export * from './task-execution';
+export * from './blacklist';

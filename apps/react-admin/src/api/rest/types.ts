@@ -986,3 +986,80 @@ export interface TaskExecutionQuery {
   workflowType?: string;
   [k: string]: unknown;
 }
+
+// ============================================================
+// 访问黑名单（sys_blacklist）— 对齐 mock/Java camelCase VO
+// target: IP|USER|DEVICE；scope: LOGIN|API|ALL
+// ============================================================
+
+export type BlacklistTargetType = 'IP' | 'USER' | 'DEVICE';
+
+export type BlacklistScope = 'LOGIN' | 'API' | 'ALL';
+
+export interface Blacklist {
+  id: number;
+  targetType: BlacklistTargetType | string;
+  targetValue: string;
+  scope: BlacklistScope | string;
+  reason: string;
+  /** 生效开始（含）；ISO 或 LocalDateTime 字符串 */
+  startsAt: string;
+  /** 生效结束（不含）；null = 永不过期 */
+  expiresAt: string | null;
+  remark: string;
+  isEnabled: 0 | 1;
+  deletedAt: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: number;
+  updatedBy: number;
+}
+
+export interface BlacklistQuery {
+  page?: number;
+  pageSize?: number;
+  targetType?: BlacklistTargetType | string;
+  targetValue?: string;
+  scope?: BlacklistScope | string;
+  /** isEnabled 过滤：0 | 1 */
+  status?: 0 | 1;
+  [k: string]: unknown;
+}
+
+export interface CreateBlacklistRequest {
+  targetType: BlacklistTargetType | string;
+  targetValue: string;
+  scope?: BlacklistScope | string;
+  reason?: string;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export interface UpdateBlacklistRequest {
+  id: number;
+  targetType?: BlacklistTargetType | string;
+  targetValue?: string;
+  scope?: BlacklistScope | string;
+  reason?: string;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  /** true 时清空 expiresAt（永久） */
+  clearExpiresAt?: boolean;
+  remark?: string;
+  isEnabled?: 0 | 1;
+}
+
+export type BlacklistBatchAction = 'enable' | 'disable' | 'delete';
+
+export interface BlacklistBatchRequest {
+  action: BlacklistBatchAction;
+  ids: number[];
+}
+
+export interface BlacklistBatchResult {
+  action: string;
+  affected: number;
+  ids: number[];
+}

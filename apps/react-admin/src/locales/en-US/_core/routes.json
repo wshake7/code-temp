@@ -58,6 +58,8 @@
   "system.i18n.title": "Internationalization",
   "system.menu.title": "Menus",
   "system.api.title": "APIs",
+  "system.blacklist.title": "Access Blacklist",
+  "blacklist": "Access Blacklist",
   "log.title": "Log Audit",
   "log.loginLog.title": "Login Log"
 }

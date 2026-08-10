@@ -58,6 +58,8 @@
   "system.i18n.title": "国际化",
   "system.menu.title": "菜单管理",
   "system.api.title": "接口管理",
+  "system.blacklist.title": "访问黑名单",
+  "blacklist": "访问黑名单",
   "log.title": "日志审计",
   "log.loginLog.title": "登录日志"
 }

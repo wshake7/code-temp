@@ -5,10 +5,12 @@ import I18nPage from '@/pages/app/system/i18n';
 import MenuPage from '@/pages/app/system/menu';
 import ApiPage from '@/pages/app/system/api';
 import RolePage from '@/pages/app/system/role';
+import BlacklistPage from '@/pages/app/system/blacklist';
 
 /**
  * 系统管理路由配置
- * user / dict / i18n / menu / api 已上线；其余模块保留目录结构以便后续补充。
+ * user / dict / i18n / menu / api / blacklist 已上线。
+ * path 对齐 seed：/system/blacklist；权限码 system:blacklist:*
  */
 export const systemRoutes: AppRouteObject[] = [
   {
@@ -31,7 +33,7 @@ export const systemRoutes: AppRouteObject[] = [
           order: 1,
         },
       },
-        {
+      {
         name: 'roles',
         path: 'roles', // 相对路径，最终为 /system/roles
         element: <RolePage />,
@@ -80,6 +82,16 @@ export const systemRoutes: AppRouteObject[] = [
           title: 'routes:apis',
           icon: 'lucide:terminal',
           order: 6,
+        },
+      },
+      {
+        name: 'blacklist',
+        path: 'blacklist', // 最终 /system/blacklist，对齐 seed component /system/blacklist/index
+        element: <BlacklistPage />,
+        meta: {
+          title: 'routes:system.blacklist.title',
+          icon: 'lucide:shield-ban',
+          order: 7,
         },
       },
     ],
