@@ -1,10 +1,10 @@
 package com.wshake.infra.security;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wshake.common.request.RequestContext;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
+import com.wshake.infra.satoken.SaTokenConfigure;
 import com.wshake.service.blacklist.BlacklistService;
 import com.wshake.service.blacklist.BlacklistService.BlacklistHit;
 import jakarta.servlet.FilterChain;
@@ -27,9 +27,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <ul>
  *   <li>LOGIN（{@code /api/auth/login}）：仅查 IP；USER 在 {@code AuthService} 发 token 前查
- *   <li>其余 {@code /api/**}（API）：查 IP；若请求带有效 token 再查 USER
+ *   <li>其余 {@code /api/**}（API）：查 IP；若已登录再查 USER
  *   <li>DEVICE 本波不查
  * </ul>
+ *
+ * <p>IP 取自 {@link RequestContext#clientIpOrNull()}（由 RequestContextFilter 预填）；
+ * userId 取自 {@link SaTokenConfigure#currentUserIdOrNull()}（与 Casbin / Language 一致）。
  *
  * <p>命中返回 HTTP 403 + {@link ResultCode#ACCESS_BLOCKED} 固定文案；reason 仅服务端日志。
  * 与登录链路 {@code AuthException.accessBlocked()} 的 HTTP/Result 形状一致。
@@ -66,7 +69,7 @@ public final class BlacklistFilter extends OncePerRequestFilter {
 
         boolean loginScene = isLoginPath(path);
         String requestScope = loginScene ? "LOGIN" : "API";
-        String clientIp = resolveClientIp(request);
+        String clientIp = RequestContext.clientIpOrNull();
 
         if (clientIp != null && !clientIp.isBlank()) {
             Optional<BlacklistHit> ipHit = blacklistService.findBlockingHit("IP", clientIp, requestScope, null);
@@ -78,7 +81,7 @@ public final class BlacklistFilter extends OncePerRequestFilter {
 
         // LOGIN 场景 USER 由 AuthService 在发 token 前处理；Filter 不解析 body
         if (!loginScene) {
-            Long userId = currentUserIdOrNull(request);
+            Long userId = SaTokenConfigure.currentUserIdOrNull();
             if (userId != null) {
                 String userValue = String.valueOf(userId);
                 Optional<BlacklistHit> userHit = blacklistService.findBlockingHit("USER", userValue, "API", null);
@@ -99,66 +102,6 @@ public final class BlacklistFilter extends OncePerRequestFilter {
         // 兼容尾斜杠，避免落到 API 场景导致 LOGIN 行拦不住登录
         String normalized = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
         return LOGIN_PATH.equals(normalized);
-    }
-
-    /**
-     * 优先 {@link RequestContext}（RequestContextFilter 已填充）；测试或异常路径再回退请求头。
-     */
-    private static String resolveClientIp(HttpServletRequest request) {
-        String fromCtx = RequestContext.clientIpOrNull();
-        if (fromCtx != null && !fromCtx.isBlank()) {
-            return fromCtx;
-        }
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            int comma = xff.indexOf(',');
-            return (comma >= 0 ? xff.substring(0, comma) : xff).trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
-    }
-
-    /**
-     * 解析当前请求 userId。Filter 阶段可能尚无 Sa 请求上下文，故：
-     * 先试 {@link StpUtil#isLogin()}；失败则从 Authorization Bearer 取 token，
-     * 用 {@link StpUtil#getLoginIdByToken(String)} 直读（不依赖拦截器）。
-     */
-    private static Long currentUserIdOrNull(HttpServletRequest request) {
-        try {
-            if (StpUtil.isLogin()) {
-                return StpUtil.getLoginIdAsLong();
-            }
-        } catch (Exception ignored) {
-            // 无请求上下文时继续走 header
-        }
-        String token = extractBearerToken(request);
-        if (token == null) {
-            return null;
-        }
-        try {
-            Object loginId = StpUtil.getLoginIdByToken(token);
-            if (loginId == null) {
-                return null;
-            }
-            return Long.parseLong(String.valueOf(loginId));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static String extractBearerToken(HttpServletRequest request) {
-        String auth = request.getHeader("Authorization");
-        if (auth == null || auth.isBlank()) {
-            return null;
-        }
-        String value = auth.trim();
-        if (value.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            value = value.substring(7).trim();
-        }
-        return value.isEmpty() ? null : value;
     }
 
     private static void writeAccessBlocked(

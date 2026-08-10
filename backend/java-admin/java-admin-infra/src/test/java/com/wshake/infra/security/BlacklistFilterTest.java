@@ -149,24 +149,19 @@ class BlacklistFilterTest {
     }
 
     @Test
-    void api_userHit_viaBearerTokenWithoutLoginContext() throws Exception {
+    void api_userHit_viaRequestContextUserId() throws Exception {
         when(blacklistService.findBlockingHit(eq("IP"), eq("4.4.4.4"), eq("API"), isNull()))
                 .thenReturn(Optional.empty());
         when(blacklistService.findBlockingHit(eq("USER"), eq("7"), eq("API"), isNull()))
                 .thenReturn(Optional.of(new BlacklistHit("USER", "7", "API", "ban")));
 
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/system/user/list");
-        req.addHeader("Authorization", "Bearer tok-xyz");
         RequestContext.setClientIp("4.4.4.4");
+        RequestContext.setUserId(7L);
         MockHttpServletResponse resp = new MockHttpServletResponse();
         AtomicBoolean chainCalled = new AtomicBoolean(false);
 
-        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
-            stp.when(StpUtil::isLogin).thenThrow(new RuntimeException("no ctx"));
-            stp.when(() -> StpUtil.getLoginIdByToken("tok-xyz")).thenReturn(7L);
-
-            filter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
-        }
+        filter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
 
         assertThat(chainCalled).isFalse();
         assertThat(resp.getStatus()).isEqualTo(403);
