@@ -142,6 +142,35 @@ class AuthServiceTest {
     }
 
     @Test
+    void login_accountExpired_throwsAuthForbidden() {
+        SysUser expired = fixture("root", SEED_HASH_123456, "Root", 1);
+        expired.setAccountExpiresAt(LocalDateTime.now().minusMinutes(1));
+        when(sysUserRepository.findByUsername("root")).thenReturn(expired);
+
+        assertThatThrownBy(() -> authService.login("root", "123456", "ok", meta))
+                .isInstanceOf(AuthException.class)
+                .satisfies(ex -> {
+                    AuthException ae = (AuthException) ex;
+                    assertThat(ae.getCode()).isEqualTo(2004);
+                    assertThat(ae.getMessage()).isEqualTo("账号已过期");
+                });
+
+        verify(loginLogger).recordPwdLogin("root", 1L, 403, false, "Account expired", meta);
+    }
+
+    @Test
+    void requireActiveUserById_expired_throws() {
+        SysUser expired = fixture("root", SEED_HASH_123456, "Root", 1);
+        expired.setAccountExpiresAt(LocalDateTime.now().minusSeconds(1));
+        when(sysUserRepository.findById(1L)).thenReturn(expired);
+
+        assertThatThrownBy(() -> authService.requireActiveUserById(1L))
+                .isInstanceOf(AuthException.class)
+                .extracting("message")
+                .isEqualTo("账号已过期");
+    }
+
+    @Test
     void login_blankUsername_throwsAuthInvalidCredentialsWithoutRepoCall() {
         assertThatThrownBy(() -> authService.login("", "any", "ok", meta))
                 .isInstanceOf(AuthException.class)

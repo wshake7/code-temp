@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
     languageCode?: null | string;
     isEnabled?: 0 | 1 | boolean;
     remark?: string;
+    accountExpiresAt?: null | string;
     roleIds?: number[];
   }>(raw, [
     "nickname",
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
     "languageCode",
     "isEnabled",
     "remark",
+    "accountExpiresAt",
     "roleIds",
   ]);
 
@@ -76,6 +78,11 @@ export default defineEventHandler(async (event) => {
     patch.languageCode = body.languageCode ? String(body.languageCode).trim() : null;
   if (body.isEnabled !== undefined) patch.isEnabled = Number(body.isEnabled) ? 1 : 0;
   if (body.remark !== undefined) patch.remark = String(body.remark).trim();
+  // 表单总提交：显式 null/空串 → 永不过期；有值则写入
+  if ("accountExpiresAt" in body || "accountExpiresAt" in raw || "account_expires_at" in raw) {
+    const v = body.accountExpiresAt;
+    patch.accountExpiresAt = v == null || v === "" ? null : String(v);
+  }
 
   const row = updateSysUser(id, patch);
   if (!row) {

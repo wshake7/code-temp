@@ -30,9 +30,9 @@ class TaskExecutionServiceTest {
 
         TemporalTaskExecution row = new TemporalTaskExecution();
         row.setId(1L);
-        row.setConfigId(null); // 视频/图片直启种子
-        row.setWorkflowId("wf-video_generation-x");
-        row.setWorkflowType(TemporalWorkflowType.VIDEO_GENERATION);
+        row.setConfigId(null); // 无 config 的直启执行
+        row.setWorkflowId("wf-log_count_tick-x");
+        row.setWorkflowType(TemporalWorkflowType.LOG_COUNT_TICK);
         row.setStatus("PENDING");
         row.setRetryCount(0);
 
@@ -51,6 +51,6 @@ class TaskExecutionServiceTest {
         assertThat(result.getItems()).hasSize(1);
         assertThat(result.getItems().get(0).configId()).isNull();
         assertThat(result.getItems().get(0).configName()).isNull();
-        assertThat(result.getItems().get(0).workflowType()).isEqualTo(TemporalWorkflowType.VIDEO_GENERATION);
+        assertThat(result.getItems().get(0).workflowType()).isEqualTo(TemporalWorkflowType.LOG_COUNT_TICK);
     }
 }

@@ -119,6 +119,37 @@ public class AuthService {
             loginLogger.recordPwdLogin(username, user.getId(), 403, false, "User disabled", meta);
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
         }
+        if (user.isAccountExpired(null)) {
+            log.warn("[AUTH] login failed username={} reason=ACCOUNT_EXPIRED", username);
+            loginLogger.recordPwdLogin(username, user.getId(), 403, false, "Account expired", meta);
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已过期");
+        }
+        return user;
+    }
+
+    /**
+     * 已登录请求侧校验：用户存在、启用、未过期。
+     *
+     * @return 通过时的用户；调用方在拒绝时负责 logout
+     * @throws AuthException 禁用 / 过期 / 不存在
+     */
+    public SysUser requireActiveUserById(Long userId) {
+        if (userId == null) {
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号不可用");
+        }
+        SysUser user = sysUserRepository.findById(userId);
+        if (user == null) {
+            log.warn("[AUTH] request rejected userId={} reason=USER_NOT_FOUND", userId);
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号不可用");
+        }
+        if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
+            log.warn("[AUTH] request rejected userId={} reason=USER_DISABLED", userId);
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
+        }
+        if (user.isAccountExpired(null)) {
+            log.warn("[AUTH] request rejected userId={} reason=ACCOUNT_EXPIRED", userId);
+            throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已过期");
+        }
         return user;
     }
 

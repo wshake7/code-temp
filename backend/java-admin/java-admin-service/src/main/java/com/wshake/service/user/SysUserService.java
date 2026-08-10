@@ -90,6 +90,7 @@ public class SysUserService {
         user.setAvatar(nullToEmpty(cmd.avatar()));
         user.setLanguageCode(blankToNull(cmd.languageCode()));
         user.setLastLoginIp("");
+        user.setAccountExpiresAt(cmd.accountExpiresAt());
         user.setRemark(nullToEmpty(cmd.remark()));
         user.setIsEnabled(cmd.isEnabled() == null ? 1 : (cmd.isEnabled() == 0 ? 0 : 1));
 
@@ -143,6 +144,8 @@ public class SysUserService {
         if (cmd.remark() != null) {
             user.setRemark(cmd.remark().trim());
         }
+        // 编辑抽屉总提交：null 表示清空为永不过期
+        user.setAccountExpiresAt(cmd.accountExpiresAt());
     }
 
     /**
@@ -250,6 +253,7 @@ public class SysUserService {
                 base.languageCode(),
                 base.lastLoginAt(),
                 base.lastLoginIp(),
+                base.accountExpiresAt(),
                 base.remark(),
                 base.isEnabled(),
                 base.deletedAt(),

@@ -1,5 +1,5 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_0900_ai_ci
@@ -64,6 +64,9 @@
 -- v11 (仅 sys_blacklist):
 --   1. 新增核心表 sys_blacklist：多态 target(IP/USER/DEVICE) + scope(LOGIN/API/ALL)
 --        + 生效窗 starts_at/expires_at；弱唯一含 deleted_at；Flyway V1 同步本表
+-- v12 (仅 sys_user):
+--   1. sys_user: 增加 account_expires_at TIMESTAMP NULL（NULL=永不过期;不含边界;
+--        与 is_enabled/Soft Delete/Blacklist 正交；到期拒登录并踢会话）
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -94,6 +97,7 @@ CREATE TABLE casbin_rule (
 -- Section 2: RBAC 核心 — sys_user
 -- v2: 去 status(改 is_enabled);加 language_code;加 remark;UNIQUE 软删感知
 -- v5: 移除 dept_id(原为 DEPT 类数据权限锚点;现由 sys_data_permission 承担,详见 v4 NULL 策略注释)
+-- v12: 增加 account_expires_at（可选账号过期；NULL=永不过期）
 -- ============================================================
 CREATE TABLE sys_user (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -106,6 +110,7 @@ CREATE TABLE sys_user (
     language_code   VARCHAR(16)     DEFAULT NULL  COMMENT '用户默认语言(软外键 → i18n_locale.code)',
     last_login_at   TIMESTAMP       NULL DEFAULT NULL  COMMENT '最近登录时间',
     last_login_ip   VARCHAR(45)     NOT NULL DEFAULT ''  COMMENT '最近登录 IP(IPv6 兼容)',
+    account_expires_at TIMESTAMP    NULL DEFAULT NULL  COMMENT '账号过期时间(NULL=永不过期;到期后不可登录且踢会话;不含边界)',
     remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
     is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用(独立于 deleted_at;三态:已删/禁用/正常)',
     deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻(应用层写 UNIX_TIMESTAMP()*1000)',
@@ -804,5 +809,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12)
 -- ============================================================

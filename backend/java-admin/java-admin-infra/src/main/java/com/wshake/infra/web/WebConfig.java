@@ -12,10 +12,10 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Web MVC 配置：注册 Sa-Token 拦截器 + Language + jcasbin 鉴权拦截器 + CORS。
+ * Web MVC 配置：注册 Sa-Token 拦截器 + 账号状态 + Language + jcasbin 鉴权拦截器 + CORS。
  *
- * <p>拦截器顺序：SaInterceptor（认证）→ LanguageInterceptor（语言上下文/异步偏好）→
- * CasbinInterceptor（授权）。
+ * <p>拦截器顺序：SaInterceptor（认证）→ AccountStatusInterceptor（启用/过期）→
+ * LanguageInterceptor（语言上下文/异步偏好）→ CasbinInterceptor（授权）。
  *
  * <p><strong>登录校验的唯一入口</strong>是本类注册的 {@code SaInterceptor}（{@code StpUtil.checkLogin()}）。
  * Controller 不再重复 {@code requireLogin}/{@code isLogin} 门闩；业务侧只在需要时读取 loginId。
@@ -31,12 +31,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public final class WebConfig implements WebMvcConfigurer {
 
     private final Enforcer casbinEnforcer;
+    private final AccountStatusInterceptor accountStatusInterceptor;
     private final LanguageInterceptor languageInterceptor;
     private final SecurityProperties securityProperties;
 
     public WebConfig(
-            Enforcer casbinEnforcer, LanguageInterceptor languageInterceptor, SecurityProperties securityProperties) {
+            Enforcer casbinEnforcer,
+            AccountStatusInterceptor accountStatusInterceptor,
+            LanguageInterceptor languageInterceptor,
+            SecurityProperties securityProperties) {
         this.casbinEnforcer = casbinEnforcer;
+        this.accountStatusInterceptor = accountStatusInterceptor;
         this.languageInterceptor = languageInterceptor;
         this.securityProperties = securityProperties;
     }
@@ -48,10 +53,15 @@ public final class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(securityProperties.getAuthExcludePaths());
 
-        // 2. Language：须在 Sa 之后，才能对已登录用户异步收敛 languageCode
+        // 2. 账号状态：须在 Sa 之后；过期/禁用则 logout + 403
+        registry.addInterceptor(accountStatusInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(securityProperties.getAuthExcludePaths());
+
+        // 3. Language：须在 Sa 之后，才能对已登录用户异步收敛 languageCode
         registry.addInterceptor(languageInterceptor).addPathPatterns("/api/**");
 
-        // 3. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
+        // 4. jcasbin 授权拦截器（deny-by-default；需先加 policy 才能访问）
         registry.addInterceptor(new CasbinInterceptor(casbinEnforcer))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(securityProperties.getCasbinExcludePaths());

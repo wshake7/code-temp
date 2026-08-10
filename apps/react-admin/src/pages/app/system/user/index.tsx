@@ -129,6 +129,14 @@ const UserPage = () => {
         r.lastLoginAt || <span style={{ color: '#999' }}>-</span>,
     },
     {
+      title: '账号过期',
+      dataIndex: 'accountExpiresAt',
+      width: 170,
+      search: false,
+      render: (_, r) =>
+        r.accountExpiresAt || <span style={{ color: '#999' }}>永不过期</span>,
+    },
+    {
       title: '操作',
       valueType: 'option',
       width: 240,

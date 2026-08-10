@@ -32,6 +32,8 @@ export interface SysUser {
   language_code: null | string;
   last_login_at: null | string;
   last_login_ip: string;
+  /** 账号过期时刻 ISO；null=永不过期 */
+  account_expires_at: null | string;
   remark: string;
   is_enabled: 0 | 1;
   /** 软删时间戳（毫秒）；0=未删 */
@@ -138,6 +140,8 @@ export function createSysUser(input: {
   languageCode?: null | string;
   isEnabled?: 0 | 1;
   remark?: string;
+  /** null/undefined=永不过期 */
+  accountExpiresAt?: null | string;
   roleIds?: number[];
 }): SysUser {
   const id = nextSysUserId();
@@ -153,6 +157,7 @@ export function createSysUser(input: {
     language_code: input.languageCode ?? null,
     last_login_at: null,
     last_login_ip: "",
+    account_expires_at: input.accountExpiresAt ?? null,
     remark: input.remark ?? "",
     is_enabled: (input.isEnabled ?? 1) as 0 | 1,
     deleted_at: 0,
@@ -178,6 +183,8 @@ export function updateSysUser(
     languageCode: null | string;
     isEnabled: 0 | 1;
     remark: string;
+    /** 表单总提交：null=清空为永不过期 */
+    accountExpiresAt: null | string;
   }>,
 ): SysUser | undefined {
   const idx = mockSysUserList.findIndex((u) => u.id === id && u.deleted_at === 0);
@@ -192,10 +199,19 @@ export function updateSysUser(
     ...(patch.languageCode !== undefined ? { language_code: patch.languageCode } : {}),
     ...(patch.isEnabled !== undefined ? { is_enabled: patch.isEnabled } : {}),
     ...(patch.remark !== undefined ? { remark: patch.remark } : {}),
+    ...(patch.accountExpiresAt !== undefined ? { account_expires_at: patch.accountExpiresAt } : {}),
     updated_at: new Date().toISOString(),
   };
   mockSysUserList[idx] = next;
   return next;
+}
+
+/** 未过期 ⇔ null 或 account_expires_at > now（不含边界）。 */
+export function isAccountExpired(user: SysUser, nowMs: number = Date.now()): boolean {
+  if (user.account_expires_at == null || user.account_expires_at === "") return false;
+  const exp = Date.parse(user.account_expires_at);
+  if (!Number.isFinite(exp)) return false;
+  return !(exp > nowMs);
 }
 
 /** 软删用户；同时清 sys_user_role 关联。返回软删后行或 undefined。 */
@@ -520,6 +536,7 @@ function buildSysUserSeeds(): SysUser[] {
       language_code: "zh-CN",
       last_login_at: null,
       last_login_ip: "",
+      account_expires_at: null,
       remark: "系统内置超级管理员",
       is_enabled: 1,
       deleted_at: 0,

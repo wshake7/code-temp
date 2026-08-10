@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
   Button,
   Col,
+  DatePicker,
   Drawer,
   Form,
   Input,
@@ -11,6 +12,8 @@ import {
   Switch,
   message,
 } from 'antd';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import {
   useCreateUser,
   useUpdateUser,
@@ -41,6 +44,8 @@ interface FormValues {
   confirmPassword?: string;
   roleIds?: number[];
   remark?: string;
+  /** null/空 = 永不过期 */
+  accountExpiresAt?: Dayjs | null;
 }
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -64,6 +69,7 @@ function buildUserFormValues(row: UserListItem | null): FormValues {
       confirmPassword: '',
       roleIds: row.roleIds ?? [],
       remark: row.remark || undefined,
+      accountExpiresAt: row.accountExpiresAt ? dayjs(row.accountExpiresAt) : null,
     };
   }
   return {
@@ -78,6 +84,7 @@ function buildUserFormValues(row: UserListItem | null): FormValues {
     confirmPassword: '',
     roleIds: [],
     remark: '',
+    accountExpiresAt: null,
   };
 }
 
@@ -136,6 +143,9 @@ const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
           isEnabled: values.isEnabled ? 1 : 0,
           roleIds: values.roleIds ?? [],
           remark: values.remark ?? '',
+          accountExpiresAt: values.accountExpiresAt
+            ? values.accountExpiresAt.toISOString()
+            : null,
         },
       });
     } else {
@@ -150,6 +160,9 @@ const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
         isEnabled: values.isEnabled ? 1 : 0,
         roleIds: values.roleIds ?? [],
         remark: values.remark ?? '',
+        accountExpiresAt: values.accountExpiresAt
+          ? values.accountExpiresAt.toISOString()
+          : null,
       });
     }
   };
@@ -241,6 +254,19 @@ const UserFormDrawer = ({ open, kind, row, onClose, onSaved }: Props) => {
 
         <Form.Item label="启用状态" name="isEnabled" valuePropName="checked">
           <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+        </Form.Item>
+
+        <Form.Item
+          label="账号过期时间"
+          name="accountExpiresAt"
+          tooltip="留空表示永不过期；到期后不可登录，已登录会话也会被拒绝"
+        >
+          <DatePicker
+            showTime
+            allowClear
+            style={{ width: '100%' }}
+            placeholder="永不过期"
+          />
         </Form.Item>
 
         {/* 安全段 */}

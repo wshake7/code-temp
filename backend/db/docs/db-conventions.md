@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v11)
+# 后台管理 DB 约定 (v12)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -560,9 +560,10 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 ### 18.5 与用户禁用 / Casbin 边界
 
 - `sys_user.is_enabled=0`：账号禁用（用户实体生命周期）
+- `sys_user.account_expires_at`（v12+）：可选账号过期；`NULL`=永不过期；未过期 ⇔ `NULL OR account_expires_at > NOW()`（不含边界）；与 `is_enabled` 正交（过期 ≠ 自动禁用）
 - `sys_blacklist`：按 IP/USER/DEVICE 的访问限制（可临时、可多维）
 - Casbin：角色能否调用 endpoint
-- 三者正交；运行时拦截顺序建议：黑名单 → 鉴权 → 数据权限（实现波次另定）
+- 上述正交；运行时拦截顺序建议：黑名单 → 登录态校验（含账号过期/禁用）→ Casbin 授权（实现细节见 java-admin）
 
 ### 18.6 本波边界
 

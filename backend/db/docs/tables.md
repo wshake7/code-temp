@@ -1,8 +1,8 @@
-# 表字段速查 (v11)
+# 表字段速查 (v12)
 
 > 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 23 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11。
+> 共 23 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12。
 
 ---
 
@@ -10,31 +10,34 @@
 
 ### 1.1 `sys_user` — 用户
 
-| 字段            | 类型            | 必填 | 默认           | 说明                                        |
-| --------------- | --------------- | ---- | -------------- | ------------------------------------------- |
-| `id`            | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                        |
-| `username`      | VARCHAR(64)     | 是   | -              | 登录名                                      |
-| `password_hash` | VARCHAR(128)    | 是   | -              | 密码哈希（bcrypt/argon2）                   |
-| `nickname`      | VARCHAR(64)     | 是   | `''`           | 展示名                                      |
-| `email`         | VARCHAR(128)    | 是   | `''`           | 邮箱                                        |
-| `phone`         | VARCHAR(32)     | 是   | `''`           | 手机号                                      |
-| `avatar`        | VARCHAR(255)    | 是   | `''`           | 头像 URL                                    |
-| `language_code` | VARCHAR(16)     | 否   | NULL           | 用户默认语言（软外键 → `i18n_locale.code`） |
-| `last_login_at` | TIMESTAMP       | 否   | NULL           | 最近登录时间                                |
-| `last_login_ip` | VARCHAR(45)     | 是   | `''`           | 最近登录 IP                                 |
-| `remark`        | VARCHAR(512)    | 是   | `''`           | 管理员备注                                  |
-| `is_enabled`    | TINYINT(1)      | 是   | 1              | 启用/禁用                                   |
-| `deleted_at`    | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                          |
-| `created_at`    | TIMESTAMP       | 是   | NOW()          |                                             |
-| `updated_at`    | TIMESTAMP       | 是   | NOW()          |                                             |
-| `created_by`    | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`        |
-| `updated_by`    | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`        |
+| 字段                 | 类型            | 必填 | 默认           | 说明                                                    |
+| -------------------- | --------------- | ---- | -------------- | ------------------------------------------------------- |
+| `id`                 | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                    |
+| `username`           | VARCHAR(64)     | 是   | -              | 登录名                                                  |
+| `password_hash`      | VARCHAR(128)    | 是   | -              | 密码哈希（bcrypt/argon2）                               |
+| `nickname`           | VARCHAR(64)     | 是   | `''`           | 展示名                                                  |
+| `email`              | VARCHAR(128)    | 是   | `''`           | 邮箱                                                    |
+| `phone`              | VARCHAR(32)     | 是   | `''`           | 手机号                                                  |
+| `avatar`             | VARCHAR(255)    | 是   | `''`           | 头像 URL                                                |
+| `language_code`      | VARCHAR(16)     | 否   | NULL           | 用户默认语言（软外键 → `i18n_locale.code`）             |
+| `last_login_at`      | TIMESTAMP       | 否   | NULL           | 最近登录时间                                            |
+| `last_login_ip`      | VARCHAR(45)     | 是   | `''`           | 最近登录 IP                                             |
+| `account_expires_at` | TIMESTAMP       | 否   | NULL           | 账号过期时刻；NULL=永不过期；不含边界（`>` now 才有效） |
+| `remark`             | VARCHAR(512)    | 是   | `''`           | 管理员备注                                              |
+| `is_enabled`         | TINYINT(1)      | 是   | 1              | 启用/禁用                                               |
+| `deleted_at`         | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                      |
+| `created_at`         | TIMESTAMP       | 是   | NOW()          |                                                         |
+| `updated_at`         | TIMESTAMP       | 是   | NOW()          |                                                         |
+| `created_by`         | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`                    |
+| `updated_by`         | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`                    |
 
 **索引**：`PRIMARY(id)` / `UNIQUE(username, deleted_at)` / `idx_is_enabled` / `idx_deleted_at`
 
 **外键**：无
 
 > v5: 移除 `dept_id`（原为 DEPT 类数据权限锚点；现由 `sys_data_permission` 承担）
+>
+> v12: 增加 `account_expires_at`（可选账号过期；与 `is_enabled` / Soft Delete / Blacklist 正交）
 
 ---
 

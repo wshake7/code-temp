@@ -60,8 +60,8 @@ class SysUserServiceTest {
         when(roleRepo.findRoleIdsByUserId(100L)).thenReturn(List.of(10L));
         when(roleRepo.findRoleNamesByIds(List.of(10L))).thenReturn(Map.of(10L, "Admin"));
 
-        UserView view = service.create(
-                new CreateUserCommand("alice", "plain-secret", "Alice", null, null, null, null, 1, null, List.of(10L)));
+        UserView view = service.create(new CreateUserCommand(
+                "alice", "plain-secret", "Alice", null, null, null, null, 1, null, null, List.of(10L)));
 
         assertThat(view.id()).isEqualTo(100L);
         assertThat(view.username()).isEqualTo("alice");
@@ -83,7 +83,7 @@ class SysUserServiceTest {
     void create_duplicateUsername_throws() {
         when(userRepo.existsByUsername("alice")).thenReturn(true);
         assertThatThrownBy(() -> service.create(
-                        new CreateUserCommand("alice", "x", "A", null, null, null, null, 1, null, List.of())))
+                        new CreateUserCommand("alice", "x", "A", null, null, null, null, 1, null, null, List.of())))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("已存在");
         verify(userRepo, never()).insert(ArgumentMatchers.any());
@@ -96,7 +96,7 @@ class SysUserServiceTest {
         when(roleRepo.findRoleIdsByUserId(2L)).thenReturn(List.of(10L));
         when(roleRepo.findRoleNamesByIds(List.of(10L))).thenReturn(Map.of(10L, "Admin"));
 
-        service.update(new UpdateUserCommand(2L, "Alice2", null, null, null, null, null, null, null));
+        service.update(new UpdateUserCommand(2L, "Alice2", null, null, null, null, null, null, null, null));
 
         verify(roleRepo, never()).replaceUserRoles(ArgumentMatchers.any(), ArgumentMatchers.anyList());
         verify(casbin, never())
@@ -113,7 +113,7 @@ class SysUserServiceTest {
         when(roleRepo.findRoleIdsByUserId(1L)).thenReturn(List.of(1L));
         when(roleRepo.findRoleNamesByIds(List.of(1L))).thenReturn(Map.of(1L, "Root"));
 
-        service.update(new UpdateUserCommand(1L, null, null, null, null, null, null, null, List.of(1L)));
+        service.update(new UpdateUserCommand(1L, null, null, null, null, null, null, null, null, List.of(1L)));
 
         verify(roleRepo).replaceUserRoles(1L, List.of(1L));
         verify(casbin)
