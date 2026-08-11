@@ -8,7 +8,17 @@ import { join, normalize } from "node:path";
 const rootDir = process.cwd();
 const CONCURRENCY_LIMIT = 10;
 const SKIP_DIRS = new Set([".DS_Store", ".git", ".idea", ".vscode", ".scratch"]);
-const TARGETS = ["node_modules", "dist", ".turbo", ".vite", "coverage", "target", "dist.zip"];
+const TARGETS = [
+  "node_modules",
+  "dist",
+  ".turbo",
+  ".vite",
+  "coverage",
+  "target",
+  "dist.zip",
+  ".nitro",
+  "dummy-non-existing-folder",
+];
 
 async function processItem(currentDir, item, targets) {
   if (SKIP_DIRS.has(item)) return false;
