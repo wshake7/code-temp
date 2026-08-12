@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.wshake.common.constant.MdcKeys;
 import com.wshake.common.request.RequestContext;
+import com.wshake.common.util.ClientIpUtils;
 import com.wshake.infra.satoken.SaTokenConfigure;
 import com.wshake.service.log.ApiLogWriter;
 import com.wshake.service.log.LogManageModels.ApiLogWriteCommand;
@@ -159,7 +160,12 @@ public class RequestLogAspect {
             }
             String clientIp = RequestContext.clientIpOrNull();
             if ((clientIp == null || clientIp.isBlank()) && request != null) {
-                clientIp = request.getRemoteAddr();
+                clientIp = ClientIpUtils.resolve(
+                        request.getHeader("X-Forwarded-For"),
+                        request.getHeader("X-Real-IP"),
+                        request.getRemoteAddr(),
+                        request.getHeader("Proxy-Client-IP"),
+                        request.getHeader("WL-Proxy-Client-IP"));
             }
             String userAgent = request != null ? nullToEmpty(request.getHeader("User-Agent")) : "";
             String referer = request != null ? nullToEmpty(request.getHeader("Referer")) : "";

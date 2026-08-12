@@ -2,6 +2,7 @@ package com.wshake.infra.request;
 
 import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.request.RequestContext;
+import com.wshake.common.util.ClientIpUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,17 +46,13 @@ public final class RequestContextFilter extends OncePerRequestFilter {
         }
     }
 
+    /** 多代理头 + 合法性校验，见 {@link ClientIpUtils}。 */
     private static String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            // 取链上第一个
-            int comma = xff.indexOf(',');
-            return (comma >= 0 ? xff.substring(0, comma) : xff).trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
+        return ClientIpUtils.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                request.getHeader("Proxy-Client-IP"),
+                request.getHeader("WL-Proxy-Client-IP"));
     }
 }

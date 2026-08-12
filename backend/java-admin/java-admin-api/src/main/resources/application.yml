@@ -178,6 +178,14 @@ server:
   port: ${APP_PORT:4080}
   servlet:
     context-path: /
+  # 反向代理后还原客户端 IP / 协议（Tomcat RemoteIpValve）
+  # 仅当 remoteAddr 匹配 internal-proxies 时才信任 X-Forwarded-*，降低头伪造风险
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+      # RFC1918 内网代理段（与文章推荐一致；部署在特殊网段时可覆盖）
+      internal-proxies: "192\\.168\\.\\d{1,3}\\.\\d{1,3}|10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|172\\.(1[6-9]|2[0-9]|3[0-1])\\.\\d{1,3}\\.\\d{1,3}|127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
 
 logging:
   level:
