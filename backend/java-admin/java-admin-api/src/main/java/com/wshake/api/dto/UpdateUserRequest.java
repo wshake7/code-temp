@@ -4,6 +4,7 @@ import com.wshake.service.user.UserManageModels.UpdateUserCommand;
 import io.github.linpeilie.annotations.AutoMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 
@@ -39,6 +40,9 @@ public class UpdateUserRequest {
 
     @Size(max = 512)
     private String remark;
+
+    @Schema(description = "账号过期时间；null=永不过期（管理端表单总提交该字段）")
+    private LocalDateTime accountExpiresAt;
 
     @Schema(description = "角色 ID 列表；省略则不改角色，传空数组清空角色")
     private List<Long> roleIds;

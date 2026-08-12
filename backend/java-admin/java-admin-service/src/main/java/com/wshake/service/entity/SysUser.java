@@ -12,12 +12,12 @@ import lombok.EqualsAndHashCode;
 /**
  * 系统用户实体。
  *
- * <p>对齐 {@code backend/db} schema v10（{@code backend/db/docs/db-conventions.md}）：
+ * <p>对齐 {@code backend/db} schema v12（{@code backend/db/docs/db-conventions.md}）：
  * <ul>
  *     <li>表名：{@code sys_user}</li>
  *     <li>主键：{@code BIGINT UNSIGNED} → {@code Long}</li>
  *     <li>密码列：{@code password_hash}（禁止回显到 API）</li>
- *     <li>启停：{@code is_enabled}；软删/审计见 {@link BaseEntity}</li>
+ *     <li>启停：{@code is_enabled}；可选过期：{@code account_expires_at}；软删/审计见 {@link BaseEntity}</li>
  * </ul>
  *
  * <p>Easy-Query {@code name-conversion: underlined} 将 camelCase 字段映射为 snake_case 列。
@@ -53,8 +53,28 @@ public class SysUser extends BaseEntity implements ProxyEntityAvailable<SysUser,
 
     private String lastLoginIp;
 
+    /**
+     * 账号过期时刻；{@code null}=永不过期。
+     *
+     * <p>未过期 ⇔ {@code null || accountExpiresAt.isAfter(now)}（不含边界）。
+     */
+    private LocalDateTime accountExpiresAt;
+
     private String remark;
 
     /** 1=启用 0=禁用（与 deleted_at 构成三态）。 */
     private Integer isEnabled;
+
+    /**
+     * 账号是否已过期（相对 {@code now}；不含边界）。
+     *
+     * @param now 判定时刻；{@code null} 时用 {@link LocalDateTime#now()}
+     */
+    public boolean isAccountExpired(LocalDateTime now) {
+        if (accountExpiresAt == null) {
+            return false;
+        }
+        LocalDateTime at = now == null ? LocalDateTime.now() : now;
+        return !accountExpiresAt.isAfter(at);
+    }
 }

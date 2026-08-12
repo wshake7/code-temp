@@ -11,6 +11,7 @@ const TO_CAMEL: Record<string, string> = {
   language_code: "languageCode",
   last_login_at: "lastLoginAt",
   last_login_ip: "lastLoginIp",
+  account_expires_at: "accountExpiresAt",
   is_enabled: "isEnabled",
   deleted_at: "deletedAt",
   created_at: "createdAt",

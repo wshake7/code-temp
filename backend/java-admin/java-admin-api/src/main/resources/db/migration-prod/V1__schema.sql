@@ -107,6 +107,7 @@ CREATE TABLE sys_user (
     language_code   VARCHAR(16)     DEFAULT NULL  COMMENT '用户默认语言(软外键 → i18n_locale.code)',
     last_login_at   TIMESTAMP       NULL DEFAULT NULL  COMMENT '最近登录时间',
     last_login_ip   VARCHAR(45)     NOT NULL DEFAULT ''  COMMENT '最近登录 IP(IPv6 兼容)',
+    account_expires_at TIMESTAMP    NULL DEFAULT NULL  COMMENT '账号过期时间(NULL=永不过期;到期后不可登录且踢会话;不含边界)',
     remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
     is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用(独立于 deleted_at;三态:已删/禁用/正常)',
     deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻(应用层写 UNIX_TIMESTAMP()*1000)',

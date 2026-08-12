@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
     languageCode?: null | string;
     isEnabled?: 0 | 1 | boolean;
     remark?: string;
+    accountExpiresAt?: null | string;
     roleIds?: number[];
   }>(raw, [
     "username",
@@ -43,6 +44,7 @@ export default defineEventHandler(async (event) => {
     "languageCode",
     "isEnabled",
     "remark",
+    "accountExpiresAt",
     "roleIds",
   ]);
 
@@ -87,6 +89,13 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const accountExpiresAt =
+    body.accountExpiresAt === undefined ||
+    body.accountExpiresAt === null ||
+    body.accountExpiresAt === ""
+      ? null
+      : String(body.accountExpiresAt);
+
   const row = createSysUser({
     username,
     password,
@@ -97,6 +106,7 @@ export default defineEventHandler(async (event) => {
     languageCode: body.languageCode ? String(body.languageCode).trim() : null,
     isEnabled: body.isEnabled === undefined ? 1 : Number(body.isEnabled) ? 1 : 0,
     remark: String(body.remark ?? "").trim(),
+    accountExpiresAt,
     roleIds,
   });
 

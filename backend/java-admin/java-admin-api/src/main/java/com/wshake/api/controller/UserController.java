@@ -87,6 +87,7 @@ public class UserController {
                 body.languageCode(),
                 body.isEnabled(),
                 body.remark(),
+                body.accountExpiresAt(),
                 body.roleIds());
         UserView view = sysUserService.update(cmd);
         return Result.ok(converter.convert(view, UserListItemVO.class));

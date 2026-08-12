@@ -54,10 +54,14 @@ _Avoid_: 核心资源默认物理 DELETE
 资源启停标志，与 Soft Delete 独立：禁用 ≠ 删除。  
 _Avoid_: 用 `deleted_at` 表达「临时停用」
 
+**Account Expires At**：
+用户账号的可选过期时刻；为空表示永不过期。到点后账号不可再登录，已登录会话亦应被拒绝并结束；与 `is_enabled`、Soft Delete、Blacklist 正交（过期 ≠ 禁用/删除/拉黑）。  
+_Avoid_: 用 `is_enabled=0` 表达「到期」；与会话 token 超时混称
+
 ### 系统能力（本波实体）
 
 **User**：
-后台操作者账号（登录名、凭证、启停、软删等）。  
+后台操作者账号（登录名、凭证、启停、软删、可选账号过期等）。  
 _Avoid_: 用「员工 / 成员」指代同一概念
 
 **Role**：

@@ -30,6 +30,7 @@ public class UserListItemVO {
     private String languageCode;
     private LocalDateTime lastLoginAt;
     private String lastLoginIp;
+    private LocalDateTime accountExpiresAt;
     private String remark;
     private Integer isEnabled;
     private Long deletedAt;

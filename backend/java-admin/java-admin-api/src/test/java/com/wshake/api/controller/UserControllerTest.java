@@ -53,7 +53,8 @@ class UserControllerTest {
         assertThat(result.getData().getItems().get(0).getUsername()).isEqualTo("alice");
         assertThat(result.getData().getItems().get(0).getRoleIds()).containsExactly(10L);
         // 不回显密码字段：VO 无 passwordHash 属性
-        assertThat(result.getData().getItems().get(0)).hasNoNullFieldsOrPropertiesExcept("languageCode", "lastLoginAt");
+        assertThat(result.getData().getItems().get(0))
+                .hasNoNullFieldsOrPropertiesExcept("languageCode", "lastLoginAt", "accountExpiresAt");
     }
 
     @Test
@@ -130,6 +131,7 @@ class UserControllerTest {
                 "zh-CN",
                 null,
                 "",
+                null,
                 "",
                 1,
                 0L,

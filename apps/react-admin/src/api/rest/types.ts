@@ -48,6 +48,8 @@ export interface UserListItem {
   languageCode: string | null;
   lastLoginAt: string | null;
   lastLoginIp: string;
+  /** 账号过期时刻；null=永不过期 */
+  accountExpiresAt: string | null;
   remark: string;
   isEnabled: 0 | 1;
   deletedAt: number;
@@ -93,6 +95,8 @@ export interface CreateUserRequest {
   isEnabled?: 0 | 1;
   roleIds?: number[];
   remark?: string;
+  /** 账号过期时刻；null/省略=永不过期 */
+  accountExpiresAt?: string | null;
 }
 
 export interface UpdateUserRequest {

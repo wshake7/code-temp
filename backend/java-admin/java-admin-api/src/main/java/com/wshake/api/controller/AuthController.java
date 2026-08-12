@@ -5,8 +5,10 @@ import com.wshake.api.dto.LoginRequest;
 import com.wshake.api.vo.LoginResponse;
 import com.wshake.api.vo.UserInfoVO;
 import com.wshake.common.exception.BizException;
+import com.wshake.common.request.RequestContext;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
+import com.wshake.common.util.ClientIpUtils;
 import com.wshake.infra.crypto.SessionEncryptKeys;
 import com.wshake.service.auth.AuthService;
 import com.wshake.service.auth.LoginClientMeta;
@@ -149,17 +151,20 @@ public class AuthController {
         return Result.ok(authService.listAccessCodes(userId));
     }
 
+    /**
+     * 优先用 Filter 预填的 {@link RequestContext#clientIpOrNull()}；standalone 单测等无 Context 时回退解析。
+     */
     private static String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            int comma = xff.indexOf(',');
-            return (comma >= 0 ? xff.substring(0, comma) : xff).trim();
+        String fromCtx = RequestContext.clientIpOrNull();
+        if (fromCtx != null && !fromCtx.isBlank()) {
+            return fromCtx;
         }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
+        return ClientIpUtils.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                request.getHeader("Proxy-Client-IP"),
+                request.getHeader("WL-Proxy-Client-IP"));
     }
 
     private static String userAgent(HttpServletRequest request) {

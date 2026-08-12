@@ -8,6 +8,7 @@ import {
   findBlockingHit,
   getMockSysUserList,
   getUserRoleCodes,
+  isAccountExpired,
 } from "~/utils/mock-data";
 import { forbiddenResponse, useResponseError, useResponseSuccess } from "~/utils/response";
 
@@ -73,6 +74,34 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, 401);
     // 与 java-admin AUTH_INVALID_CREDENTIALS(2002) 对齐
     return useResponseError("Username or password is incorrect.", 2002);
+  }
+
+  if (sysUser.is_enabled !== 1) {
+    appendLoginLog({
+      username: sysUser.username,
+      success: 0,
+      reason: "User disabled",
+      statusCode: 403,
+      sysUserId: sysUser.id,
+      loginIp,
+      userAgent,
+    });
+    setResponseStatus(event, 403);
+    return useResponseError("账号已禁用", 2004);
+  }
+
+  if (isAccountExpired(sysUser)) {
+    appendLoginLog({
+      username: sysUser.username,
+      success: 0,
+      reason: "Account expired",
+      statusCode: 403,
+      sysUserId: sysUser.id,
+      loginIp,
+      userAgent,
+    });
+    setResponseStatus(event, 403);
+    return useResponseError("账号已过期", 2004);
   }
 
   // LOGIN + USER：凭证正确后、发 token 前查黑名单（对齐 Java AuthService）

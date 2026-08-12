@@ -47,4 +47,31 @@ class RequestContextFilterTest {
         // finally 已清理
         assertThat(RequestContext.get()).isNull();
     }
+
+    @Test
+    void filter_skipsUnknownInXff_andUsesNextValidIp() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/auth/login");
+        req.addHeader("X-Forwarded-For", "unknown, 203.0.113.8");
+        req.setRemoteAddr("10.0.0.1");
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+
+        AtomicReference<String> seenIp = new AtomicReference<>();
+        filter.doFilter(req, resp, (r, s) -> seenIp.set(RequestContext.clientIpOrNull()));
+
+        assertThat(seenIp.get()).isEqualTo("203.0.113.8");
+        assertThat(RequestContext.get()).isNull();
+    }
+
+    @Test
+    void filter_fallsBackToXRealIp_whenXffAbsent() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/user/info");
+        req.addHeader("X-Real-IP", "198.51.100.9");
+        req.setRemoteAddr("10.0.0.1");
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+
+        AtomicReference<String> seenIp = new AtomicReference<>();
+        filter.doFilter(req, resp, (r, s) -> seenIp.set(RequestContext.clientIpOrNull()));
+
+        assertThat(seenIp.get()).isEqualTo("198.51.100.9");
+    }
 }

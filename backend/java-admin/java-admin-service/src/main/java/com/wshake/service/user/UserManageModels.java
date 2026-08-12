@@ -44,9 +44,14 @@ public final class UserManageModels {
             String languageCode,
             Integer isEnabled,
             String remark,
+            LocalDateTime accountExpiresAt,
             List<Long> roleIds) {}
 
-    /** 更新命令（username/password 不可改）。 */
+    /**
+     * 更新命令（username/password 不可改）。
+     *
+     * <p>{@code accountExpiresAt}：管理端编辑抽屉总提交；{@code null}=清空为永不过期。
+     */
     public record UpdateUserCommand(
             Long id,
             String nickname,
@@ -56,6 +61,7 @@ public final class UserManageModels {
             String languageCode,
             Integer isEnabled,
             String remark,
+            LocalDateTime accountExpiresAt,
             /* null=不改角色；非 null（可为空列表）=全量替换。 */
             List<Long> roleIds) {}
 
@@ -75,6 +81,7 @@ public final class UserManageModels {
             String languageCode,
             LocalDateTime lastLoginAt,
             String lastLoginIp,
+            LocalDateTime accountExpiresAt,
             String remark,
             Integer isEnabled,
             Long deletedAt,
