@@ -1,7 +1,7 @@
 # ============================================================
 # java-admin dev 依赖编排
 # 位置：backend/java-admin/deploy/docker-compose.yml
-# 用途：dev 期起 mysql + redis + nacos + temporal(+ui)（java-admin 自身不在 compose）
+# 用途：dev 期起 mysql + redis + nacos + temporal(+ui) + minio（java-admin 自身不在 compose）
 # ============================================================
 services:
   # ----------------------------
@@ -161,6 +161,37 @@ services:
       mysql:
         condition: service_healthy
 
+  # ----------------------------
+  # MinIO（单机 /data；镜像钉死社区版 RELEASE.2025-04-08）
+  # 宿主机 4000 段：4900 → API 9000，4901 → Console 9001
+  # Console：http://127.0.0.1:4901  默认账号 minioadmin / minioadmin
+  # 应用侧（本机进程）：S3 endpoint = http://127.0.0.1:4900
+  # ----------------------------
+  minio:
+    image: minio/minio:RELEASE.2025-04-08T15-41-24Z
+    container_name: java-admin-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "${MINIO_API_PORT:-4900}:9000"
+      - "${MINIO_CONSOLE_PORT:-4901}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Console 从宿主机打开时，避免仍跳到容器内 :9000
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL:-http://127.0.0.1:4900}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://127.0.0.1:4901}
+    volumes:
+      - minio_data:/data
+    networks:
+      - java-admin-net
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
 networks:
   java-admin-net:
     driver: bridge
@@ -170,3 +201,4 @@ volumes:
   redis_data:
   nacos_data:
   nacos_logs:
+  minio_data:
