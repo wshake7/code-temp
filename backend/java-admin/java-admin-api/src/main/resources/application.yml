@@ -191,4 +191,6 @@ logging:
   level:
     root: INFO
     com.wshake: INFO
+    com.wshake.infra.temporal.workflow.ExecutionMirrorTickActivitiesImpl: WARN
+    com.wshake.infra.temporal.workflow.ExecutionMirrorTickWorkflowImpl: WARN
     com.easy.query: WARN

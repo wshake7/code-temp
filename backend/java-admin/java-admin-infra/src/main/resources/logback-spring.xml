@@ -16,9 +16,11 @@
     <property name="LOG_FILE" value="${LOG_DIR}/${APP_NAME}.log"/>
     <property name="LOG_FILE_PATTERN" value="${LOG_DIR}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log"/>
     <property name="LOG_ERROR_FILE" value="${LOG_DIR}/${APP_NAME}-error.log"/>
-    <property name="LOG_ERROR_FILE_PATTERN" value="${LOG_DIR}/${APP_NAME}-error.%d{yyyy-MM-dd}.%i.log"/>
-    <property name="LOG_MAX_FILE_SIZE" value="100MB"/>
-    <property name="LOG_MAX_HISTORY" value="30"/>
+    <property name="LOG_ERROR_FILE_PATTERN" value="${LOG_DIR}/error/${APP_NAME}-error.%d{yyyy-MM-dd}.%i.log"/>
+    <property name="LOG_WARN_FILE" value="${LOG_DIR}/${APP_NAME}-warn.log"/>
+    <property name="LOG_WARN_FILE_PATTERN" value="${LOG_DIR}/warn/${APP_NAME}-warn.%d{yyyy-MM-dd}.%i.log"/>
+    <property name="LOG_MAX_FILE_SIZE" value="20MB"/>
+    <property name="LOG_MAX_HISTORY" value="100"/>
     <property name="LOG_TOTAL_SIZE_CAP" value="10GB"/>
 
     <!--
@@ -93,10 +95,27 @@
                 <charset>UTF-8</charset>
             </encoder>
         </appender>
+        <appender name="WARN_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_WARN_FILE}</file>
+            <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+                <level>WARN</level>
+            </filter>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_WARN_FILE_PATTERN}</fileNamePattern>
+                <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
+                <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+                <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
         <root level="INFO">
             <appender-ref ref="STDOUT"/>
             <appender-ref ref="FILE"/>
             <appender-ref ref="ERROR_FILE"/>
+            <appender-ref ref="WARN_FILE"/>
         </root>
     </springProfile>
 
