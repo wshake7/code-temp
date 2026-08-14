@@ -1,15 +1,15 @@
-# 后台管理 DB 约定 (v12)
+# 后台管理 DB 约定 (v13)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
 ## 1. 字符集与排序规则
 
 - **字符集**：`utf8mb4`（4 字节，能存 emoji 与生僻汉字）
-- **排序规则**：`utf8mb4_0900_ai_ci`（MySQL 8 默认，Unicode 9.0）
+- **排序规则**：`utf8mb4_unicode_ci`（兼容 MySQL 5.7 / 部分发行版；`utf8mb4_0900_ai_ci` 仅官方 MySQL 8.0+）
 - **引擎**：`InnoDB`（事务 + 行锁 + FK）
 
 所有表与列显式声明上述三项，**不**依赖数据库默认。
@@ -47,7 +47,7 @@
 
 ## 4. 审计 + 启停 + 软删字段（核心表）
 
-每张**核心表**（共 11 张）必须包含以下 **7 个字段**，**顺序固定**：
+每张**核心表**（共 12 张）必须包含以下 **7 个字段**，**顺序固定**：
 
 ```sql
 remark          VARCHAR(512)    NOT NULL DEFAULT ''                -- 管理员备注
@@ -91,12 +91,12 @@ updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0                  -- 0=系统�
 
 ### 4.4 不同表的覆盖
 
-| 表类                                                                                                                                                                                                 | 字段                                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 核心表 11 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist`） | 上述 7 字段全有                                                                                                                  |
-| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                   | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
-| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
-| 归档表 3 张（`*_archive`）                                                                                                                                                                           | 镜像热表（多 `archived_at`）                                                                                                     |
+| 表类                                                                                                                                                                                                                  | 字段                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 核心表 12 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist` / `sys_material`） | 上述 7 字段全有                                                                                                                  |
+| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                                    | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
+| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                                 | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
+| 归档表 3 张（`*_archive`）                                                                                                                                                                                            | 镜像热表（多 `archived_at`）                                                                                                     |
 
 ---
 
@@ -243,6 +243,8 @@ ALTER TABLE sys_role
 - 字典项样式（`dict_data.tag_type`，v9+）：`default` / `primary` / `success` / `warning` / `error` / `processing` / `magenta` / `red` / `volcano` / `orange` / `gold` / `lime` / `green` / `cyan` / `blue` / `geekblue` / `purple`
 - 黑名单目标类型（`sys_blacklist.target_type`，v11+）：`IP` / `USER` / `DEVICE`
 - 黑名单限制范围（`sys_blacklist.scope`，v11+）：`LOGIN` / `API` / `ALL`
+- 素材类型（`sys_material.type`，v13+）：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
+- 素材存储（`sys_material.storage_type`，v13+）：`LOCAL` / `OSS` / `COS` / `S3`
 
 ---
 
@@ -256,6 +258,7 @@ ALTER TABLE sys_role
 - `operation_log.before_value` / `after_value`（数据快照）
 - `sys_data_permission.action` / `scope_values` / `conditions`
 - `sys_menu.metadata`（前端扩展字段）
+- `sys_material.metadata`（文件细节与类型扩展；无则为 `NULL`；v13+）
 
 **不**用 JSON：
 
@@ -572,7 +575,30 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 ---
 
-## 19. 不在本任务范围
+## 19. 素材库 (`sys_material`，v13+)
+
+### 19.1 一张表、多种类型
+
+- `type` 区分形态：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
+- 列上只留筛选/展示用字段：`name` / `type` / `storage_type` / `sort` + 核心 7 字段
+- 文件细节与类型扩展一律进 `metadata` JSON，**不**按类型拆表、**不**再设 `extra`
+- 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`；其余类型专属键可同对象追加
+- **不**在库内存储文件体；对象定位放在 `storage_type` + `metadata.storage_key` / `metadata.url`
+
+### 19.2 无业务 UNIQUE
+
+- `name` 以及 `metadata` 内的 `url` / `checksum` 允许重复或缺失
+- 不加 `UNIQUE(..., deleted_at)`：无稳定自然键，空串默认值会让「无编码」活跃行互撞
+- 去重、按哈希复用由应用层决定（后续可加生成列或条件唯一）
+
+### 19.3 本波边界
+
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
+- **未**交付：Flyway、Java entity / CRUD、上传流水线、素材与业务的绑定表
+
+---
+
+## 20. 不在本任务范围
 
 - ORM model 代码（Go struct / Java entity）
 - 迁移工具集成（仅交付独立 .sql；`schema.sql` + `schema_data.sql` 可独立执行）
@@ -581,5 +607,6 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 - 全量业务 Seed 之外的数据（日志 / i18n 翻译文案 / Temporal 任务配置等；`schema_data.sql` 已含字典 + RBAC 最小可登录种子）
 - 数据库 Docker 编排
 - `sys_blacklist` 运行时拦截（见 §18.6；管理 CRUD 与 Flyway 由 java-admin 交付）
+- `sys_material` 的 Flyway / ORM / 上传与业务绑定（见 §19.3）
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

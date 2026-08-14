@@ -17,9 +17,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "spring.flyway")
 public class FlywayMigratorProperties {
 
-    /** 迁移脚本目录列表；空则由 FlywayMigrator 按 profile 回退默认。yml 单值与列表均可绑定。 */
+    /** 迁移脚本目录列表；空则回退 {@code classpath:db/migration}。yml 单值与列表均可绑定。 */
     private List<String> locations = new ArrayList<>();
 
-    /** 迁移目标版本；空则 prod 默认 1，其它 profile 不限制。 */
+    /** 迁移目标版本；空则不限制，执行到最新。 */
     private String target = "";
 }

@@ -1,12 +1,12 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
--- 字符集:     utf8mb4 / utf8mb4_0900_ai_ci
+-- 字符集:     utf8mb4 / utf8mb4_unicode_ci
 -- 引擎:       InnoDB
--- 版本要求:   MySQL 8.0.13+ （使用 JSON 类型 / TEXT 默认值表达式）
--- 表数:       23 张
---             核心 11（含 sys_data_permission / sys_blacklist）
+-- 版本要求:   MySQL 5.7.8+ 及兼容发行版（prod 不用 utf8mb4_0900_ai_ci；该 collation 仅官方 MySQL 8.0+）
+-- 表数:       24 张
+--             核心 12（含 sys_data_permission / sys_blacklist / sys_material）
 --             关联 4（sys_user_role / sys_role_api / sys_role_menu / sys_menu_api）
 --             记录 4（3 张日志 + temporal_task_execution）
 --             归档 3（api_log_archive / sys_login_log_archive / operation_log_archive）
@@ -67,6 +67,9 @@
 -- v12 (仅 sys_user):
 --   1. sys_user: 增加 account_expires_at TIMESTAMP NULL（NULL=永不过期;不含边界;
 --        与 is_enabled/Soft Delete/Blacklist 正交；到期拒登录并踢会话）
+-- v13 (仅 sys_material):
+--   1. 新增核心表 sys_material：多类型素材(IMAGE/VIDEO/AUDIO/DOCUMENT/OTHER)
+--        + storage_type；文件细节进 metadata JSON；不存二进制；无业务 UNIQUE
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -89,7 +92,7 @@ CREATE TABLE casbin_rule (
     v5    VARCHAR(255)    DEFAULT NULL,
     PRIMARY KEY (id),
     INDEX idx_casbin_rule_ptype_v0_v1 (ptype, v0, v1)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Casbin policy 存储（casbin/mysql-adapter v2 标准表）';
 
 
@@ -122,7 +125,7 @@ CREATE TABLE sys_user (
     UNIQUE KEY uniq_sys_user_username (username, deleted_at),
     INDEX idx_sys_user_is_enabled (is_enabled),
     INDEX idx_sys_user_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='用户表';
 
 
@@ -149,7 +152,7 @@ CREATE TABLE sys_role (
     INDEX idx_sys_role_parent_id (parent_id),
     INDEX idx_sys_role_is_enabled (is_enabled),
     INDEX idx_sys_role_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='角色表(支持父子层级继承)';
 
 
@@ -178,7 +181,7 @@ CREATE TABLE sys_api (
     INDEX idx_sys_api_group (api_group),
     INDEX idx_sys_api_is_enabled (is_enabled),
     INDEX idx_sys_api_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='API/接口管理(HTTP 路由 + 权限码)';
 
 
@@ -214,7 +217,7 @@ CREATE TABLE sys_menu (
     INDEX idx_sys_menu_type (type),
     INDEX idx_sys_menu_is_enabled (is_enabled),
     INDEX idx_sys_menu_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='菜单表(树形 + 物化路径 + 按钮级权限码)';
 
 
@@ -239,7 +242,7 @@ CREATE TABLE i18n_locale (
     UNIQUE KEY uniq_i18n_locale_code (code, deleted_at),
     INDEX idx_i18n_locale_is_enabled (is_enabled),
     INDEX idx_i18n_locale_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='I18n 语言/区域';
 
 
@@ -265,7 +268,7 @@ CREATE TABLE dict_type (
     UNIQUE KEY uniq_dict_type_code (code, deleted_at),
     INDEX idx_dict_type_is_enabled (is_enabled),
     INDEX idx_dict_type_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='字典类型';
 
 
@@ -294,7 +297,7 @@ CREATE TABLE temporal_task_config (
     UNIQUE KEY uniq_temporal_task_config_code (code, deleted_at),
     INDEX idx_temporal_task_config_is_enabled (is_enabled),
     INDEX idx_temporal_task_config_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Temporal 任务调度配置(workflow/activity 注册)';
 
 
@@ -319,7 +322,7 @@ CREATE TABLE i18n_translation (
     INDEX idx_i18n_translation_key (translation_key),
     INDEX idx_i18n_translation_deleted_at (deleted_at),
     CONSTRAINT fk_i18n_translation_locale_id FOREIGN KEY (locale_id) REFERENCES i18n_locale (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='I18n 翻译(UI 字符串键值对)';
 
 
@@ -354,7 +357,7 @@ CREATE TABLE dict_data (
     INDEX idx_dict_data_is_enabled (is_enabled),
     INDEX idx_dict_data_deleted_at (deleted_at),
     CONSTRAINT fk_dict_data_type_id FOREIGN KEY (type_id) REFERENCES dict_type (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='字典数据项';
 
 
@@ -369,7 +372,7 @@ CREATE TABLE sys_user_role (
     INDEX idx_sys_user_role_role_id (role_id),
     CONSTRAINT fk_sys_user_role_user_id FOREIGN KEY (user_id) REFERENCES sys_user (id),
     CONSTRAINT fk_sys_user_role_role_id FOREIGN KEY (role_id) REFERENCES sys_role (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='用户-角色关联(无软删,无 updated_at/updated_by)';
 
 
@@ -384,7 +387,7 @@ CREATE TABLE sys_role_api (
     INDEX idx_sys_role_api_api_id (api_id),
     CONSTRAINT fk_sys_role_api_role_id FOREIGN KEY (role_id) REFERENCES sys_role (id),
     CONSTRAINT fk_sys_role_api_api_id  FOREIGN KEY (api_id)  REFERENCES sys_api (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='角色-API 授权关联(无软删)';
 
 
@@ -399,7 +402,7 @@ CREATE TABLE sys_role_menu (
     INDEX idx_sys_role_menu_menu_id (menu_id),
     CONSTRAINT fk_sys_role_menu_role_id FOREIGN KEY (role_id) REFERENCES sys_role (id),
     CONSTRAINT fk_sys_role_menu_menu_id FOREIGN KEY (menu_id) REFERENCES sys_menu (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='角色-菜单授权关联(无软删)';
 
 
@@ -415,7 +418,7 @@ CREATE TABLE sys_menu_api (
     INDEX idx_sys_menu_api_api_id (api_id),
     CONSTRAINT fk_sys_menu_api_menu_id FOREIGN KEY (menu_id) REFERENCES sys_menu (id),
     CONSTRAINT fk_sys_menu_api_api_id  FOREIGN KEY (api_id)  REFERENCES sys_api (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='菜单-API 快捷绑定(非授权,便于按菜单批量赋权)';
 
 
@@ -471,7 +474,7 @@ CREATE TABLE sys_data_permission (
     INDEX idx_sys_data_permission_resource (resource_table),
     INDEX idx_sys_data_permission_is_enabled (is_enabled),
     INDEX idx_sys_data_permission_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='ABAC 数据权限(主体多态 + 多 action + 多 scope,行级授权)';
 
 
@@ -510,8 +513,38 @@ CREATE TABLE sys_blacklist (
     INDEX idx_sys_blacklist_expires_at (expires_at),
     INDEX idx_sys_blacklist_is_enabled (is_enabled),
     INDEX idx_sys_blacklist_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='访问黑名单(多态 target + scope + 时间窗;运行时拦截本波未实现)';
+
+
+-- ============================================================
+-- Section 16b: 素材库 — sys_material (v13)
+-- 多类型共用一张表; type 区分形态; 文件细节与类型扩展一律进 metadata
+-- 只存元数据 + storage_type,不存文件体
+-- 无业务 UNIQUE: 无稳定自然键(name / metadata.url / metadata.checksum 均可空或重复)
+-- ============================================================
+CREATE TABLE sys_material (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name            VARCHAR(128)    NOT NULL  COMMENT '素材展示名',
+    type            VARCHAR(32)     NOT NULL  COMMENT '素材类型: IMAGE / VIDEO / AUDIO / DOCUMENT / OTHER',
+    storage_type    VARCHAR(32)     NOT NULL DEFAULT 'LOCAL'
+                                    COMMENT '存储: LOCAL / OSS / COS / S3',
+    metadata        JSON            DEFAULT NULL
+                                    COMMENT '文件与类型扩展: mime_type/file_ext/original_name/storage_key/url/size_bytes/width/height/duration_ms/checksum 等;无则为 NULL',
+    sort            INT             NOT NULL DEFAULT 0  COMMENT '排序(升序)',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
+    is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用',
+    deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '创建人(0=系统操作;非0=软引用 sys_user.id)',
+    updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
+    PRIMARY KEY (id),
+    INDEX idx_sys_material_type (type),
+    INDEX idx_sys_material_is_enabled (is_enabled),
+    INDEX idx_sys_material_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='素材库(多类型元数据+存储定位;不存二进制;v13 第一稿)';
 
 
 -- ============================================================
@@ -570,7 +603,7 @@ CREATE TABLE api_log (
     INDEX idx_api_log_status_code_created_at (status_code, created_at),
     INDEX idx_api_log_success_created_at (success, created_at),
     INDEX idx_api_log_client_ip_created_at (client_ip, created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='API 调用日志(记录型,只增不改;含 UA/IP 解析与数据变更快照)';
 
 
@@ -623,7 +656,7 @@ CREATE TABLE api_log_archive (
     INDEX idx_api_log_archive_status_code_created_at (status_code, created_at),
     INDEX idx_api_log_archive_success_created_at (success, created_at),
     INDEX idx_api_log_archive_client_ip_created_at (client_ip, created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='API 日志归档(由 TTL 作业从 api_log 搬运;与热表同结构)';
 
 
@@ -669,7 +702,7 @@ CREATE TABLE sys_login_log (
     INDEX idx_sys_login_log_sys_user_id (sys_user_id),
     INDEX idx_sys_login_log_login_ip_created_at (login_ip, created_at),
     INDEX idx_sys_login_log_login_time (login_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='登录日志(记录型,只增不改;含 UA/IP 解析与客户端指纹)';
 
 
@@ -707,7 +740,7 @@ CREATE TABLE sys_login_log_archive (
     INDEX idx_sys_login_log_archive_sys_user_id (sys_user_id),
     INDEX idx_sys_login_log_archive_login_ip_created_at (login_ip, created_at),
     INDEX idx_sys_login_log_archive_login_time (login_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='登录日志归档(与热表同结构)';
 
 
@@ -733,7 +766,7 @@ CREATE TABLE operation_log (
     INDEX idx_operation_log_user_id_created_at (user_id, created_at),
     INDEX idx_operation_log_module_action_created_at (module, action, created_at),
     INDEX idx_operation_log_source (source)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='操作日志(AOP 拦截 + 显式打标;记录型)';
 
 
@@ -760,7 +793,7 @@ CREATE TABLE operation_log_archive (
     INDEX idx_operation_log_archive_user_id_created_at (user_id, created_at),
     INDEX idx_operation_log_archive_module_action_created_at (module, action, created_at),
     INDEX idx_operation_log_archive_source (source)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='操作日志归档';
 
 
@@ -788,7 +821,7 @@ CREATE TABLE temporal_task_execution (
     UNIQUE KEY uniq_temporal_task_execution_workflow_run (workflow_id, run_id),
     INDEX idx_temporal_task_execution_config_started_at (config_id, started_at),
     INDEX idx_temporal_task_execution_status_started_at (status, started_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Temporal 执行记录(应用层镜像,只存摘要)';
 
 
@@ -809,5 +842,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13)
 -- ============================================================

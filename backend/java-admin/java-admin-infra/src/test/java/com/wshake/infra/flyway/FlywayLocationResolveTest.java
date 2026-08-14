@@ -29,11 +29,11 @@ class FlywayLocationResolveTest {
     }
 
     @Test
-    void prodProfile_defaultsTargetToVersion1() {
+    void prodProfile_defaultsTargetUnrestricted() {
         MockEnvironment env = new MockEnvironment();
         env.setActiveProfiles("prod");
-        assertThat(FlywayMigrator.resolveTarget(env, "")).isEqualTo("1");
-        assertThat(FlywayMigrator.resolveTarget(env, null)).isEqualTo("1");
+        assertThat(FlywayMigrator.resolveTarget(env, "")).isNull();
+        assertThat(FlywayMigrator.resolveTarget(env, null)).isNull();
     }
 
     @Test
@@ -52,9 +52,9 @@ class FlywayLocationResolveTest {
     }
 
     @Test
-    void multiProfileContainingProd_defaultsTargetTo1() {
+    void multiProfileContainingProd_defaultsTargetUnrestricted() {
         MockEnvironment env = new MockEnvironment();
         env.setActiveProfiles("dev", "prod");
-        assertThat(FlywayMigrator.resolveTarget(env, "")).isEqualTo("1");
+        assertThat(FlywayMigrator.resolveTarget(env, "")).isNull();
     }
 }

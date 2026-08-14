@@ -1,7 +1,7 @@
 /**
  * ALTCHA PoW widget 的 React 薄封装。
  *
- * - 挂载 challenge 属性指向后端 `/api/altcha/challenge`（URL 形式，widget 自动 fetch）
+ * - 挂载 challenge 属性（默认拼接 VITE_API_URL + /altcha/challenge；URL 形式，widget 自动 fetch）
  * - 监听 `statechange`，verified 时把隐藏字段 payload（Base64）回传
  * - 受控 `value` / `onChange`，可直接作为 antd Form.Item 的子元素
  * - 通过 ref 暴露 `reset()`：登录失败后清空勾选并重新拉取 challenge
@@ -11,7 +11,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 export interface AltchaWidgetProps {
-  /** challenge 拉取地址；走 Vite 代理到 mock 的 /api/altcha/challenge */
+  /** challenge 拉取地址；缺省拼接 VITE_API_URL + /altcha/challenge */
   challenge?: string;
   /** 当前 payload 值（Base64），由 Form.Item 注入 */
   value?: string;
@@ -41,18 +41,23 @@ type AltchaWidgetElement = HTMLElement & {
   reset?: (newState?: string, err?: string | null) => void;
 };
 
-const DEFAULT_CHALLENGE_URL = '/api/altcha/challenge';
+function resolveChallengeUrl(challenge?: string) {
+  if (challenge) return challenge;
+  const base = String(import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+  return `${base}/altcha/challenge`;
+}
 
 export const AltchaWidget = forwardRef<AltchaWidgetHandle, AltchaWidgetProps>(
   function AltchaWidget(
     {
-      challenge = DEFAULT_CHALLENGE_URL,
+      challenge,
       value,
       onChange,
       language = 'zh',
     },
     ref,
   ) {
+    const challengeUrl = resolveChallengeUrl(challenge);
     const hostRef = useRef<HTMLDivElement>(null);
     const widgetRef = useRef<AltchaWidgetElement | null>(null);
     const onChangeRef = useRef(onChange);
@@ -80,7 +85,7 @@ export const AltchaWidget = forwardRef<AltchaWidgetHandle, AltchaWidgetProps>(
       if (!host) return;
 
       const widget = document.createElement('altcha-widget') as AltchaWidgetElement;
-      widget.setAttribute('challenge', challenge);
+      widget.setAttribute('challenge', challengeUrl);
       widget.setAttribute('language', language);
       widget.setAttribute('name', 'altcha');
       // hideLogo/hideFooter 不是 HTML 属性，需走 configuration JSON
@@ -114,7 +119,7 @@ export const AltchaWidget = forwardRef<AltchaWidgetHandle, AltchaWidgetProps>(
         widget.remove();
         widgetRef.current = null;
       };
-    }, [challenge, language]);
+    }, [challengeUrl, language]);
 
     // 与上方密码/账号输入框同宽对齐；覆盖 ALTCHA 默认 max-width: 320px
     return (

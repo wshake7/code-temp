@@ -26,7 +26,7 @@ spring:
           max-idle: 8
           min-idle: 1
 
-  # Flyway V1 + V2（dev 加载全部；prod 用 application-prod.yml 的 migration-prod 不含 V2）
+  # Flyway：未配置 target 时执行 locations 下全部版本
   flyway:
     locations: classpath:db/migration
 

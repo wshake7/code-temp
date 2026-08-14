@@ -22,7 +22,7 @@ spring:
           max-idle: 16
           min-idle: 4
 
-  # Flyway 仅 V1（Q8 决策：prod 零种子用户；migration-prod 目录里没有 V2__seed_admin_user.sql）
+  # Flyway：prod 用 migration-prod；未配置 spring.flyway.target 时执行该目录全部版本
   flyway:
     locations: classpath:db/migration-prod
 

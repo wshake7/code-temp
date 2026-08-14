@@ -11,9 +11,7 @@
 --   - Casbin subject = 用户 id 字符串；Root 通配 p, 1, /*, * 保证首登不被 deny-by-default
 --     matcher: r.sub == p.sub && keyMatch2(r.obj, p.obj) && (p.act == "*" || r.act == p.act)
 --
--- 环境:
---   - dev: 执行本脚本（spring.flyway 无 target）
---   - prod: 默认 spring.flyway.target=1 不执行本脚本；本文件与 dev 对齐，便于需要时追加 locations
+-- 环境: 未配置 spring.flyway.target 时各 profile 均执行本脚本
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;

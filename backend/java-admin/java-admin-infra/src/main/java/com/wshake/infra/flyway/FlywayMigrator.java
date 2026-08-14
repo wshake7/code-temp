@@ -19,18 +19,14 @@ import org.springframework.core.env.Environment;
  * <p>Spring Boot 4 + Flyway 10.x 的自动装配在我们环境下不触发，因此显式提供
  * {@link Flyway} Bean 并在创建时 {@link Flyway#migrate()}。
  *
- * <p><strong>脚本布局（classpath {@code db/}，与 profile 无关的 schema 只维护一份）：</strong>
+ * <p><strong>脚本布局（classpath {@code db/}）：</strong>
  * <ul>
  *     <li>{@code db/migration/V1__schema.sql} — 全量表结构（原 {@code backend/db/schema.sql}）</li>
- *     <li>{@code db/migration/V2__seed_root_casbin.sql} — dev Root + Casbin 通配 seed</li>
- *     <li>{@code db/migration-prod/} — 预留 prod 专用增量；默认不放重复 schema</li>
+ *     <li>{@code db/migration/V2__schema_seed.sql} — 字典 + RBAC + Root + Casbin seed</li>
+ *     <li>{@code db/migration-prod/} — prod 专用目录（由 {@code spring.flyway.locations} 指定）</li>
  * </ul>
  *
- * <p>默认 locations 均为 {@code classpath:db/migration}：
- * <ul>
- *     <li>dev：不设 target → 执行 V1 + V2</li>
- *     <li>prod：{@code spring.flyway.target=1} → 只执行 V1，零 seed</li>
- * </ul>
+ * <p>默认 locations 均为 {@code classpath:db/migration}；不设 target 则执行全部版本。
  * 可通过 {@code spring.flyway.locations} / {@code spring.flyway.target} 覆盖
  *（见 {@link FlywayMigratorProperties}）。
  *
@@ -87,8 +83,7 @@ public class FlywayMigrator {
     }
 
     /**
-     * 解析迁移目录：配置优先；否则 dev/prod 均使用 {@code classpath:db/migration}
-     *（schema 单源；prod 靠 target 截止 seed）。
+     * 解析迁移目录：配置优先；否则使用 {@code classpath:db/migration}。
      */
     static String[] resolveLocations(Environment environment, String configuredLocations) {
         if (configuredLocations != null && !configuredLocations.isBlank()) {
@@ -101,14 +96,12 @@ public class FlywayMigrator {
     }
 
     /**
-     * 解析迁移目标版本：配置优先；prod 默认 {@code 1}（仅 schema）；其它 profile 不限制。
+     * 解析迁移目标版本：仅使用显式配置；未配置则不限制。
      */
     static String resolveTarget(Environment environment, String configuredTarget) {
         if (configuredTarget != null && !configuredTarget.isBlank()) {
             return configuredTarget.trim();
         }
-        List<String> profiles = Arrays.asList(environment.getActiveProfiles());
-        boolean prod = profiles.stream().anyMatch("prod"::equalsIgnoreCase);
-        return prod ? "1" : null;
+        return null;
     }
 }
