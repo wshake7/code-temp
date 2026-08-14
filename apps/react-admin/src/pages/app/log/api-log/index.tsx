@@ -4,6 +4,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { listApiLogsApi } from '@/api/rest/api-log';
 import type { ApiLogListItem, ApiLogSource } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 import ApiLogDetailDrawer from './modules/detail-drawer';
 
 const METHOD_OPTIONS = {
@@ -140,7 +141,7 @@ export function ApiLogPanel() {
           createdAt: value,
         }),
       },
-      render: (_, r) => r.createdAt || '-',
+      render: (_, r) => formatDateTime(r.createdAt),
     },
     {
       title: '失败原因',

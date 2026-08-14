@@ -4,6 +4,7 @@ import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.port.TaskSchedulePort;
@@ -21,7 +22,6 @@ import com.wshake.service.task.TaskManageModels.TaskExecutionView;
 import com.wshake.service.task.TaskManageModels.TaskTriggerResult;
 import com.wshake.service.task.TaskManageModels.UpdateTaskConfigCommand;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -280,7 +280,7 @@ public class TaskConfigService {
                 config.getTimeoutSeconds(),
                 input));
 
-        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime now = TimeZones.now();
         TemporalTaskExecution row = new TemporalTaskExecution();
         row.setConfigId(config.getId());
         row.setWorkflowId(started.workflowId());

@@ -2,6 +2,7 @@ package com.wshake.infra.temporal;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.port.TaskSchedulePort;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
@@ -280,7 +281,7 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                 .setArguments(businessInput)
                 .build();
 
-        ScheduleSpec.Builder specBuilder = ScheduleSpec.newBuilder();
+        ScheduleSpec.Builder specBuilder = ScheduleSpec.newBuilder().setTimeZoneName(TimeZones.PLATFORM_ID);
         Duration interval = parseSecondInterval(cron);
         if (interval != null) {
             // 亚分钟节拍用 Interval（如每 10s），比 6 段 cron 更稳

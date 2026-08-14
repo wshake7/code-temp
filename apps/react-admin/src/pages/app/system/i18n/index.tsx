@@ -37,6 +37,7 @@ import type {
   I18nTranslationKey,
 } from '@/api/rest/types';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
+import { formatDateTime } from '@/utils/date';
 import I18nLocaleDrawer from './modules/locale-drawer';
 import I18nImportModal from './modules/import-modal';
 import I18nTranslationKeyDrawer from './modules/translation-key-drawer';
@@ -158,6 +159,7 @@ const I18nPage = () => {
       width: 170,
       valueType: 'dateTime',
       search: false,
+      render: (_, r) => formatDateTime(r.updatedAt),
     },
     {
       title: '操作',
@@ -264,6 +266,7 @@ const I18nPage = () => {
       width: 170,
       valueType: 'dateTime',
       search: false,
+      render: (_, r) => formatDateTime(r.updatedAt),
     },
     {
       title: '操作',
@@ -477,6 +480,7 @@ const I18nPage = () => {
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       width: 170,
+      render: (text: string | undefined) => formatDateTime(text),
     },
     {
       title: '操作',

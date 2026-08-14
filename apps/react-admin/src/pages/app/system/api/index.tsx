@@ -17,6 +17,7 @@ import {
 } from '@/api/hooks/api';
 import { listApisApi } from '@/api/rest/api';
 import type { HttpMethod, SysApi } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import ApiFormDrawer from './modules/api-form-drawer';
 
@@ -276,7 +277,7 @@ const ApiPage = () => {
       valueType: 'dateTime',
       search: false,
       render: (_, r) =>
-        r.isGroup ? <span style={{ color: '#999' }}>-</span> : r.createdAt,
+        r.isGroup ? <span style={{ color: '#999' }}>-</span> : formatDateTime(r.createdAt),
     },
     {
       title: '操作',

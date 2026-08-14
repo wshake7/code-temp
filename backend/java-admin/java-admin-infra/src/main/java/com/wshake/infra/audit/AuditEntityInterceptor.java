@@ -6,10 +6,10 @@ import com.easy.query.core.expression.parser.core.base.ColumnSetter;
 import com.easy.query.core.expression.segment.index.EntitySegmentComparer;
 import com.easy.query.core.expression.sql.builder.EntityInsertExpressionBuilder;
 import com.easy.query.core.expression.sql.builder.EntityUpdateExpressionBuilder;
+import com.wshake.common.time.TimeZones;
 import com.wshake.infra.satoken.SaTokenConfigure;
 import com.wshake.service.entity.BaseEntity;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
@@ -46,7 +46,7 @@ public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSe
     public void configureInsert(
             Class<?> entityClass, EntityInsertExpressionBuilder entityInsertExpressionBuilder, Object entity) {
         BaseEntity baseEntity = (BaseEntity) entity;
-        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime now = TimeZones.now();
         Long operatorId = currentOperatorId();
 
         if (baseEntity.getDeletedAt() == null) {
@@ -70,7 +70,7 @@ public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSe
     public void configureUpdate(
             Class<?> entityClass, EntityUpdateExpressionBuilder entityUpdateExpressionBuilder, Object entity) {
         BaseEntity baseEntity = (BaseEntity) entity;
-        baseEntity.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
+        baseEntity.setUpdatedAt(TimeZones.now());
         baseEntity.setUpdatedBy(currentOperatorId());
     }
 
@@ -87,7 +87,7 @@ public final class AuditEntityInterceptor implements EntityInterceptor, UpdateSe
             return updatedAt.isInSegment() && updatedBy.isInSegment();
         });
         if (!updatedAt.isInSegment()) {
-            columnSetter.set("updatedAt", LocalDateTime.now(ZoneId.systemDefault()));
+            columnSetter.set("updatedAt", TimeZones.now());
         }
         if (!updatedBy.isInSegment()) {
             columnSetter.set("updatedBy", currentOperatorId());

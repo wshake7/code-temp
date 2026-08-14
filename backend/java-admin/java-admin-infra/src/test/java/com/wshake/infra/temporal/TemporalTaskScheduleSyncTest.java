@@ -93,6 +93,7 @@ class TemporalTaskScheduleSyncTest {
         assertThat(scheduleCap.getValue().getSpec().getIntervals().get(0).getEvery())
                 .isEqualTo(java.time.Duration.ofSeconds(10));
         assertThat(scheduleCap.getValue().getSpec().getCronExpressions()).isNullOrEmpty();
+        assertThat(scheduleCap.getValue().getSpec().getTimeZoneName()).isEqualTo("Asia/Shanghai");
         assertThat(optionsCap.getValue().isTriggerImmediately()).isTrue();
         assertThat(scheduleCap.getValue().getAction()).isInstanceOf(ScheduleActionStartWorkflow.class);
         ScheduleActionStartWorkflow action =
@@ -113,6 +114,7 @@ class TemporalTaskScheduleSyncTest {
                 .createSchedule(eq("task-log_count_tick"), scheduleCap.capture(), any(ScheduleOptions.class));
         Schedule schedule = scheduleCap.getValue();
         assertThat(schedule.getSpec().getCronExpressions()).containsExactly("0 0 2 * * *");
+        assertThat(schedule.getSpec().getTimeZoneName()).isEqualTo("Asia/Shanghai");
         assertThat(schedule.getAction()).isInstanceOf(ScheduleActionStartWorkflow.class);
         ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) schedule.getAction();
         assertThat(action.getWorkflowType()).isEqualTo("LogCountTickWorkflow");

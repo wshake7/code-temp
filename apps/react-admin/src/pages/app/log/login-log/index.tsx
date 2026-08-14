@@ -4,6 +4,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { listLoginLogsApi } from '@/api/rest/login-log';
 import type { LoginLogListItem, LoginLogSource } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 import LoginLogDetailDrawer from './modules/detail-drawer';
 
 const LOGIN_METHOD_OPTIONS = {
@@ -115,7 +116,7 @@ export function LoginLogPanel() {
           loginTime: value,
         }),
       },
-      render: (_, r) => r.loginTime || '-',
+      render: (_, r) => formatDateTime(r.loginTime),
     },
     {
       title: '地理位置',

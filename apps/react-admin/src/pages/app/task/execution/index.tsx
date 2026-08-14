@@ -9,6 +9,7 @@ import type { TaskExecution, TaskExecutionStatus } from '@/api/rest/types';
 import { useListTaskWorkflowTypes } from '@/api/hooks/task-config';
 import { onTaskExecutionChanged } from '../modules/events';
 import TaskExecutionDetailDrawer from './modules/detail-drawer';
+import { formatDateTime } from '@/utils/date';
 import { formatDuration, statusColor, statusLabelKey } from './modules/shared';
 
 const STATUS_OPTIONS: TaskExecutionStatus[] = [
@@ -165,14 +166,15 @@ export function TaskExecutionPanel() {
           startedAt: value,
         }),
       },
-      render: (_, r) => r.startedAt || '-',
+      render: (_, r) => formatDateTime(r.startedAt),
     },
     {
       title: t('closedAt'),
       dataIndex: 'closedAt',
       width: 180,
       search: false,
-      render: (_, r) => r.closedAt || <span style={{ color: '#999' }}>-</span>,
+      render: (_, r) =>
+        r.closedAt ? formatDateTime(r.closedAt) : <span style={{ color: '#999' }}>-</span>,
     },
     {
       title: t('waitDuration'),

@@ -1,6 +1,7 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysMenu;
 import com.wshake.service.entity.SysRoleApi;
@@ -10,7 +11,6 @@ import com.wshake.service.entity.proxy.SysMenuProxy;
 import com.wshake.service.entity.proxy.SysRoleApiProxy;
 import com.wshake.service.entity.proxy.SysRoleMenuProxy;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -120,7 +120,7 @@ public class SysRoleBindingRepository {
         if (menuIds == null || menuIds.isEmpty()) {
             return;
         }
-        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime now = TimeZones.now();
         List<SysRoleMenu> rows = new ArrayList<>(menuIds.size());
         for (Long menuId : menuIds) {
             SysRoleMenu row = new SysRoleMenu();
@@ -137,7 +137,7 @@ public class SysRoleBindingRepository {
         if (apiIds == null || apiIds.isEmpty()) {
             return;
         }
-        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime now = TimeZones.now();
         List<SysRoleApi> rows = new ArrayList<>(apiIds.size());
         for (Long apiId : apiIds) {
             SysRoleApi row = new SysRoleApi();

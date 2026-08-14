@@ -15,6 +15,7 @@ services:
       # 与 application-dev.yml 默认 MYSQL_PORT=4336 对齐（4000 段，避开本机 3306）
       - "${MYSQL_PORT:-4336}:3306"
     environment:
+      TZ: Asia/Shanghai
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-javaadmin_dev}
     volumes:

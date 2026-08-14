@@ -1,6 +1,7 @@
 import { Descriptions, Drawer, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { TaskExecution } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 import { formatDuration, statusColor, statusLabelKey } from './shared';
 
 interface Props {
@@ -54,10 +55,10 @@ const TaskExecutionDetailDrawer = ({ open, row, onClose }: Props) => {
             <Tag color={statusColor(row.status)}>{statusLabel(row.status)}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label={t('retryCount')}>{row.retryCount ?? 0}</Descriptions.Item>
-          <Descriptions.Item label={t('createdAt')}>{dash(row.createdAt)}</Descriptions.Item>
-          <Descriptions.Item label={t('pendingAt')}>{dash(row.pendingAt)}</Descriptions.Item>
-          <Descriptions.Item label={t('startedAt')}>{dash(row.startedAt)}</Descriptions.Item>
-          <Descriptions.Item label={t('closedAt')}>{dash(row.closedAt)}</Descriptions.Item>
+          <Descriptions.Item label={t('createdAt')}>{formatDateTime(row.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label={t('pendingAt')}>{formatDateTime(row.pendingAt)}</Descriptions.Item>
+          <Descriptions.Item label={t('startedAt')}>{formatDateTime(row.startedAt)}</Descriptions.Item>
+          <Descriptions.Item label={t('closedAt')}>{formatDateTime(row.closedAt)}</Descriptions.Item>
           <Descriptions.Item label={t('duration')}>
             {formatDuration(row.startedAt, row.closedAt)}
           </Descriptions.Item>

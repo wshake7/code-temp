@@ -27,11 +27,13 @@ export function statusLabelKey(status: string): string {
   return `status${status}`;
 }
 
+import { parsePlatformMillis } from '@/utils/date';
+
 /** 由 startedAt / closedAt 推导耗时展示 */
 export function formatDuration(startedAt: string | null | undefined, closedAt: string | null): string {
   if (!startedAt || !closedAt) return '—';
-  const start = Date.parse(startedAt);
-  const end = Date.parse(closedAt);
+  const start = parsePlatformMillis(startedAt);
+  const end = parsePlatformMillis(closedAt);
   if (Number.isNaN(start) || Number.isNaN(end) || end < start) return '—';
   const sec = Math.round((end - start) / 1000);
   if (sec < 60) return `${sec}s`;

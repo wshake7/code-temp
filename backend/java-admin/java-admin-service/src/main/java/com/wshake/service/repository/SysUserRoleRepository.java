@@ -1,6 +1,7 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysRole;
 import com.wshake.service.entity.SysRoleApi;
@@ -12,7 +13,6 @@ import com.wshake.service.entity.proxy.SysUserProxy;
 import com.wshake.service.entity.proxy.SysUserRoleProxy;
 import com.wshake.service.port.CasbinPolicyPort.ApiPolicy;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -132,7 +132,7 @@ public class SysUserRoleRepository {
         if (roleIds == null || roleIds.isEmpty()) {
             return;
         }
-        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime now = TimeZones.now();
         List<SysUserRole> rows = new ArrayList<>(roleIds.size());
         for (Long roleId : roleIds) {
             SysUserRole ur = new SysUserRole();

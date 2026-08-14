@@ -1,5 +1,6 @@
 package com.wshake.service.log;
 
+import com.wshake.common.time.TimeZones;
 import com.wshake.common.util.UserAgentParser;
 import com.wshake.service.entity.ApiLog;
 import com.wshake.service.entity.SysUser;
@@ -8,7 +9,6 @@ import com.wshake.service.repository.ApiLogRepository;
 import com.wshake.service.repository.SysUserRepository;
 import com.wshake.service.support.geo.IpLocationResolver;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.Executor;
@@ -55,7 +55,7 @@ public class ApiLogWriter {
         if (command == null) {
             return;
         }
-        LocalDateTime createdAt = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime createdAt = TimeZones.now();
         apiLogExecutor.execute(() -> insertQuietly(command, createdAt));
     }
 

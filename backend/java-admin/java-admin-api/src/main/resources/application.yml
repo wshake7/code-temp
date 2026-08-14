@@ -107,6 +107,9 @@ altcha:
 
 # 请求安全中间件：Timestamp / Encrypt / Nonce / Sign / Language 独立开关；dev 默认全开
 app:
+  # 平台墙钟（仅 Asia/Shanghai，见 ADR 0004）
+  time:
+    zone: Asia/Shanghai
   security:
     timestamp:
       enabled: ${SECURITY_TIMESTAMP_ENABLED:true}

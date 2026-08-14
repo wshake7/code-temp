@@ -9,6 +9,7 @@ import {
 } from '@/api/hooks/user';
 import { listUsersApi } from '@/api/rest/user';
 import type { UserListItem } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import UserFormDrawer, { type UserFormKind } from './modules/user-form-drawer';
 import ResetPasswordModal from './modules/reset-password-modal';
@@ -126,7 +127,7 @@ const UserPage = () => {
       width: 170,
       search: false,
       render: (_, r) =>
-        r.lastLoginAt || <span style={{ color: '#999' }}>-</span>,
+        r.lastLoginAt ? formatDateTime(r.lastLoginAt) : <span style={{ color: '#999' }}>-</span>,
     },
     {
       title: '账号过期',
@@ -134,7 +135,7 @@ const UserPage = () => {
       width: 170,
       search: false,
       render: (_, r) =>
-        r.accountExpiresAt || <span style={{ color: '#999' }}>永不过期</span>,
+        r.accountExpiresAt ? formatDateTime(r.accountExpiresAt) : <span style={{ color: '#999' }}>永不过期</span>,
     },
     {
       title: '操作',

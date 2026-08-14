@@ -1,5 +1,6 @@
 package com.wshake.infra.temporal.workflow;
 
+import com.wshake.common.time.TimeZones;
 import com.wshake.infra.temporal.TemporalTaskTriggerPort;
 import com.wshake.service.entity.TemporalTaskConfig;
 import com.wshake.service.entity.TemporalTaskExecution;
@@ -25,7 +26,6 @@ import io.temporal.spring.boot.ActivityImpl;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -100,8 +100,6 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
 
     /** {@code failure_reason} 列上限，与 schema VARCHAR(1024) 对齐。 */
     private static final int FAILURE_REASON_MAX = 1024;
-
-    private static final ZoneId ZONE = ZoneId.systemDefault();
 
     private final WorkflowClient workflowClient;
     private final TemporalTaskExecutionRepository executionRepository;
@@ -240,7 +238,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         String wfId = meta.getExecution().getWorkflowId();
         String runId = meta.getExecution().getRunId();
         Long configId = resolveConfigId(meta, wfId);
-        LocalDateTime now = LocalDateTime.now(ZONE);
+        LocalDateTime now = TimeZones.now();
         LocalDateTime temporalStart =
                 toLocal(meta.getStartTime() != null ? meta.getStartTime() : meta.getExecutionTime());
         String status = mapStatus(meta.getStatus());
@@ -282,7 +280,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         String baseStatus = mapStatus(meta.getStatus());
         RetrySnapshot retry = extractRetrySnapshot(meta);
         String status = resolveOpenStatus(baseStatus, retry);
-        LocalDateTime now = LocalDateTime.now(ZONE);
+        LocalDateTime now = TimeZones.now();
         LocalDateTime temporalStart =
                 toLocal(meta.getExecutionTime() != null ? meta.getExecutionTime() : meta.getStartTime());
         LocalDateTime closedAt = toLocal(meta.getCloseTime());
@@ -745,7 +743,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
 
     /** @param instant Temporal Instant；null → null */
     private static LocalDateTime toLocal(Instant instant) {
-        return instant == null ? null : LocalDateTime.ofInstant(instant, ZONE);
+        return TimeZones.toLocal(instant);
     }
 
     /**
@@ -757,7 +755,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         if (ts == null || (ts.getSeconds() == 0 && ts.getNanos() == 0)) {
             return null;
         }
-        return LocalDateTime.ofInstant(Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()), ZONE);
+        return TimeZones.toLocal(Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()));
     }
 
     /** 取较早非 null 时间。 */

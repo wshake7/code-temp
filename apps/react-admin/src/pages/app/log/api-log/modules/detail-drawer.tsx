@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Descriptions, Drawer, Tag } from 'antd';
 import type { ApiLogListItem } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 
 interface Props {
   open: boolean;
@@ -99,9 +100,9 @@ const ApiLogDetailDrawer = ({ open, row, onClose }: Props) => {
           <Descriptions.Item label="User-Agent">
             <span style={{ wordBreak: 'break-all' }}>{dash(row.userAgent)}</span>
           </Descriptions.Item>
-          <Descriptions.Item label="创建时间">{dash(row.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label="创建时间">{formatDateTime(row.createdAt)}</Descriptions.Item>
           {row.archivedAt ? (
-            <Descriptions.Item label="归档时间">{row.archivedAt}</Descriptions.Item>
+            <Descriptions.Item label="归档时间">{formatDateTime(row.archivedAt)}</Descriptions.Item>
           ) : null}
         </Descriptions>
       ) : null}

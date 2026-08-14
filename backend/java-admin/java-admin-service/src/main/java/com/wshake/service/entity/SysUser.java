@@ -4,6 +4,7 @@ import com.easy.query.core.annotation.Column;
 import com.easy.query.core.annotation.EntityProxy;
 import com.easy.query.core.annotation.Table;
 import com.easy.query.core.proxy.ProxyEntityAvailable;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.proxy.SysUserProxy;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -68,13 +69,13 @@ public class SysUser extends BaseEntity implements ProxyEntityAvailable<SysUser,
     /**
      * 账号是否已过期（相对 {@code now}；不含边界）。
      *
-     * @param now 判定时刻；{@code null} 时用 {@link LocalDateTime#now()}
+     * @param now 判定时刻；{@code null} 时用 {@link TimeZones#now()}
      */
     public boolean isAccountExpired(LocalDateTime now) {
         if (accountExpiresAt == null) {
             return false;
         }
-        LocalDateTime at = now == null ? LocalDateTime.now() : now;
+        LocalDateTime at = now == null ? TimeZones.now() : now;
         return !accountExpiresAt.isAfter(at);
     }
 }

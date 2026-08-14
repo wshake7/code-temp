@@ -1,13 +1,13 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysMenuApi;
 import com.wshake.service.entity.SysRoleMenu;
 import com.wshake.service.entity.proxy.SysApiProxy;
 import com.wshake.service.entity.proxy.SysMenuApiProxy;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -103,7 +103,7 @@ public class SysMenuApiRepository {
         if (apiIds == null || apiIds.isEmpty()) {
             return List.of();
         }
-        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        LocalDateTime now = TimeZones.now();
         List<SysMenuApi> rows = new ArrayList<>(apiIds.size());
         for (Long apiId : apiIds) {
             SysMenuApi row = new SysMenuApi();

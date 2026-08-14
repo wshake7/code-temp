@@ -1,16 +1,13 @@
 package com.wshake.service.log;
 
+import com.wshake.common.time.DateTimes;
 import com.wshake.service.entity.ApiLog;
 import com.wshake.service.entity.ApiLogArchive;
 import com.wshake.service.entity.SysLoginLog;
 import com.wshake.service.entity.SysLoginLogArchive;
 import io.github.linpeilie.annotations.AutoMapper;
 import io.github.linpeilie.annotations.AutoMappers;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
 /**
@@ -261,26 +258,9 @@ public final class LogManageModels {
     }
 
     /**
-     * 解析查询时间：支持 ISO-8601（含 Z）、{@code yyyy-MM-dd'T'HH:mm:ss}、空格分隔。
+     * 解析查询时间：支持 ISO-8601（含 Z / offset）、无 offset 视为上海墙钟。
      */
     static LocalDateTime parseDateTime(String raw) {
-        String value = trimToNull(raw);
-        if (value == null) {
-            return null;
-        }
-        try {
-            if (value.endsWith("Z") || value.contains("+") || value.matches(".*[+-]\\d{2}:\\d{2}$")) {
-                Instant instant = Instant.parse(value);
-                return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
-            }
-            String normalized = value.contains(" ") && !value.contains("T") ? value.replace(' ', 'T') : value;
-            return LocalDateTime.parse(normalized, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            try {
-                return LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            } catch (DateTimeParseException ignored) {
-                return null;
-            }
-        }
+        return DateTimes.parse(raw);
     }
 }

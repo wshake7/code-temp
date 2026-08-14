@@ -1,5 +1,6 @@
 import { Descriptions, Drawer, Tag } from 'antd';
 import type { LoginLogListItem } from '@/api/rest/types';
+import { formatDateTime } from '@/utils/date';
 
 interface Props {
   open: boolean;
@@ -34,7 +35,7 @@ const LoginLogDetailDrawer = ({ open, row, onClose }: Props) => {
           <Descriptions.Item label="状态码">{dash(row.statusCode)}</Descriptions.Item>
           <Descriptions.Item label="用户 ID">{dash(row.sysUserId)}</Descriptions.Item>
           <Descriptions.Item label="登录方式">{dash(row.loginMethod)}</Descriptions.Item>
-          <Descriptions.Item label="登录时间">{dash(row.loginTime)}</Descriptions.Item>
+          <Descriptions.Item label="登录时间">{formatDateTime(row.loginTime)}</Descriptions.Item>
           <Descriptions.Item label="登录 IP">{dash(row.loginIp)}</Descriptions.Item>
           <Descriptions.Item label="MAC">{dash(row.loginMac)}</Descriptions.Item>
           <Descriptions.Item label="客户端 ID">{dash(row.clientId)}</Descriptions.Item>
@@ -49,9 +50,9 @@ const LoginLogDetailDrawer = ({ open, row, onClose }: Props) => {
           <Descriptions.Item label="User-Agent">
             <span style={{ wordBreak: 'break-all' }}>{dash(row.userAgent)}</span>
           </Descriptions.Item>
-          <Descriptions.Item label="创建时间">{dash(row.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label="创建时间">{formatDateTime(row.createdAt)}</Descriptions.Item>
           {row.archivedAt ? (
-            <Descriptions.Item label="归档时间">{row.archivedAt}</Descriptions.Item>
+            <Descriptions.Item label="归档时间">{formatDateTime(row.archivedAt)}</Descriptions.Item>
           ) : null}
         </Descriptions>
       ) : null}

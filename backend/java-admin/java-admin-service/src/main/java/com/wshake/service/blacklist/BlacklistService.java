@@ -4,6 +4,7 @@ import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.blacklist.BlacklistManageModels.BlacklistBatchCommand;
 import com.wshake.service.blacklist.BlacklistManageModels.BlacklistBatchResult;
 import com.wshake.service.blacklist.BlacklistManageModels.BlacklistListQuery;
@@ -56,7 +57,7 @@ public class BlacklistService {
         String targetType = requireTargetType(cmd.targetType());
         String targetValue = requireTargetValue(targetType, cmd.targetValue());
         String scope = requireScope(cmd.scope());
-        LocalDateTime startsAt = cmd.startsAt() == null ? LocalDateTime.now() : cmd.startsAt();
+        LocalDateTime startsAt = cmd.startsAt() == null ? TimeZones.now() : cmd.startsAt();
         LocalDateTime expiresAt = cmd.expiresAt();
         validateWindow(startsAt, expiresAt);
         rejectIfExactDuplicate(targetType, targetValue, scope, startsAt, expiresAt, null);
@@ -204,7 +205,7 @@ public class BlacklistService {
         if (!Set.of("LOGIN", "API", "ALL").contains(scope)) {
             return Optional.empty();
         }
-        LocalDateTime at = now == null ? LocalDateTime.now() : now;
+        LocalDateTime at = now == null ? TimeZones.now() : now;
         SysBlacklist row = blacklistRepository.findActiveHit(type, value, scope, at);
         if (row == null) {
             return Optional.empty();

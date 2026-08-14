@@ -2,6 +2,7 @@ package com.wshake.infra.temporal;
 
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
+import com.wshake.common.time.TimeZones;
 import com.wshake.service.port.TaskTriggerPort;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
@@ -11,7 +12,6 @@ import io.temporal.client.WorkflowStub;
 import io.temporal.common.RetryOptions;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -143,7 +143,7 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
 
     private String buildWorkflowId(String code) {
         long n = seq.incrementAndGet();
-        return buildManualWorkflowId(code, n, LocalDateTime.now(ZoneId.systemDefault()));
+        return buildManualWorkflowId(code, n, TimeZones.now());
     }
 
     /**
