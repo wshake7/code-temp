@@ -178,7 +178,7 @@ public class BlacklistService {
     /**
      * 运行时命中判定（S1）：是否被拦截。
      *
-     * <p>本波 DEVICE 不参与运行时；调用方应只查 IP / USER。
+     * <p>本波 DEVICE 不参与运行时；调用方应只查 IP / SYS_USER。
      */
     public boolean isBlocked(String targetType, String targetValue, String requestScope, LocalDateTime now) {
         return findBlockingHit(targetType, targetValue, requestScope, now).isPresent();
@@ -256,7 +256,7 @@ public class BlacklistService {
     private static String requireTargetType(String raw) {
         String type = BlacklistManageModels.normalizeTargetType(raw);
         if (type == null || !BlacklistManageModels.TARGET_TYPES.contains(type)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "targetType must be IP|USER|DEVICE");
+            throw BizException.of(ResultCode.PARAM_INVALID, "targetType must be IP|SYS_USER|DEVICE");
         }
         return type;
     }

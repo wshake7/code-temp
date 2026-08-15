@@ -26,8 +26,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * 之后、Timestamp/Encrypt 之前，保证公开登录路径也能做 IP 检查。
  *
  * <ul>
- *   <li>LOGIN（{@code /api/auth/login}）：仅查 IP；USER 在 {@code AuthService} 发 token 前查
- *   <li>其余 {@code /api/**}（API）：查 IP；若已登录再查 USER
+ *   <li>LOGIN（{@code /api/auth/login}）：仅查 IP；SYS_USER 在 {@code AuthService} 发 token 前查
+ *   <li>其余 {@code /api/**}（API）：查 IP；若已登录再查 SYS_USER
  *   <li>DEVICE 本波不查
  * </ul>
  *
@@ -79,14 +79,14 @@ public final class BlacklistFilter extends OncePerRequestFilter {
             }
         }
 
-        // LOGIN 场景 USER 由 AuthService 在发 token 前处理；Filter 不解析 body
+        // LOGIN 场景 SYS_USER 由 AuthService 在发 token 前处理；Filter 不解析 body
         if (!loginScene) {
             Long userId = SaTokenConfigure.currentUserIdOrNull();
             if (userId != null) {
                 String userValue = String.valueOf(userId);
-                Optional<BlacklistHit> userHit = blacklistService.findBlockingHit("USER", userValue, "API", null);
+                Optional<BlacklistHit> userHit = blacklistService.findBlockingHit("SYS_USER", userValue, "API", null);
                 if (userHit.isPresent()) {
-                    writeAccessBlocked(response, "USER", userValue, "API", userHit.get());
+                    writeAccessBlocked(response, "SYS_USER", userValue, "API", userHit.get());
                     return;
                 }
             }

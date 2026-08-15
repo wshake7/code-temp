@@ -20,13 +20,13 @@
   "targetTypeFilterPlaceholder": "Filter by type",
   "targetTypeMap": {
     "IP": "IP",
-    "USER": "User",
+    "SYS_USER": "User",
     "DEVICE": "Device"
   },
   "targetValue": "Target Value",
   "targetValuePlaceholder": "IP / user id / device id",
   "targetValueFilterPlaceholder": "Filter by target value",
-  "targetValueHint": "For USER, use sys_user.id decimal string; DEVICE is config-only this wave",
+  "targetValueHint": "For SYS_USER, use sys_user.id decimal string; DEVICE is config-only this wave",
   "targetValueMax": "Target value max 128 characters",
   "requiredTargetType": "Target type is required",
   "requiredTargetValue": "Target value is required",

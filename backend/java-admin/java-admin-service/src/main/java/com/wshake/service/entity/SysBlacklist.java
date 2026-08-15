@@ -23,10 +23,10 @@ public class SysBlacklist extends BaseEntity implements ProxyEntityAvailable<Sys
     @Column(primaryKey = true, generatedKey = true)
     private Long id;
 
-    /** IP / USER / DEVICE */
+    /** IP / SYS_USER / DEVICE */
     private String targetType;
 
-    /** 目标值（IP 文本；USER=用户 id 字符串；DEVICE=deviceId）。 */
+    /** 目标值（IP 文本；SYS_USER=用户 id 字符串；DEVICE=deviceId）。 */
     private String targetValue;
 
     /** LOGIN / API / ALL */

@@ -26,7 +26,7 @@ import type {
 } from '@/api/rest/types';
 import { getApiErrorMessage } from './error-message';
 
-const TARGET_TYPES: BlacklistTargetType[] = ['IP', 'USER', 'DEVICE'];
+const TARGET_TYPES: BlacklistTargetType[] = ['IP', 'SYS_USER', 'DEVICE'];
 const SCOPES: BlacklistScope[] = ['LOGIN', 'API', 'ALL'];
 
 /** 与 task/user 表单一致的分段标题 */

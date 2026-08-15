@@ -85,7 +85,7 @@ _Avoid_: 仅前端本地 JSON、与后端文案体系脱节（本波以可管理
 _Avoid_: 用应用日志文件代替可查询的审计实体
 
 **Blacklist**：
-访问黑名单条目：按 IP / USER / DEVICE 多态 target，配合 scope（LOGIN / API / ALL）与时间窗限制访问；与用户 `is_enabled`、Casbin 正交。  
+访问黑名单条目：按 IP / SYS_USER / DEVICE 多态 target，配合 scope（LOGIN / API / ALL）与时间窗限制访问；与用户 `is_enabled`、Casbin 正交。  
 _Avoid_: 用「禁用用户」或 Casbin deny 代替临时/多维访问限制；本波运行时不查 DEVICE
 
 **Access Blocked**：

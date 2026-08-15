@@ -993,10 +993,10 @@ export interface TaskExecutionQuery {
 
 // ============================================================
 // 访问黑名单（sys_blacklist）— 对齐 mock/Java camelCase VO
-// target: IP|USER|DEVICE；scope: LOGIN|API|ALL
+// target: IP|SYS_USER|DEVICE；scope: LOGIN|API|ALL
 // ============================================================
 
-export type BlacklistTargetType = 'IP' | 'USER' | 'DEVICE';
+export type BlacklistTargetType = 'IP' | 'SYS_USER' | 'DEVICE';
 
 export type BlacklistScope = 'LOGIN' | 'API' | 'ALL';
 

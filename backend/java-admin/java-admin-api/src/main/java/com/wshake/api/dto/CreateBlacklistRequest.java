@@ -20,7 +20,7 @@ public class CreateBlacklistRequest {
 
     @NotBlank
     @Size(max = 16)
-    @Schema(description = "目标类型 IP|USER|DEVICE", requiredMode = Schema.RequiredMode.REQUIRED, example = "IP")
+    @Schema(description = "目标类型 IP|SYS_USER|DEVICE", requiredMode = Schema.RequiredMode.REQUIRED, example = "IP")
     private String targetType;
 
     @NotBlank

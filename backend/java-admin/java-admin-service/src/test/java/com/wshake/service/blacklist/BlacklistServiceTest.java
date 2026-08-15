@@ -161,7 +161,7 @@ class BlacklistServiceTest {
 
     @Test
     void batch_enable() {
-        when(repo.listByIds(List.of(1L))).thenReturn(List.of(row(1L, "USER", "42", "LOGIN", T0, null)));
+        when(repo.listByIds(List.of(1L))).thenReturn(List.of(row(1L, "SYS_USER", "42", "LOGIN", T0, null)));
 
         BlacklistBatchResult result = service.batch(new BlacklistBatchCommand("enable", List.of(1L)));
 
@@ -206,11 +206,11 @@ class BlacklistServiceTest {
 
     @Test
     void findBlockingHit_returnsReasonForServerLog_notEmptyWhenHit() {
-        SysBlacklist hit = row(9L, "USER", "42", "ALL", T0, null);
+        SysBlacklist hit = row(9L, "SYS_USER", "42", "ALL", T0, null);
         hit.setReason("account abuse");
-        when(repo.findActiveHit("USER", "42", "LOGIN", T1)).thenReturn(hit);
+        when(repo.findActiveHit("SYS_USER", "42", "LOGIN", T1)).thenReturn(hit);
 
-        var found = service.findBlockingHit("USER", "42", "LOGIN", T1);
+        var found = service.findBlockingHit("SYS_USER", "42", "LOGIN", T1);
 
         assertThat(found).isPresent();
         assertThat(found.get().reason()).isEqualTo("account abuse");

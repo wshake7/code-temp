@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v14)
+# 后台管理 DB 约定 (v15)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -193,15 +193,15 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 ### 7.2 不建外键（软引用，`NULL` 或 `0` 占位）
 
-| 引用                                                                   | 类型                     | 原因                                                              |
-| ---------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
-| `created_by` / `updated_by` → `sys_user.id`                            | `NOT NULL DEFAULT 0`     | 0=系统操作；用户删除时不应级联清空历史                            |
-| `sys_user.language_code` → `i18n_locale.code`                          | `NULL`                   | 同上（i18n_locale.code 软引用）                                   |
-| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`       | `NOT NULL DEFAULT 0`     | 多态主体（`ANY_*` 时为 0），无法 FK                               |
-| `sys_blacklist.target_value`（当 `target_type='USER'`）→ `sys_user.id` | `VARCHAR` 存十进制字符串 | 多态 target，无法 FK；IP/DEVICE 无实体引用                        |
-| `sys_material.target_id`（当 `target_type='SYS_USER'`）→ `sys_user.id` | `NOT NULL DEFAULT 0`     | 多态归属（`GENERAL` 时为 0），无法 FK；`DEPT` 预留（v14+）        |
-| `temporal_task_execution.config_id` → `temporal_task_config.id`        | `NULL`                   | 执行可能先于配置存在                                              |
-| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`    | `NULL`                   | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| 引用                                                                       | 类型                     | 原因                                                              |
+| -------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| `created_by` / `updated_by` → `sys_user.id`                                | `NOT NULL DEFAULT 0`     | 0=系统操作；用户删除时不应级联清空历史                            |
+| `sys_user.language_code` → `i18n_locale.code`                              | `NULL`                   | 同上（i18n_locale.code 软引用）                                   |
+| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`           | `NOT NULL DEFAULT 0`     | 多态主体（`ANY_*` 时为 0），无法 FK                               |
+| `sys_blacklist.target_value`（当 `target_type='SYS_USER'`）→ `sys_user.id` | `VARCHAR` 存十进制字符串 | 多态 target，无法 FK；IP/DEVICE 无实体引用（v15 改名）            |
+| `sys_material.target_id`（当 `target_type='SYS_USER'`）→ `sys_user.id`     | `NOT NULL DEFAULT 0`     | 多态归属（`GENERAL` 时为 0），无法 FK；`DEPT` 预留（v14+）        |
+| `temporal_task_execution.config_id` → `temporal_task_config.id`            | `NULL`                   | 执行可能先于配置存在                                              |
+| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`        | `NULL`                   | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ### 7.3 自引用外键
 
@@ -242,7 +242,7 @@ ALTER TABLE sys_role
 - Temporal 执行 `retry_count`：已发生重试次数（首次执行为 `0`，非剩余次数）
 - 字典项平台（`dict_data.platform`，v8+）：`general` / `react-admin` / `vue-admin`
 - 字典项样式（`dict_data.tag_type`，v9+）：`default` / `primary` / `success` / `warning` / `error` / `processing` / `magenta` / `red` / `volcano` / `orange` / `gold` / `lime` / `green` / `cyan` / `blue` / `geekblue` / `purple`
-- 黑名单目标类型（`sys_blacklist.target_type`，v11+）：`IP` / `USER` / `DEVICE`
+- 黑名单目标类型（`sys_blacklist.target_type`，v11+；v15 改名）：`IP` / `SYS_USER` / `DEVICE`
 - 黑名单限制范围（`sys_blacklist.scope`，v11+）：`LOGIN` / `API` / `ALL`
 - 素材类型（`sys_material.type`，v13+）：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
 - 素材存储（`sys_material.storage_type`，v13+）：`LOCAL` / `OSS` / `COS` / `S3`
@@ -516,10 +516,10 @@ v4+ 起 `sys_menu` 加 `tree_path VARCHAR(1024)`（物化路径，如 `/1/3/7/`�
 | `target_type` | `target_value` 存法                                      | 匹配                        |
 | ------------- | -------------------------------------------------------- | --------------------------- |
 | `IP`          | 规范化 IP 文本（建议应用层统一 IPv6 小写、去端口）；≤128 | **精确等值**（本波无 CIDR） |
-| `USER`        | `sys_user.id` 的十进制字符串（软引用，不建 FK）          | 等值                        |
+| `SYS_USER`    | `sys_user.id` 的十进制字符串（软引用，不建 FK）          | 等值                        |
 | `DEVICE`      | 客户端上报 deviceId **原样**（utf8mb4 比较，大小写敏感） | 等值                        |
 
-应用层校验 `target_type` 合法性；`USER` 时校验用户存在性（可选，封禁可保留已删用户 id）。
+应用层校验 `target_type` 合法性；`SYS_USER` 时校验用户存在性（可选，封禁可保留已删用户 id）。
 
 ### 18.2 scope
 
@@ -566,14 +566,14 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 - `sys_user.is_enabled=0`：账号禁用（用户实体生命周期）
 - `sys_user.account_expires_at`（v12+）：可选账号过期；`NULL`=永不过期；未过期 ⇔ `NULL OR account_expires_at > NOW()`（不含边界）；与 `is_enabled` 正交（过期 ≠ 自动禁用）
-- `sys_blacklist`：按 IP/USER/DEVICE 的访问限制（可临时、可多维）
+- `sys_blacklist`：按 IP/SYS_USER/DEVICE 的访问限制（可临时、可多维）
 - Casbin：角色能否调用 endpoint
 - 上述正交；运行时拦截顺序建议：黑名单 → 登录态校验（含账号过期/禁用）→ Casbin 授权（实现细节见 java-admin）
 
 ### 18.6 本波边界
 
 - 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md` + Flyway `V1` 表 + `V2` 菜单/API seed + 管理端 CRUD
-- 已交付（java-admin）：运行时 Filter（LOGIN IP / API IP+session USER）+ 登录链路 USER 拦截（Access Blocked）；DEVICE 运行时仍不查
+- 已交付（java-admin）：运行时 Filter（LOGIN IP / API IP+session SYS_USER）+ 登录链路 SYS_USER 拦截（Access Blocked）；DEVICE 运行时仍不查
 
 ---
 

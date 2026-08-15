@@ -2,8 +2,8 @@
  * 访问黑名单（sys_blacklist）mock 数据 + 命中判定 + CRUD 领域逻辑。
  *
  * 对齐 Java BlacklistService / Filter：
- * - target: IP | USER | DEVICE；scope: LOGIN | API | ALL
- * - 运行时仅查 IP + session USER；DEVICE 不参与命中
+ * - target: IP | SYS_USER | DEVICE；scope: LOGIN | API | ALL
+ * - 运行时仅查 IP + session SYS_USER；DEVICE 不参与命中
  * - 同窗活跃重复拒绝；时间窗重叠允许（OR）
  * - Access Blocked：code=2005，固定文案，不回传 reason
  */
@@ -14,7 +14,7 @@ import { isoNow } from "./shared";
 // 类型与常量
 // ============================================================
 
-export const TARGET_TYPES = ["IP", "USER", "DEVICE"] as const;
+export const TARGET_TYPES = ["IP", "SYS_USER", "DEVICE"] as const;
 export type BlacklistTargetType = (typeof TARGET_TYPES)[number];
 
 export const SCOPES = ["LOGIN", "API", "ALL"] as const;
@@ -154,7 +154,7 @@ export function normalizeScope(raw: unknown): string {
 }
 
 /**
- * 规范化 target_value：USER/DEVICE 原样 trim；IP 去端口并小写化。
+ * 规范化 target_value：SYS_USER/DEVICE 原样 trim；IP 去端口并小写化。
  * 对齐 Java BlacklistManageModels.normalizeTargetValue。
  */
 export function normalizeTargetValue(targetType: string, raw: unknown): string | null {
@@ -175,7 +175,7 @@ export function normalizeTargetValue(targetType: string, raw: unknown): string |
 function requireTargetType(raw: unknown): BlacklistResult<BlacklistTargetType> {
   const type = normalizeTargetType(raw);
   if (type == null || !(TARGET_TYPES as readonly string[]).includes(type)) {
-    return { ok: false, status: 400, msg: "targetType must be IP|USER|DEVICE" };
+    return { ok: false, status: 400, msg: "targetType must be IP|SYS_USER|DEVICE" };
   }
   return { ok: true, data: type as BlacklistTargetType };
 }
@@ -323,7 +323,7 @@ export function accessBlockedBody(): { code: number; msg: string; data: null } {
 /**
  * 中间件/登录共用的拦截判定。
  * - LOGIN 路径：仅 IP
- * - 其余 /api/**：IP + 可选 userId（session USER）
+ * - 其余 /api/**：IP + 可选 userId（session SYS_USER）
  */
 export function evaluateRequestBlacklist(input: {
   path: string;
@@ -346,7 +346,7 @@ export function evaluateRequestBlacklist(input: {
   }
 
   if (!loginScene && input.userId != null && String(input.userId).trim() !== "") {
-    const userHit = findBlockingHit("USER", String(input.userId), "API", now);
+    const userHit = findBlockingHit("SYS_USER", String(input.userId), "API", now);
     if (userHit) return userHit;
   }
 

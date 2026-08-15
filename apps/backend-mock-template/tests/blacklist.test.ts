@@ -72,7 +72,7 @@ describe("mock blacklist seam S4", () => {
     const startsAt = "2026-01-01T00:00:00.000Z";
     const expiresAt = "2026-12-31T00:00:00.000Z";
     const a = createBlacklist({
-      targetType: "USER",
+      targetType: "SYS_USER",
       targetValue: "42",
       scope: "ALL",
       startsAt,
@@ -81,7 +81,7 @@ describe("mock blacklist seam S4", () => {
     expect(a.ok).toBe(true);
 
     const dup = createBlacklist({
-      targetType: "USER",
+      targetType: "SYS_USER",
       targetValue: "42",
       scope: "ALL",
       startsAt,
@@ -93,7 +93,7 @@ describe("mock blacklist seam S4", () => {
     }
 
     const overlap = createBlacklist({
-      targetType: "USER",
+      targetType: "SYS_USER",
       targetValue: "42",
       scope: "ALL",
       startsAt: "2026-06-01T00:00:00.000Z",
@@ -150,7 +150,7 @@ describe("mock blacklist seam S4", () => {
     expect(evaluated).not.toBeNull();
     expect(evaluated?.targetType).toBe("IP");
 
-    // LOGIN 场景 Filter 不查 USER（即使 userId 传入也不应因 USER 误拦登录入口 IP 路径语义）
+    // LOGIN 场景 Filter 不查 SYS_USER（即使 userId 传入也不应因 SYS_USER 误拦登录入口 IP 路径语义）
     // 此处仅验证 IP 命中；响应体不含 reason
     const body = accessBlockedBody();
     expect(body).toEqual({
@@ -161,9 +161,9 @@ describe("mock blacklist seam S4", () => {
     expect(JSON.stringify(body)).not.toContain("secret-should-not-leak");
   });
 
-  it("拦截路径：API session USER 命中；DEVICE 运行时不生效", () => {
+  it("拦截路径：API session SYS_USER 命中；DEVICE 运行时不生效", () => {
     createBlacklist({
-      targetType: "USER",
+      targetType: "SYS_USER",
       targetValue: "99",
       scope: "ALL",
       reason: "ban-user",
@@ -185,7 +185,7 @@ describe("mock blacklist seam S4", () => {
       userId: 99,
     });
     expect(apiHit).not.toBeNull();
-    expect(apiHit?.targetType).toBe("USER");
+    expect(apiHit?.targetType).toBe("SYS_USER");
     expect(apiHit?.targetValue).toBe("99");
 
     // DEVICE 永不命中

@@ -51,9 +51,9 @@ class BlacklistControllerTest {
     @Test
     void create_mapsBody() {
         when(blacklistService.create(ArgumentMatchers.any(CreateBlacklistCommand.class)))
-                .thenReturn(sampleView(10L, "USER", "42"));
+                .thenReturn(sampleView(10L, "SYS_USER", "42"));
         CreateBlacklistRequest req = new CreateBlacklistRequest();
-        req.setTargetType("USER");
+        req.setTargetType("SYS_USER");
         req.setTargetValue("42");
         req.setScope("LOGIN");
         req.setReason("abuse");
@@ -63,7 +63,7 @@ class BlacklistControllerTest {
         assertThat(result.getCode()).isEqualTo(0);
         ArgumentCaptor<CreateBlacklistCommand> cap = ArgumentCaptor.forClass(CreateBlacklistCommand.class);
         verify(blacklistService).create(cap.capture());
-        assertThat(cap.getValue().targetType()).isEqualTo("USER");
+        assertThat(cap.getValue().targetType()).isEqualTo("SYS_USER");
         assertThat(cap.getValue().targetValue()).isEqualTo("42");
         assertThat(cap.getValue().scope()).isEqualTo("LOGIN");
         assertThat(cap.getValue().reason()).isEqualTo("abuse");

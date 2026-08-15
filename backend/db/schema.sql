@@ -1,5 +1,5 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_unicode_ci
@@ -75,6 +75,8 @@
 -- v14 (仅 sys_material):
 --   1. sys_material: 加 target_type / target_id（多态归属;GENERAL 时 target_id=0;
 --        SYS_USER/DEPT 为预留;不建 FK）
+-- v15 (仅 sys_blacklist):
+--   1. sys_blacklist.target_type：USER → SYS_USER（对齐表名 sys_user；与素材归属枚举一致）
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -485,7 +487,7 @@ CREATE TABLE sys_data_permission (
 
 -- ============================================================
 -- Section 16: 访问黑名单 — sys_blacklist (v11)
--- 多态 target(IP/USER/DEVICE) + scope(LOGIN/API/ALL) + 生效窗
+-- 多态 target(IP/SYS_USER/DEVICE) + scope(LOGIN/API/ALL) + 生效窗
 -- 命中语义: deleted_at=0 AND is_enabled=1 AND starts_at<=NOW()
 --           AND (expires_at IS NULL OR expires_at>NOW())
 --           AND scope IN (请求场景, 'ALL')；多行 OR
@@ -494,8 +496,8 @@ CREATE TABLE sys_data_permission (
 -- ============================================================
 CREATE TABLE sys_blacklist (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    target_type     VARCHAR(16)     NOT NULL  COMMENT '目标类型: IP / USER / DEVICE',
-    target_value    VARCHAR(128)    NOT NULL  COMMENT '目标值(IP 文本; USER=sys_user.id 十进制字符串软引用; DEVICE=客户端 deviceId 原样)',
+    target_type     VARCHAR(16)     NOT NULL  COMMENT '目标类型: IP / SYS_USER / DEVICE',
+    target_value    VARCHAR(128)    NOT NULL  COMMENT '目标值(IP 文本; SYS_USER=sys_user.id 十进制字符串软引用; DEVICE=客户端 deviceId 原样)',
     scope           VARCHAR(16)     NOT NULL DEFAULT 'ALL'
                                     COMMENT '限制范围: LOGIN=仅登录 / API=仅已认证 API / ALL=全部(命中时 scope IN (场景, ALL))',
     reason          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '封禁原因(对用户/审计可见;可空串)',
@@ -853,5 +855,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER)
 -- ============================================================

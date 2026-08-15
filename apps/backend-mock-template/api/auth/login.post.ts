@@ -104,11 +104,11 @@ export default defineEventHandler(async (event) => {
     return useResponseError("账号已过期", 2004);
   }
 
-  // LOGIN + USER：凭证正确后、发 token 前查黑名单（对齐 Java AuthService）
-  const userHit = findBlockingHit("USER", String(sysUser.id), "LOGIN");
+  // LOGIN + SYS_USER：凭证正确后、发 token 前查黑名单（对齐 Java AuthService）
+  const userHit = findBlockingHit("SYS_USER", String(sysUser.id), "LOGIN");
   if (userHit) {
     console.warn(
-      `[BLACKLIST] Access Blocked targetType=USER targetValue=${sysUser.id} scene=LOGIN hitScope=${userHit.scope} reason=${userHit.reason}`,
+      `[BLACKLIST] Access Blocked targetType=SYS_USER targetValue=${sysUser.id} scene=LOGIN hitScope=${userHit.scope} reason=${userHit.reason}`,
     );
     appendLoginLog({
       username: sysUser.username,

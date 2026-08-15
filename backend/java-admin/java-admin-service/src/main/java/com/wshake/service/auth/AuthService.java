@@ -17,8 +17,8 @@ import org.springframework.stereotype.Service;
 /**
  * 鉴权 Service。
  *
- * <p>登录：ALTCHA → 用户名密码（BCrypt）→ USER 黑名单（scope 覆盖 LOGIN）→ 写登录日志 → 返回用户与角色摘要。
- * Sa-Token 登录态由 Controller 写入（本类在返回前完成 USER 拦截，保证发 token 前拒绝）。
+ * <p>登录：ALTCHA → 用户名密码（BCrypt）→ SYS_USER 黑名单（scope 覆盖 LOGIN）→ 写登录日志 → 返回用户与角色摘要。
+ * Sa-Token 登录态由 Controller 写入（本类在返回前完成 SYS_USER 拦截，保证发 token 前拒绝）。
  * 登录日志经 {@link LoginLogger} 异步落库。
  *
  * @author wshake
@@ -162,13 +162,13 @@ public class AuthService {
     }
 
     /**
-     * 用户解析成功且密码正确后、发 token 前：查 USER 黑名单（scope 覆盖 LOGIN）。
+     * 用户解析成功且密码正确后、发 token 前：查 SYS_USER 黑名单（scope 覆盖 LOGIN）。
      *
-     * <p>Filter 不解析登录 body，故 USER 拦截落在本链路；IP 由 BlacklistFilter 在 LOGIN 场景处理。
+     * <p>Filter 不解析登录 body，故 SYS_USER 拦截落在本链路；IP 由 BlacklistFilter 在 LOGIN 场景处理。
      */
     private void rejectIfUserBlacklisted(SysUser user, String username, LoginClientMeta meta) {
         Optional<BlacklistHit> hit =
-                blacklistService.findBlockingHit("USER", String.valueOf(user.getId()), "LOGIN", null);
+                blacklistService.findBlockingHit("SYS_USER", String.valueOf(user.getId()), "LOGIN", null);
         if (hit.isEmpty()) {
             return;
         }

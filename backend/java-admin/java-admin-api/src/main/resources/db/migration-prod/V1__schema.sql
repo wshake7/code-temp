@@ -474,7 +474,7 @@ CREATE TABLE sys_data_permission (
 
 -- ============================================================
 -- Section 15b: 访问黑名单 — sys_blacklist (v11)
--- 多态 target(IP/USER/DEVICE) + scope(LOGIN/API/ALL) + 生效窗
+-- 多态 target(IP/SYS_USER/DEVICE) + scope(LOGIN/API/ALL) + 生效窗
 -- 命中语义: deleted_at=0 AND is_enabled=1 AND starts_at<=NOW()
 --           AND (expires_at IS NULL OR expires_at>NOW())
 --           AND scope IN (请求场景, 'ALL')；多行 OR
@@ -483,8 +483,8 @@ CREATE TABLE sys_data_permission (
 -- ============================================================
 CREATE TABLE sys_blacklist (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    target_type     VARCHAR(16)     NOT NULL  COMMENT '目标类型: IP / USER / DEVICE',
-    target_value    VARCHAR(128)    NOT NULL  COMMENT '目标值(IP 文本; USER=sys_user.id 十进制字符串软引用; DEVICE=客户端 deviceId 原样)',
+    target_type     VARCHAR(16)     NOT NULL  COMMENT '目标类型: IP / SYS_USER / DEVICE',
+    target_value    VARCHAR(128)    NOT NULL  COMMENT '目标值(IP 文本; SYS_USER=sys_user.id 十进制字符串软引用; DEVICE=客户端 deviceId 原样)',
     scope           VARCHAR(16)     NOT NULL DEFAULT 'ALL'
                                     COMMENT '限制范围: LOGIN=仅登录 / API=仅已认证 API / ALL=全部(命中时 scope IN (场景, ALL))',
     reason          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '封禁原因(对用户/审计可见;可空串)',

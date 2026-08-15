@@ -202,8 +202,8 @@ class AuthServiceTest {
     void login_userBlacklisted_throwsAccessBlockedBeforeSuccess_andDoesNotExposeReason() {
         SysUser user = fixture("root", SEED_HASH_123456, "Root", 1);
         when(sysUserRepository.findByUsername("root")).thenReturn(user);
-        when(blacklistService.findBlockingHit("USER", "1", "LOGIN", null))
-                .thenReturn(Optional.of(new BlacklistHit("USER", "1", "ALL", "secret-internal-reason")));
+        when(blacklistService.findBlockingHit("SYS_USER", "1", "LOGIN", null))
+                .thenReturn(Optional.of(new BlacklistHit("SYS_USER", "1", "ALL", "secret-internal-reason")));
 
         assertThatThrownBy(() -> authService.login("root", "123456", "ok", meta))
                 .isInstanceOf(AuthException.class)

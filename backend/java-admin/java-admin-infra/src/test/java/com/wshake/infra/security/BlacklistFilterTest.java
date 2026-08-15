@@ -27,7 +27,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
- * S2：黑名单 Filter 外部行为 — Access Blocked、固定文案、不回传 reason；LOGIN IP / API IP+USER。
+ * S2：黑名单 Filter 外部行为 — Access Blocked、固定文案、不回传 reason；LOGIN IP / API IP+SYS_USER。
  */
 class BlacklistFilterTest {
 
@@ -66,7 +66,7 @@ class BlacklistFilterTest {
         assertThat(body.get("code").asInt()).isEqualTo(ResultCode.ACCESS_BLOCKED.getCode());
         assertThat(body.get("msg").asText()).isEqualTo(ResultCode.ACCESS_BLOCKED.getMsg());
         assertThat(resp.getContentAsString()).doesNotContain("do-not-leak");
-        verify(blacklistService, never()).findBlockingHit(eq("USER"), any(), any(), any());
+        verify(blacklistService, never()).findBlockingHit(eq("SYS_USER"), any(), any(), any());
     }
 
     @Test
@@ -99,7 +99,7 @@ class BlacklistFilterTest {
         filter.doFilter(req, resp, (r, s) -> chainCalled.set(true));
 
         assertThat(chainCalled).isTrue();
-        verify(blacklistService, never()).findBlockingHit(eq("USER"), any(), any(), any());
+        verify(blacklistService, never()).findBlockingHit(eq("SYS_USER"), any(), any(), any());
     }
 
     @Test
@@ -125,8 +125,8 @@ class BlacklistFilterTest {
     void api_loggedInUserHit_returnsAccessBlocked() throws Exception {
         when(blacklistService.findBlockingHit(eq("IP"), eq("2.2.2.2"), eq("API"), isNull()))
                 .thenReturn(Optional.empty());
-        when(blacklistService.findBlockingHit(eq("USER"), eq("99"), eq("API"), isNull()))
-                .thenReturn(Optional.of(new BlacklistHit("USER", "99", "ALL", "internal-only")));
+        when(blacklistService.findBlockingHit(eq("SYS_USER"), eq("99"), eq("API"), isNull()))
+                .thenReturn(Optional.of(new BlacklistHit("SYS_USER", "99", "ALL", "internal-only")));
 
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/system/menu/list");
         RequestContext.setClientIp("2.2.2.2");
@@ -152,8 +152,8 @@ class BlacklistFilterTest {
     void api_userHit_viaRequestContextUserId() throws Exception {
         when(blacklistService.findBlockingHit(eq("IP"), eq("4.4.4.4"), eq("API"), isNull()))
                 .thenReturn(Optional.empty());
-        when(blacklistService.findBlockingHit(eq("USER"), eq("7"), eq("API"), isNull()))
-                .thenReturn(Optional.of(new BlacklistHit("USER", "7", "API", "ban")));
+        when(blacklistService.findBlockingHit(eq("SYS_USER"), eq("7"), eq("API"), isNull()))
+                .thenReturn(Optional.of(new BlacklistHit("SYS_USER", "7", "API", "ban")));
 
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/system/user/list");
         RequestContext.setClientIp("4.4.4.4");
@@ -186,7 +186,7 @@ class BlacklistFilterTest {
         }
 
         assertThat(chainCalled).isTrue();
-        verify(blacklistService, never()).findBlockingHit(eq("USER"), any(), any(), any());
+        verify(blacklistService, never()).findBlockingHit(eq("SYS_USER"), any(), any(), any());
     }
 
     @Test

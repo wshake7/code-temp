@@ -20,7 +20,7 @@ import lombok.Data;
 public class UpdateBlacklistRequest {
 
     @Size(max = 16)
-    @Schema(description = "目标类型 IP|USER|DEVICE")
+    @Schema(description = "目标类型 IP|SYS_USER|DEVICE")
     private String targetType;
 
     @Size(max = 128)

@@ -20,13 +20,13 @@
   "targetTypeFilterPlaceholder": "按类型筛选",
   "targetTypeMap": {
     "IP": "IP",
-    "USER": "用户",
+    "SYS_USER": "用户",
     "DEVICE": "设备"
   },
   "targetValue": "目标值",
   "targetValuePlaceholder": "IP / 用户 ID / 设备标识",
   "targetValueFilterPlaceholder": "按目标值筛选",
-  "targetValueHint": "USER 请填 sys_user.id 十进制字符串；DEVICE 本波仅配置不拦截",
+  "targetValueHint": "SYS_USER 请填 sys_user.id 十进制字符串；DEVICE 本波仅配置不拦截",
   "targetValueMax": "目标值最长 128 字符",
   "requiredTargetType": "请选择目标类型",
   "requiredTargetValue": "请输入目标值",

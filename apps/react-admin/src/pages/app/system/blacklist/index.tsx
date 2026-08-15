@@ -162,7 +162,7 @@ const BlacklistPage = () => {
 
   const targetTypeValueEnum: Record<BlacklistTargetType, { text: string }> = {
     IP: { text: t('targetTypeMap.IP') },
-    USER: { text: t('targetTypeMap.USER') },
+    SYS_USER: { text: t('targetTypeMap.SYS_USER') },
     DEVICE: { text: t('targetTypeMap.DEVICE') },
   };
   const scopeValueEnum: Record<BlacklistScope, { text: string }> = {

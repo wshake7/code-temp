@@ -10,8 +10,8 @@ import { verifyAccessToken } from "~/utils/session-utils";
 /**
  * 访问黑名单运行时拦截（对齐 Java BlacklistFilter）。
  *
- * - LOGIN（/api/auth/login）：仅查 IP；USER 在 login handler 发 token 前查
- * - 其余 /api/**：查 IP；若有有效会话再查 USER
+ * - LOGIN（/api/auth/login）：仅查 IP；SYS_USER 在 login handler 发 token 前查
+ * - 其余 /api/**：查 IP；若有有效会话再查 SYS_USER
  * - DEVICE 本波不查
  * - 命中：HTTP 403 + code=2005 + 固定文案 Access Blocked；不回传 reason
  */

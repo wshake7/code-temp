@@ -16,7 +16,7 @@ public final class BlacklistManageModels {
 
     private BlacklistManageModels() {}
 
-    public static final Set<String> TARGET_TYPES = Set.of("IP", "USER", "DEVICE");
+    public static final Set<String> TARGET_TYPES = Set.of("IP", "SYS_USER", "DEVICE");
     public static final Set<String> SCOPES = Set.of("LOGIN", "API", "ALL");
 
     public record BlacklistListQuery(
@@ -139,7 +139,7 @@ public final class BlacklistManageModels {
     }
 
     /**
-     * 规范化 target_value：USER/DEVICE 原样 trim；IP 去端口倾向的尾缀并小写化 IPv6。
+     * 规范化 target_value：SYS_USER/DEVICE 原样 trim；IP 去端口倾向的尾缀并小写化 IPv6。
      */
     static String normalizeTargetValue(String targetType, String raw) {
         if (raw == null) {
