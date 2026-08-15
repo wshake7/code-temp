@@ -1,5 +1,5 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_unicode_ci
@@ -24,8 +24,10 @@
 --   - NOT NULL + DEFAULT '' : VARCHAR/CHAR/TEXT/MEDIUMTEXT 业务字段
 --   - NULL                  : TIMESTAMP（最后登录/关闭时间等真实未发生）
 --   - NULL                  : JSON（metadata / input_summary / 条件快照等按需填）
---   - NOT NULL + DEFAULT 0  : BIGINT UNSIGNED 主外键占位（created_by / updated_by;0=系统操作/无用户上下文）
---   - NULL                  : BIGINT UNSIGNED 真软外键（language_code / parent_id / config_id / target_id / sys_user_id-in-logs / subject_id）
+--   - NOT NULL + DEFAULT 0  : BIGINT UNSIGNED 主外键占位（created_by / updated_by;0=系统操作/无用户上下文；
+--                             sys_material.target_id 在 GENERAL 时为 0；v14+）
+--   - NULL                  : BIGINT UNSIGNED 真软外键（language_code / parent_id / config_id /
+--                             operation_log.target_id / sys_user_id-in-logs / subject_id）
 --   - NULL                  : 业务语义 NULL（cron_expr=仅手动;reason=未失败;closed_at=仍在运行;path=BUTTON/DIR 无路径）
 -- v5 相对 v4 的改动:
 --   1. sys_user: 移除 dept_id 及其索引(原为 DEPT 类数据权限锚点;现交由 sys_data_permission 承担)
@@ -70,6 +72,9 @@
 -- v13 (仅 sys_material):
 --   1. 新增核心表 sys_material：多类型素材(IMAGE/VIDEO/AUDIO/DOCUMENT/OTHER)
 --        + storage_type；文件细节进 metadata JSON；不存二进制；无业务 UNIQUE
+-- v14 (仅 sys_material):
+--   1. sys_material: 加 target_type / target_id（多态归属;GENERAL 时 target_id=0;
+--        SYS_USER/DEPT 为预留;不建 FK）
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -518,15 +523,20 @@ CREATE TABLE sys_blacklist (
 
 
 -- ============================================================
--- Section 16b: 素材库 — sys_material (v13)
+-- Section 16b: 素材库 — sys_material (v13; v14 加归属)
 -- 多类型共用一张表; type 区分形态; 文件细节与类型扩展一律进 metadata
 -- 只存元数据 + storage_type,不存文件体
+-- 归属: target_type + target_id(多态软引用;GENERAL 时 target_id=0;SYS_USER/DEPT 预留)
 -- 无业务 UNIQUE: 无稳定自然键(name / metadata.url / metadata.checksum 均可空或重复)
 -- ============================================================
 CREATE TABLE sys_material (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     name            VARCHAR(128)    NOT NULL  COMMENT '素材展示名',
     type            VARCHAR(32)     NOT NULL  COMMENT '素材类型: IMAGE / VIDEO / AUDIO / DOCUMENT / OTHER',
+    target_type     VARCHAR(32)     NOT NULL DEFAULT 'GENERAL'
+                                    COMMENT '归属类型: GENERAL / SYS_USER / DEPT;GENERAL 时 target_id 必须为 0',
+    target_id       BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '归属 ID;GENERAL=0;SYS_USER=sys_user.id;DEPT=预留部门 id',
     storage_type    VARCHAR(32)     NOT NULL DEFAULT 'LOCAL'
                                     COMMENT '存储: LOCAL / OSS / COS / S3',
     metadata        JSON            DEFAULT NULL
@@ -541,10 +551,11 @@ CREATE TABLE sys_material (
     updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
     PRIMARY KEY (id),
     INDEX idx_sys_material_type (type),
+    INDEX idx_sys_material_target (target_type, target_id),
     INDEX idx_sys_material_is_enabled (is_enabled),
     INDEX idx_sys_material_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='素材库(多类型元数据+存储定位;不存二进制;v13 第一稿)';
+  COMMENT='素材库(多类型元数据+存储定位+多态归属;不存二进制;v14)';
 
 
 -- ============================================================
@@ -842,5 +853,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target)
 -- ============================================================

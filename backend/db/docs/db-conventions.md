@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v13)
+# 后台管理 DB 约定 (v14)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -199,6 +199,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 | `sys_user.language_code` → `i18n_locale.code`                          | `NULL`                   | 同上（i18n_locale.code 软引用）                                   |
 | `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`       | `NOT NULL DEFAULT 0`     | 多态主体（`ANY_*` 时为 0），无法 FK                               |
 | `sys_blacklist.target_value`（当 `target_type='USER'`）→ `sys_user.id` | `VARCHAR` 存十进制字符串 | 多态 target，无法 FK；IP/DEVICE 无实体引用                        |
+| `sys_material.target_id`（当 `target_type='SYS_USER'`）→ `sys_user.id` | `NOT NULL DEFAULT 0`     | 多态归属（`GENERAL` 时为 0），无法 FK；`DEPT` 预留（v14+）        |
 | `temporal_task_execution.config_id` → `temporal_task_config.id`        | `NULL`                   | 执行可能先于配置存在                                              |
 | `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`    | `NULL`                   | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
@@ -245,6 +246,7 @@ ALTER TABLE sys_role
 - 黑名单限制范围（`sys_blacklist.scope`，v11+）：`LOGIN` / `API` / `ALL`
 - 素材类型（`sys_material.type`，v13+）：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
 - 素材存储（`sys_material.storage_type`，v13+）：`LOCAL` / `OSS` / `COS` / `S3`
+- 素材归属（`sys_material.target_type`，v14+）：`GENERAL` / `SYS_USER` / `DEPT`
 
 ---
 
@@ -575,12 +577,12 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 ---
 
-## 19. 素材库 (`sys_material`，v13+)
+## 19. 素材库 (`sys_material`，v13+；归属 v14+)
 
 ### 19.1 一张表、多种类型
 
 - `type` 区分形态：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
-- 列上只留筛选/展示用字段：`name` / `type` / `storage_type` / `sort` + 核心 7 字段
+- 列上只留筛选/展示用字段：`name` / `type` / `target_type` / `target_id` / `storage_type` / `sort` + 核心 7 字段
 - 文件细节与类型扩展一律进 `metadata` JSON，**不**按类型拆表、**不**再设 `extra`
 - 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`；其余类型专属键可同对象追加
 - **不**在库内存储文件体；对象定位放在 `storage_type` + `metadata.storage_key` / `metadata.url`
@@ -591,10 +593,25 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 - 不加 `UNIQUE(..., deleted_at)`：无稳定自然键，空串默认值会让「无编码」活跃行互撞
 - 去重、按哈希复用由应用层决定（后续可加生成列或条件唯一）
 
-### 19.3 本波边界
+### 19.3 多态归属（v14+）
 
-- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
-- **未**交付：Flyway、Java entity / CRUD、上传流水线、素材与业务的绑定表
+- `target_type` + `target_id` 表示素材归属，**不是**黑名单的 `target_*`，也**不是**操作日志的 `target_id`
+- 取值与占位：
+
+| `target_type` | `target_id`   | 语义                           |
+| ------------- | ------------- | ------------------------------ |
+| `GENERAL`     | **必须为 0**  | 通用素材，不绑用户/部门        |
+| `SYS_USER`    | `sys_user.id` | 用户私有（预留；软引用）       |
+| `DEPT`        | 部门 id       | 部门素材（预留；当前无部门表） |
+
+- **不**建 FK：多态目标无法落单一外键；`DEPT` 尚无实体表
+- 应用层校验：`target_type` 合法性；`GENERAL` 时强制 `target_id=0`；`SYS_USER`/`DEPT` 时 `target_id > 0`（存在性校验随业务接入再做）
+- 列表筛选走 `idx_sys_material_target (target_type, target_id)`
+
+### 19.4 本波边界
+
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`（含 v14 归属列）
+- **未**交付：Flyway、Java entity / CRUD、上传流水线、素材与业务的绑定表、`SYS_USER`/`DEPT` 运行时过滤
 
 ---
 
@@ -607,6 +624,6 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 - 全量业务 Seed 之外的数据（日志 / i18n 翻译文案 / Temporal 任务配置等；`schema_data.sql` 已含字典 + RBAC 最小可登录种子）
 - 数据库 Docker 编排
 - `sys_blacklist` 运行时拦截（见 §18.6；管理 CRUD 与 Flyway 由 java-admin 交付）
-- `sys_material` 的 Flyway / ORM / 上传与业务绑定（见 §19.3）
+- `sys_material` 的 Flyway / ORM / 上传与业务绑定（见 §19.4）
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

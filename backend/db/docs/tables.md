@@ -1,8 +1,8 @@
-# 表字段速查 (v13)
+# 表字段速查 (v14)
 
 > 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 24 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13。
+> 共 24 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14。
 
 ---
 
@@ -346,31 +346,33 @@
 
 ---
 
-## 6c. 素材库模块（v13）
+## 6c. 素材库模块（v13；v14 加归属）
 
 ### 6c.1 `sys_material` — 素材
 
-| 字段           | 类型            | 必填 | 默认           | 说明                                               |
-| -------------- | --------------- | ---- | -------------- | -------------------------------------------------- |
-| `id`           | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                               |
-| `name`         | VARCHAR(128)    | 是   | -              | 素材展示名                                         |
-| `type`         | VARCHAR(32)     | 是   | -              | `IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER` |
-| `storage_type` | VARCHAR(32)     | 是   | `'LOCAL'`      | `LOCAL` / `OSS` / `COS` / `S3`                     |
-| `metadata`     | JSON            | 否   | NULL           | 文件细节与类型扩展；建议键见下                     |
-| `sort`         | INT             | 是   | 0              | 排序（升序）                                       |
-| `remark`       | VARCHAR(512)    | 是   | `''`           | 管理员备注                                         |
-| `is_enabled`   | TINYINT(1)      | 是   | 1              | 启用/禁用                                          |
-| `deleted_at`   | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                 |
-| `created_at`   | TIMESTAMP       | 是   | NOW()          |                                                    |
-| `updated_at`   | TIMESTAMP       | 是   | NOW()          |                                                    |
-| `created_by`   | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`               |
-| `updated_by`   | BIGINT UNSIGNED | 是   | 0              |                                                    |
+| 字段           | 类型            | 必填 | 默认           | 说明                                                      |
+| -------------- | --------------- | ---- | -------------- | --------------------------------------------------------- |
+| `id`           | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                      |
+| `name`         | VARCHAR(128)    | 是   | -              | 素材展示名                                                |
+| `type`         | VARCHAR(32)     | 是   | -              | `IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`        |
+| `target_type`  | VARCHAR(32)     | 是   | `'GENERAL'`    | 归属：`GENERAL` / `SYS_USER` / `DEPT`（v14+）             |
+| `target_id`    | BIGINT UNSIGNED | 是   | 0              | `GENERAL` 必须为 0；`SYS_USER`=`sys_user.id`；`DEPT` 预留 |
+| `storage_type` | VARCHAR(32)     | 是   | `'LOCAL'`      | `LOCAL` / `OSS` / `COS` / `S3`                            |
+| `metadata`     | JSON            | 否   | NULL           | 文件细节与类型扩展；建议键见下                            |
+| `sort`         | INT             | 是   | 0              | 排序（升序）                                              |
+| `remark`       | VARCHAR(512)    | 是   | `''`           | 管理员备注                                                |
+| `is_enabled`   | TINYINT(1)      | 是   | 1              | 启用/禁用                                                 |
+| `deleted_at`   | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                        |
+| `created_at`   | TIMESTAMP       | 是   | NOW()          |                                                           |
+| `updated_at`   | TIMESTAMP       | 是   | NOW()          |                                                           |
+| `created_by`   | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`                      |
+| `updated_by`   | BIGINT UNSIGNED | 是   | 0              |                                                           |
 
-**索引**：`PRIMARY(id)` / `idx_type` / `idx_is_enabled` / `idx_deleted_at`
+**索引**：`PRIMARY(id)` / `idx_type` / `idx_target(target_type, target_id)` / `idx_is_enabled` / `idx_deleted_at`
 
-**外键**：无
+**外键**：无（多态归属，软引用）
 
-> 只存元数据与 `storage_type`，不存文件体。`metadata` 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`。无业务 UNIQUE。详见 `db-conventions.md` §19。
+> 只存元数据与 `storage_type`，不存文件体。`metadata` 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`。无业务 UNIQUE。`GENERAL` 时 `target_id=0`。详见 `db-conventions.md` §19。
 
 ---
 

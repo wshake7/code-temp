@@ -1,4 +1,4 @@
-# ER 关系与基数 (v13)
+# ER 关系与基数 (v14)
 
 > 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 
@@ -47,11 +47,12 @@
 │   │ IP/USER/DEVICE │  IP/DEVICE 无 FK；scope=LOGIN/API/ALL                  │
 │   └────────────────┘                                                        │
 │                                                                             │
-│                       素材库 (v13)                                          │
+│                       素材库 (v13；v14 归属)                                 │
 │                                                                             │
 │   ┌────────────────┐  无 FK；不存文件体                                     │
 │   │ sys_material   │  type=IMAGE/VIDEO/AUDIO/DOCUMENT/OTHER                 │
 │   │ name+type+存储  │  文件细节进 metadata JSON                             │
+│   │ target_type/id │  GENERAL/0；SYS_USER/DEPT 软引用预留                   │
 │   └────────────────┘                                                        │
 │                                                                             │
 │                          I18n                                               │
@@ -113,16 +114,17 @@
 
 ### 2.2 1:N（一对多）
 
-| 父                     | 子                        | 外键                                      | 备注                    |
-| ---------------------- | ------------------------- | ----------------------------------------- | ----------------------- |
-| `sys_menu`             | `sys_menu`                | `parent_id`                               | 自引用树形（v1+）       |
-| `sys_role`             | `sys_role`                | `parent_id`                               | 自引用角色层级（v4+）   |
-| `i18n_locale`          | `i18n_translation`        | `locale_id`                               | FK                      |
-| `dict_type`            | `dict_data`               | `type_id`                                 | FK                      |
-| `temporal_task_config` | `temporal_task_execution` | `config_id`                               | **软外键**（不建 FK）   |
-| `sys_role`             | `sys_data_permission`     | `subject_id`（当 `subject_type='ROLE'`）  | **软关联**（多态主体）  |
-| `sys_user`             | `sys_data_permission`     | `subject_id`（当 `subject_type='USER'`）  | **软关联**              |
-| `sys_user`             | `sys_blacklist`           | `target_value`（当 `target_type='USER'`） | **软关联**（字符串 id） |
+| 父                     | 子                        | 外键                                       | 备注                                 |
+| ---------------------- | ------------------------- | ------------------------------------------ | ------------------------------------ |
+| `sys_menu`             | `sys_menu`                | `parent_id`                                | 自引用树形（v1+）                    |
+| `sys_role`             | `sys_role`                | `parent_id`                                | 自引用角色层级（v4+）                |
+| `i18n_locale`          | `i18n_translation`        | `locale_id`                                | FK                                   |
+| `dict_type`            | `dict_data`               | `type_id`                                  | FK                                   |
+| `temporal_task_config` | `temporal_task_execution` | `config_id`                                | **软外键**（不建 FK）                |
+| `sys_role`             | `sys_data_permission`     | `subject_id`（当 `subject_type='ROLE'`）   | **软关联**（多态主体）               |
+| `sys_user`             | `sys_data_permission`     | `subject_id`（当 `subject_type='USER'`）   | **软关联**                           |
+| `sys_user`             | `sys_blacklist`           | `target_value`（当 `target_type='USER'`）  | **软关联**（字符串 id）              |
+| `sys_user`             | `sys_material`            | `target_id`（当 `target_type='SYS_USER'`） | **软关联**（v14+；`GENERAL` 时为 0） |
 
 ### 2.3 1:1 / 0..1
 
@@ -132,14 +134,15 @@
 
 ## 3. 软引用清单（不建 FK）
 
-| 字段                        | 表                          | 类型                 | 软引用目标                    | 原因                                                          |
-| --------------------------- | --------------------------- | -------------------- | ----------------------------- | ------------------------------------------------------------- |
-| `created_by` / `updated_by` | 所有 12 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）   | 用户删除时不应级联清空历史                                    |
-| `language_code`             | `sys_user`                  | `NULL`               | `i18n_locale.code`            | i18n_locale.code 软引用                                       |
-| `subject_id`                | `sys_data_permission`       | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id` | 多态主体（`ANY_*` 时为 0）                                    |
-| `target_value`              | `sys_blacklist`             | `VARCHAR(128)`       | `sys_user.id`（仅 `USER`）    | 多态 target；IP/DEVICE 无实体引用（v11+）                     |
-| `config_id`                 | `temporal_task_execution`   | `NULL`               | `temporal_task_config.id`     | 执行可能先于配置存在                                          |
-| `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`               | `sys_user.id`                 | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| 字段                        | 表                          | 类型                 | 软引用目标                     | 原因                                                          |
+| --------------------------- | --------------------------- | -------------------- | ------------------------------ | ------------------------------------------------------------- |
+| `created_by` / `updated_by` | 所有 12 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）    | 用户删除时不应级联清空历史                                    |
+| `language_code`             | `sys_user`                  | `NULL`               | `i18n_locale.code`             | i18n_locale.code 软引用                                       |
+| `subject_id`                | `sys_data_permission`       | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id`  | 多态主体（`ANY_*` 时为 0）                                    |
+| `target_value`              | `sys_blacklist`             | `VARCHAR(128)`       | `sys_user.id`（仅 `USER`）     | 多态 target；IP/DEVICE 无实体引用（v11+）                     |
+| `target_id`                 | `sys_material`              | `NOT NULL DEFAULT 0` | `sys_user.id`（仅 `SYS_USER`） | 多态归属；`GENERAL` 时为 0；`DEPT` 预留（v14+）               |
+| `config_id`                 | `temporal_task_execution`   | `NULL`               | `temporal_task_config.id`      | 执行可能先于配置存在                                          |
+| `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`               | `sys_user.id`                  | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
 
 ---
 
@@ -309,7 +312,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 
 ## 10. 软删时间戳 `deleted_at` 模式
 
-所有核心表（12 张，含 v11 `sys_blacklist`、v13 `sys_material`）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
+所有核心表（12 张，含 v11 `sys_blacklist`、v13+ `sys_material`）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
 
 - `0` = 活跃行
 - `> 0` = 软删时刻（毫秒 Unix 时间戳）
