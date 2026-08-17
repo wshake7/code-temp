@@ -76,6 +76,9 @@
 
         <!-- AWS SDK v2（S3 / MinIO） -->
         <aws.sdk.version>2.31.78</aws.sdk.version>
+
+        <!-- OkHttp 出站 HTTP 客户端（Boot BOM 不管理；Maven 须用 okhttp-jvm） -->
+        <okhttp.version>5.4.0</okhttp.version>
     </properties>
 
     <dependencyManagement>
@@ -268,6 +271,15 @@
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
                 <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- OkHttp BOM（对齐 okhttp-jvm / mockwebserver3） -->
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-bom</artifactId>
+                <version>${okhttp.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

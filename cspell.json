@@ -33,6 +33,7 @@
     "minioadmin",
     "mockjs",
     "nacos",
+    "okhttp",
     "nitro",
     "nitropack",
     "oxfmt",
