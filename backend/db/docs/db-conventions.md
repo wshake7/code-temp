@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v15)
+# 后台管理 DB 约定 (v16)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -245,7 +245,7 @@ ALTER TABLE sys_role
 - 黑名单目标类型（`sys_blacklist.target_type`，v11+；v15 改名）：`IP` / `SYS_USER` / `DEVICE`
 - 黑名单限制范围（`sys_blacklist.scope`，v11+）：`LOGIN` / `API` / `ALL`
 - 素材类型（`sys_material.type`，v13+）：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
-- 素材存储（`sys_material.storage_type`，v13+）：`LOCAL` / `OSS` / `COS` / `S3`
+- 素材存储（`sys_material.storage_type`，v13+；v16 收窄）：`LOCAL` / `S3` / `DB`
 - 素材归属（`sys_material.target_type`，v14+）：`GENERAL` / `SYS_USER` / `DEPT`
 
 ---
@@ -577,15 +577,17 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 ---
 
-## 19. 素材库 (`sys_material`，v13+；归属 v14+)
+## 19. 素材库 (`sys_material`，v13+；归属 v14+；存储与正文 v16)
 
 ### 19.1 一张表、多种类型
 
 - `type` 区分形态：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
-- 列上只留筛选/展示用字段：`name` / `type` / `target_type` / `target_id` / `storage_type` / `sort` + 核心 7 字段
+- 列上只留筛选/展示/定位用字段：`name` / `type` / `target_type` / `target_id` / `storage_type` / `content` / `sort` + 核心 7 字段
 - 文件细节与类型扩展一律进 `metadata` JSON，**不**按类型拆表、**不**再设 `extra`
 - 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`；其余类型专属键可同对象追加
-- **不**在库内存储文件体；对象定位放在 `storage_type` + `metadata.storage_key` / `metadata.url`
+- 存储分流（v16）：
+  - `LOCAL` / `S3`：`content` 存对象地址（本地路径或 URL）；`metadata` 仍可补 `storage_key` / `url` 等细节
+  - `DB`：正文/文件体文本写入 `content`（`TEXT`，最大约 64KB）；大文件仍走 `LOCAL`/`S3`，**不**用 BLOB
 
 ### 19.2 无业务 UNIQUE
 
@@ -610,7 +612,7 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 ### 19.4 本波边界
 
-- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`（含 v14 归属列）
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`（含 v14 归属列、v16 `storage_type`/`content`）
 - **未**交付：Flyway、Java entity / CRUD、上传流水线、素材与业务的绑定表、`SYS_USER`/`DEPT` 运行时过滤
 
 ---

@@ -1,5 +1,5 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER + v16 content)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_unicode_ci
@@ -77,6 +77,9 @@
 --        SYS_USER/DEPT 为预留;不建 FK）
 -- v15 (仅 sys_blacklist):
 --   1. sys_blacklist.target_type：USER → SYS_USER（对齐表名 sys_user；与素材归属枚举一致）
+-- v16 (仅 sys_material):
+--   1. sys_material.storage_type：LOCAL / OSS / COS / S3 → LOCAL / S3 / DB
+--   2. sys_material: 加 content TEXT（DB=正文/文件体文本；LOCAL/S3=对象地址）
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -525,9 +528,10 @@ CREATE TABLE sys_blacklist (
 
 
 -- ============================================================
--- Section 16b: 素材库 — sys_material (v13; v14 加归属)
+-- Section 16b: 素材库 — sys_material (v13; v14 加归属; v16 storage_type + content)
 -- 多类型共用一张表; type 区分形态; 文件细节与类型扩展一律进 metadata
--- 只存元数据 + storage_type,不存文件体
+-- LOCAL/S3: content 存对象地址;细节仍进 metadata
+-- DB: content 存正文/文件体文本
 -- 归属: target_type + target_id(多态软引用;GENERAL 时 target_id=0;SYS_USER/DEPT 预留)
 -- 无业务 UNIQUE: 无稳定自然键(name / metadata.url / metadata.checksum 均可空或重复)
 -- ============================================================
@@ -540,7 +544,9 @@ CREATE TABLE sys_material (
     target_id       BIGINT UNSIGNED NOT NULL DEFAULT 0
                                     COMMENT '归属 ID;GENERAL=0;SYS_USER=sys_user.id;DEPT=预留部门 id',
     storage_type    VARCHAR(32)     NOT NULL DEFAULT 'LOCAL'
-                                    COMMENT '存储: LOCAL / OSS / COS / S3',
+                                    COMMENT '存储: LOCAL / S3 / DB',
+    content         TEXT            NOT NULL DEFAULT ''
+                                    COMMENT 'DB=正文/文件体文本;LOCAL/S3=对象地址(路径或 URL)',
     metadata        JSON            DEFAULT NULL
                                     COMMENT '文件与类型扩展: mime_type/file_ext/original_name/storage_key/url/size_bytes/width/height/duration_ms/checksum 等;无则为 NULL',
     sort            INT             NOT NULL DEFAULT 0  COMMENT '排序(升序)',
@@ -557,7 +563,7 @@ CREATE TABLE sys_material (
     INDEX idx_sys_material_is_enabled (is_enabled),
     INDEX idx_sys_material_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='素材库(多类型元数据+存储定位+多态归属;不存二进制;v14)';
+  COMMENT='素材库(多类型元数据+存储定位+多态归属;DB 时 content 存文本体;v16)';
 
 
 -- ============================================================
@@ -855,5 +861,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER + v16 content)
 -- ============================================================

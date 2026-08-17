@@ -1,4 +1,4 @@
-# ER 关系与基数 (v15)
+# ER 关系与基数 (v16)
 
 > 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 
@@ -48,11 +48,11 @@
 │   │ DEVICE         │                                                        │
 │   └────────────────┘                                                        │
 │                                                                             │
-│                       素材库 (v13；v14 归属)                                 │
+│                       素材库 (v13；v14 归属；v16 content)                    │
 │                                                                             │
-│   ┌────────────────┐  无 FK；不存文件体                                     │
+│   ┌────────────────┐  无 FK；content=DB 文本体 / LOCAL·S3 地址              │
 │   │ sys_material   │  type=IMAGE/VIDEO/AUDIO/DOCUMENT/OTHER                 │
-│   │ name+type+存储  │  文件细节进 metadata JSON                             │
+│   │ name+type+存储  │  storage=LOCAL/S3/DB；细节进 metadata                 │
 │   │ target_type/id │  GENERAL/0；SYS_USER/DEPT 软引用预留                   │
 │   └────────────────┘                                                        │
 │                                                                             │

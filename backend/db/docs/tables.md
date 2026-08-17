@@ -1,8 +1,8 @@
-# 表字段速查 (v15)
+# 表字段速查 (v16)
 
 > 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 24 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15。
+> 共 24 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16。
 
 ---
 
@@ -346,7 +346,7 @@
 
 ---
 
-## 6c. 素材库模块（v13；v14 加归属）
+## 6c. 素材库模块（v13；v14 加归属；v16 `storage_type` + `content`）
 
 ### 6c.1 `sys_material` — 素材
 
@@ -357,7 +357,8 @@
 | `type`         | VARCHAR(32)     | 是   | -              | `IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`        |
 | `target_type`  | VARCHAR(32)     | 是   | `'GENERAL'`    | 归属：`GENERAL` / `SYS_USER` / `DEPT`（v14+）             |
 | `target_id`    | BIGINT UNSIGNED | 是   | 0              | `GENERAL` 必须为 0；`SYS_USER`=`sys_user.id`；`DEPT` 预留 |
-| `storage_type` | VARCHAR(32)     | 是   | `'LOCAL'`      | `LOCAL` / `OSS` / `COS` / `S3`                            |
+| `storage_type` | VARCHAR(32)     | 是   | `'LOCAL'`      | `LOCAL` / `S3` / `DB`（v16）                              |
+| `content`      | TEXT            | 是   | `''`           | `DB`=正文/文件体文本；`LOCAL`/`S3`=对象地址（v16）        |
 | `metadata`     | JSON            | 否   | NULL           | 文件细节与类型扩展；建议键见下                            |
 | `sort`         | INT             | 是   | 0              | 排序（升序）                                              |
 | `remark`       | VARCHAR(512)    | 是   | `''`           | 管理员备注                                                |
@@ -372,7 +373,7 @@
 
 **外键**：无（多态归属，软引用）
 
-> 只存元数据与 `storage_type`，不存文件体。`metadata` 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`。无业务 UNIQUE。`GENERAL` 时 `target_id=0`。详见 `db-conventions.md` §19。
+> `content`：`DB` 存正文/文件体文本；`LOCAL`/`S3` 存对象地址（路径或 URL）。`metadata` 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`。无业务 UNIQUE。`GENERAL` 时 `target_id=0`。详见 `db-conventions.md` §19。
 
 ---
 
