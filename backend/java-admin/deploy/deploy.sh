@@ -62,6 +62,10 @@ apply_defaults() {
   : "${SPRING_PROFILES_ACTIVE:=prod}"
   : "${JAVA_OPTS:=-Xms512m -Xmx2g -XX:+UseG1GC}"
   : "${FORCE_UNIT:=0}"
+  # 业务时区固定东八区；env 已写 -Duser.timezone= 时不覆盖
+  if [[ "${JAVA_OPTS}" != *"-Duser.timezone="* ]]; then
+    JAVA_OPTS="${JAVA_OPTS} -Duser.timezone=Asia/Shanghai"
+  fi
 }
 
 require_root() {
