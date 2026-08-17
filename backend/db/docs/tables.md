@@ -1,8 +1,8 @@
-# 表字段速查 (v17)
+# 表字段速查 (v19)
 
 > 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 25 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16 + `sys_pay_method` v17。
+> 共 29 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16 + `sys_pay_method` v17 + `sys_pay_bill` / `sys_withdraw_bill` v18 + 套餐与账单 `source` v19。
 
 ---
 
@@ -404,6 +404,141 @@
 **外键**：无
 
 > `metadata` 建议键：`merchant_id` / `app_id` / `secret_ref` / `notify_url` / `return_url` / `fee_rate` / `min_amount` / `max_amount` / `daily_limit` / `currency`。密钥只存引用或密文。详见 `db-conventions.md` §20。
+
+---
+
+## 6d2. 充值套餐（v19）
+
+### 6d2.1 `sys_recharge_package` — 充值套餐
+
+| 字段           | 类型            | 必填 | 默认           | 说明                   |
+| -------------- | --------------- | ---- | -------------- | ---------------------- |
+| `id`           | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                   |
+| `code`         | VARCHAR(32)     | 是   | -              | 套餐编码；软删感知唯一 |
+| `name`         | VARCHAR(64)     | 是   | -              | 展示名                 |
+| `pay_amount`   | DECIMAL(18,2)   | 是   | -              | 用户实付               |
+| `grant_amount` | DECIMAL(18,2)   | 是   | -              | 到账金额               |
+| `bonus_amount` | DECIMAL(18,2)   | 是   | `0.00`         | 赠送金额               |
+| `currency`     | VARCHAR(16)     | 是   | `'CNY'`        | 币种                   |
+| `icon`         | VARCHAR(255)    | 是   | `''`           | 展示图标               |
+| `sort`         | INT             | 是   | 0              | 排序（升序）           |
+| `metadata`     | JSON            | 否   | NULL           | 扩展                   |
+| `remark`       | VARCHAR(512)    | 是   | `''`           | 管理员备注             |
+| `is_enabled`   | TINYINT(1)      | 是   | 1              | 启用/禁用              |
+| `deleted_at`   | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）     |
+| `created_at`   | TIMESTAMP       | 是   | NOW()          |                        |
+| `updated_at`   | TIMESTAMP       | 是   | NOW()          |                        |
+| `created_by`   | BIGINT UNSIGNED | 是   | 0              |                        |
+| `updated_by`   | BIGINT UNSIGNED | 是   | 0              |                        |
+
+**索引**：`PRIMARY(id)` / `UNIQUE(code, deleted_at)` / `idx_is_enabled` / `idx_deleted_at`
+
+**外键**：无
+
+> 仅用户充值档位。后台调账不建套餐、不写 `package_id`。详见 `db-conventions.md` §22。
+
+---
+
+## 6d3. 提现套餐（v19）
+
+### 6d3.1 `sys_withdraw_package` — 提现套餐
+
+| 字段            | 类型            | 必填 | 默认           | 说明                   |
+| --------------- | --------------- | ---- | -------------- | ---------------------- |
+| `id`            | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                   |
+| `code`          | VARCHAR(32)     | 是   | -              | 套餐编码；软删感知唯一 |
+| `name`          | VARCHAR(64)     | 是   | -              | 展示名                 |
+| `amount`        | DECIMAL(18,2)   | 是   | -              | 提现申请额             |
+| `fee_amount`    | DECIMAL(18,2)   | 是   | `0.00`         | 手续费                 |
+| `actual_amount` | DECIMAL(18,2)   | 是   | -              | 实际到账               |
+| `currency`      | VARCHAR(16)     | 是   | `'CNY'`        | 币种                   |
+| `icon`          | VARCHAR(255)    | 是   | `''`           | 展示图标               |
+| `sort`          | INT             | 是   | 0              | 排序（升序）           |
+| `metadata`      | JSON            | 否   | NULL           | 扩展                   |
+| `remark`        | VARCHAR(512)    | 是   | `''`           | 管理员备注             |
+| `is_enabled`    | TINYINT(1)      | 是   | 1              | 启用/禁用              |
+| `deleted_at`    | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）     |
+| `created_at`    | TIMESTAMP       | 是   | NOW()          |                        |
+| `updated_at`    | TIMESTAMP       | 是   | NOW()          |                        |
+| `created_by`    | BIGINT UNSIGNED | 是   | 0              |                        |
+| `updated_by`    | BIGINT UNSIGNED | 是   | 0              |                        |
+
+**索引**：`PRIMARY(id)` / `UNIQUE(code, deleted_at)` / `idx_is_enabled` / `idx_deleted_at`
+
+**外键**：无
+
+> 仅用户提现档位。后台出金不建套餐、不写 `package_id`。详见 `db-conventions.md` §22。
+
+---
+
+## 6e. 支付账单（v18；v19 加 `source` / `package_id`）
+
+### 6e.1 `sys_pay_bill` — 支付账单
+
+| 字段             | 类型            | 必填 | 默认           | 说明                                                                |
+| ---------------- | --------------- | ---- | -------------- | ------------------------------------------------------------------- |
+| `id`             | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                                |
+| `bill_no`        | VARCHAR(64)     | 是   | -              | 账单号；全局唯一（无软删）                                          |
+| `source`         | VARCHAR(16)     | 是   | -              | `ADMIN`=后台调账 / `RECHARGE`=用户充值                              |
+| `user_id`        | BIGINT UNSIGNED | 是   | 0              | 业务用户（软引用；本波不绑用户表）                                  |
+| `pay_method_id`  | BIGINT UNSIGNED | 是   | 0              | 软引用 `sys_pay_method.id`；`ADMIN` 常为 0                          |
+| `package_id`     | BIGINT UNSIGNED | 是   | 0              | 软引用 `sys_recharge_package.id`；`ADMIN` 必须为 0                  |
+| `channel`        | VARCHAR(32)     | 是   | -              | 下单时通道快照；`ADMIN` 可用 `OTHER`                                |
+| `title`          | VARCHAR(128)    | 是   | `''`           | 账单标题/商品摘要                                                   |
+| `amount`         | DECIMAL(18,2)   | 是   | -              | 应付/调账金额                                                       |
+| `currency`       | VARCHAR(16)     | 是   | `'CNY'`        | 币种                                                                |
+| `status`         | VARCHAR(32)     | 是   | `'PENDING'`    | `PENDING` / `PAYING` / `SUCCESS` / `FAILED` / `CLOSED` / `REFUNDED` |
+| `third_trade_no` | VARCHAR(128)    | 是   | `''`           | 第三方交易号；`ADMIN` 常为空串                                      |
+| `paid_at`        | TIMESTAMP       | 否   | NULL           | 支付成功时刻                                                        |
+| `expired_at`     | TIMESTAMP       | 否   | NULL           | 支付过期时刻                                                        |
+| `metadata`       | JSON            | 否   | NULL           | 回包与扩展                                                          |
+| `remark`         | VARCHAR(512)    | 是   | `''`           | 管理员备注                                                          |
+| `created_at`     | TIMESTAMP       | 是   | NOW()          |                                                                     |
+| `updated_at`     | TIMESTAMP       | 是   | NOW()          |                                                                     |
+
+**索引**：`PRIMARY(id)` / `UNIQUE(bill_no)` / `idx(user_id, created_at)` / `idx(source, status, created_at)` / `idx(package_id)` / `idx(third_trade_no)`
+
+**外键**：无
+
+> 非核心表。`ADMIN` 禁止绑套餐。详见 `db-conventions.md` §21。
+
+---
+
+## 6f. 提现账单（v18；v19 加 `source` / `package_id`）
+
+### 6f.1 `sys_withdraw_bill` — 提现账单
+
+| 字段             | 类型            | 必填 | 默认           | 说明                                                                                    |
+| ---------------- | --------------- | ---- | -------------- | --------------------------------------------------------------------------------------- |
+| `id`             | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                                                    |
+| `bill_no`        | VARCHAR(64)     | 是   | -              | 账单号；全局唯一（无软删）                                                              |
+| `source`         | VARCHAR(16)     | 是   | -              | `ADMIN`=后台出金 / `WITHDRAW`=用户提现                                                  |
+| `user_id`        | BIGINT UNSIGNED | 是   | 0              | 业务用户（软引用；本波不绑用户表）                                                      |
+| `pay_method_id`  | BIGINT UNSIGNED | 是   | 0              | 软引用 `sys_pay_method.id`；`ADMIN` 常为 0                                              |
+| `package_id`     | BIGINT UNSIGNED | 是   | 0              | 软引用 `sys_withdraw_package.id`；`ADMIN` 必须为 0                                      |
+| `channel`        | VARCHAR(32)     | 是   | -              | 申请时通道快照；`ADMIN` 可用 `OTHER`                                                    |
+| `amount`         | DECIMAL(18,2)   | 是   | -              | 申请金额                                                                                |
+| `fee_amount`     | DECIMAL(18,2)   | 是   | `0.00`         | 手续费                                                                                  |
+| `actual_amount`  | DECIMAL(18,2)   | 是   | -              | 实际到账                                                                                |
+| `currency`       | VARCHAR(16)     | 是   | `'CNY'`        | 币种                                                                                    |
+| `status`         | VARCHAR(32)     | 是   | `'PENDING'`    | `PENDING` / `APPROVED` / `REJECTED` / `PROCESSING` / `SUCCESS` / `FAILED` / `CANCELLED` |
+| `account_name`   | VARCHAR(64)     | 是   | `''`           | 收款户名                                                                                |
+| `account_no`     | VARCHAR(128)    | 是   | `''`           | 收款账号                                                                                |
+| `third_trade_no` | VARCHAR(128)    | 是   | `''`           | 第三方出款单号                                                                          |
+| `reject_reason`  | VARCHAR(512)    | 是   | `''`           | 拒绝原因（对用户可见）                                                                  |
+| `reviewed_by`    | BIGINT UNSIGNED | 是   | 0              | 审核人；0=未审/系统                                                                     |
+| `reviewed_at`    | TIMESTAMP       | 否   | NULL           | 审核时刻                                                                                |
+| `finished_at`    | TIMESTAMP       | 否   | NULL           | 出款终态时刻                                                                            |
+| `metadata`       | JSON            | 否   | NULL           | 扩展                                                                                    |
+| `remark`         | VARCHAR(512)    | 是   | `''`           | 管理员备注                                                                              |
+| `created_at`     | TIMESTAMP       | 是   | NOW()          |                                                                                         |
+| `updated_at`     | TIMESTAMP       | 是   | NOW()          |                                                                                         |
+
+**索引**：`PRIMARY(id)` / `UNIQUE(bill_no)` / `idx(user_id, created_at)` / `idx(source, status, created_at)` / `idx(package_id)` / `idx(third_trade_no)`
+
+**外键**：无
+
+> 非核心表。`ADMIN` 禁止绑套餐。`actual_amount` 一般 = `amount - fee_amount`，由应用层写入。详见 `db-conventions.md` §21。
 
 ---
 

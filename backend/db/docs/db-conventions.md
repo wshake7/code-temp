@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v17)
+# 后台管理 DB 约定 (v19)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16 + `sys_pay_method` v17。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16 + `sys_pay_method` v17 + `sys_pay_bill` / `sys_withdraw_bill` v18 + 套餐与账单 `source` v19。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -26,6 +26,7 @@
 | 枚举字段   | `VARCHAR(32) + 应用层 enum`                                                                               | `TINYINT` 存魔法值                                            |
 | 时间字段   | `TIMESTAMP`（除非需要 2038+，否则不用 `DATETIME`）                                                        | `DATETIME`(3) 存毫秒                                          |
 | 布尔字段   | `TINYINT(1) NOT NULL DEFAULT 0`                                                                           | `BOOLEAN` / `BIT(1)`                                          |
+| 金额字段   | `DECIMAL(18,2) NOT NULL`（精确小数）                                                                      | `FLOAT` / `DOUBLE` / 未标明币种的裸数字                       |
 | JSON 字段  | `JSON`（MySQL 8 原生）                                                                                    | `TEXT` 存 JSON 字符串                                         |
 | 软删时间戳 | `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0`（毫秒；0=未删）                                           | `is_deleted TINYINT`（需配合 `is_active` 生成列才能感知唯一） |
 | 启停标志   | `is_enabled TINYINT(1) NOT NULL DEFAULT 1`                                                                | 与 `deleted_at` 混用（丢失三态语义）                          |
@@ -47,7 +48,7 @@
 
 ## 4. 审计 + 启停 + 软删字段（核心表）
 
-每张**核心表**（共 13 张）必须包含以下 **7 个字段**，**顺序固定**：
+每张**核心表**（共 15 张）必须包含以下 **7 个字段**，**顺序固定**：
 
 ```sql
 remark          VARCHAR(512)    NOT NULL DEFAULT ''                -- 管理员备注
@@ -91,12 +92,13 @@ updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0                  -- 0=系统�
 
 ### 4.4 不同表的覆盖
 
-| 表类                                                                                                                                                                                                                                     | 字段                                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 核心表 13 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist` / `sys_material` / `sys_pay_method`） | 上述 7 字段全有                                                                                                                  |
-| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                                                       | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
-| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                                                    | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
-| 归档表 3 张（`*_archive`）                                                                                                                                                                                                               | 镜像热表（多 `archived_at`）                                                                                                     |
+| 表类                                                                                                                                                                                                                                                                                       | 字段                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 核心表 15 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist` / `sys_material` / `sys_pay_method` / `sys_recharge_package` / `sys_withdraw_package`） | 上述 7 字段全有                                                                                                                  |
+| 账单表 2 张（`sys_pay_bill` / `sys_withdraw_bill`）                                                                                                                                                                                                                                        | **只**加 `remark` + `created_at` + `updated_at`；无 `is_enabled` / `deleted_at` / `created_by` / `updated_by`；关单走 `status`   |
+| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                                                                                                         | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
+| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                                                                                                      | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
+| 归档表 3 张（`*_archive`）                                                                                                                                                                                                                                                                 | 镜像热表（多 `archived_at`）                                                                                                     |
 
 ---
 
@@ -139,6 +141,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 - `sys_data_permission.(subject_type, subject_id, resource_table, action_key)`
 - `sys_blacklist.(target_type, target_value, scope, starts_at, expires_at)`（v11+；弱唯一，见 §18；允许多条不同时间窗）
 - `sys_pay_method.code`（v17+）
+- `sys_recharge_package.code` / `sys_withdraw_package.code`（v19+）
 
 ---
 
@@ -154,16 +157,18 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 ### 6.2 高频索引模式
 
-| 场景                    | 索引                                                                                           |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| 按用户 + 时间查日志     | `(sys_user_id, created_at)`（v5+ `api_log` / `sys_login_log`；`operation_log` 仍为 `user_id`） |
-| 按用户 + 模块 + 时间    | `(sys_user_id, module, created_at)`（`api_log` 特有；v5+）                                     |
-| 按状态 + 时间筛选       | `(status_code, created_at)`（`api_log`）/ `(status, created_at)`（`temporal_task_execution`）  |
-| 关联表反向查询          | `(xxx_id, role_id)`（与 PK 反向）                                                              |
-| 字典/枚举筛选           | `(type_id, sort)`                                                                              |
-| 字典按平台过滤          | `idx_dict_data_platform`（`dict_data.platform`；v8+）                                          |
-| 软删过滤                | `idx_*_deleted_at` 单列                                                                        |
-| 菜单物化路径查祖先/子树 | `(tree_path)` 前缀匹配                                                                         |
+| 场景                    | 索引                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| 按用户 + 时间查日志     | `(sys_user_id, created_at)`（v5+ `api_log` / `sys_login_log`；`operation_log` 仍为 `user_id`）            |
+| 按用户 + 模块 + 时间    | `(sys_user_id, module, created_at)`（`api_log` 特有；v5+）                                                |
+| 按状态 + 时间筛选       | `(status_code, created_at)`（`api_log`）/ `(status, created_at)`（`temporal_task_execution` / 账单 v18+） |
+| 按用户 + 时间查账单     | `(user_id, created_at)`（`sys_pay_bill` / `sys_withdraw_bill`；v18+）                                     |
+| 按第三方单号对账        | `idx_*_third_trade_no`（账单；v18+；空串不唯一）                                                          |
+| 关联表反向查询          | `(xxx_id, role_id)`（与 PK 反向）                                                                         |
+| 字典/枚举筛选           | `(type_id, sort)`                                                                                         |
+| 字典按平台过滤          | `idx_dict_data_platform`（`dict_data.platform`；v8+）                                                     |
+| 软删过滤                | `idx_*_deleted_at` 单列                                                                                   |
+| 菜单物化路径查祖先/子树 | `(tree_path)` 前缀匹配                                                                                    |
 
 ### 6.3 索引命名
 
@@ -194,15 +199,20 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 
 ### 7.2 不建外键（软引用，`NULL` 或 `0` 占位）
 
-| 引用                                                                       | 类型                     | 原因                                                              |
-| -------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
-| `created_by` / `updated_by` → `sys_user.id`                                | `NOT NULL DEFAULT 0`     | 0=系统操作；用户删除时不应级联清空历史                            |
-| `sys_user.language_code` → `i18n_locale.code`                              | `NULL`                   | 同上（i18n_locale.code 软引用）                                   |
-| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`           | `NOT NULL DEFAULT 0`     | 多态主体（`ANY_*` 时为 0），无法 FK                               |
-| `sys_blacklist.target_value`（当 `target_type='SYS_USER'`）→ `sys_user.id` | `VARCHAR` 存十进制字符串 | 多态 target，无法 FK；IP/DEVICE 无实体引用（v15 改名）            |
-| `sys_material.target_id`（当 `target_type='SYS_USER'`）→ `sys_user.id`     | `NOT NULL DEFAULT 0`     | 多态归属（`GENERAL` 时为 0），无法 FK；`DEPT` 预留（v14+）        |
-| `temporal_task_execution.config_id` → `temporal_task_config.id`            | `NULL`                   | 执行可能先于配置存在                                              |
-| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`        | `NULL`                   | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| 引用                                                                                   | 类型                     | 原因                                                              |
+| -------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| `created_by` / `updated_by` → `sys_user.id`                                            | `NOT NULL DEFAULT 0`     | 0=系统操作；用户删除时不应级联清空历史                            |
+| `sys_user.language_code` → `i18n_locale.code`                                          | `NULL`                   | 同上（i18n_locale.code 软引用）                                   |
+| `sys_data_permission.subject_id` → `sys_user.id` / `sys_role.id`                       | `NOT NULL DEFAULT 0`     | 多态主体（`ANY_*` 时为 0），无法 FK                               |
+| `sys_blacklist.target_value`（当 `target_type='SYS_USER'`）→ `sys_user.id`             | `VARCHAR` 存十进制字符串 | 多态 target，无法 FK；IP/DEVICE 无实体引用（v15 改名）            |
+| `sys_material.target_id`（当 `target_type='SYS_USER'`）→ `sys_user.id`                 | `NOT NULL DEFAULT 0`     | 多态归属（`GENERAL` 时为 0），无法 FK；`DEPT` 预留（v14+）        |
+| `temporal_task_execution.config_id` → `temporal_task_config.id`                        | `NULL`                   | 执行可能先于配置存在                                              |
+| `api_log.sys_user_id` / `sys_login_log.sys_user_id` → `sys_user.id`                    | `NULL`                   | 日志应保留用户删除前的痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| `sys_pay_bill.pay_method_id` / `sys_withdraw_bill.pay_method_id` → `sys_pay_method.id` | `NOT NULL DEFAULT 0`     | 账单须保留通道删除后的历史；`channel` 另有快照（v18+）            |
+| `sys_pay_bill.user_id` / `sys_withdraw_bill.user_id`                                   | `NOT NULL DEFAULT 0`     | 业务用户；本波无独立用户表，无法 FK（v18+）                       |
+| `sys_pay_bill.package_id` → `sys_recharge_package.id`                                  | `NOT NULL DEFAULT 0`     | `ADMIN` 必须为 0；套餐删除后账单仍留档（v19+）                    |
+| `sys_withdraw_bill.package_id` → `sys_withdraw_package.id`                             | `NOT NULL DEFAULT 0`     | `ADMIN` 必须为 0；套餐删除后账单仍留档（v19+）                    |
+| `sys_withdraw_bill.reviewed_by` → `sys_user.id`                                        | `NOT NULL DEFAULT 0`     | 0=未审/系统；审核人删除不应级联（v18+）                           |
 
 ### 7.3 自引用外键
 
@@ -249,7 +259,11 @@ ALTER TABLE sys_role
 - 素材存储（`sys_material.storage_type`，v13+；v16 收窄）：`LOCAL` / `S3` / `DB`
 - 素材归属（`sys_material.target_type`，v14+）：`GENERAL` / `SYS_USER` / `DEPT`
 - 支付方式场景（`sys_pay_method.scene`，v17+）：`PAY` / `WITHDRAW` / `BOTH`
-- 支付通道类型（`sys_pay_method.channel`，v17+）：`ALIPAY` / `WECHAT` / `BANK` / `CRYPTO` / `OTHER`
+- 支付通道类型（`sys_pay_method.channel` / 账单 `channel` 快照，v17+）：`ALIPAY` / `WECHAT` / `BANK` / `CRYPTO` / `OTHER`
+- 支付账单状态（`sys_pay_bill.status`，v18+）：`PENDING` / `PAYING` / `SUCCESS` / `FAILED` / `CLOSED` / `REFUNDED`
+- 提现账单状态（`sys_withdraw_bill.status`，v18+）：`PENDING` / `APPROVED` / `REJECTED` / `PROCESSING` / `SUCCESS` / `FAILED` / `CANCELLED`
+- 支付账单来源（`sys_pay_bill.source`，v19+）：`ADMIN` / `RECHARGE`
+- 提现账单来源（`sys_withdraw_bill.source`，v19+）：`ADMIN` / `WITHDRAW`
 
 ---
 
@@ -265,6 +279,8 @@ ALTER TABLE sys_role
 - `sys_menu.metadata`（前端扩展字段）
 - `sys_material.metadata`（文件细节与类型扩展；无则为 `NULL`；v13+）
 - `sys_pay_method.metadata`（通道专属配置；无则为 `NULL`；v17+）
+- `sys_pay_bill.metadata` / `sys_withdraw_bill.metadata`（回包与通道扩展；无则为 `NULL`；v18+）
+- `sys_recharge_package.metadata` / `sys_withdraw_package.metadata`（套餐扩展；无则为 `NULL`；v19+）
 
 **不**用 JSON：
 
@@ -651,11 +667,103 @@ UNIQUE (code, deleted_at)
 ### 20.4 本波边界
 
 - 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
-- **未**交付：Flyway、Java entity / CRUD、菜单与 API seed、支付/提现订单与流水、真实通道 SDK、密钥托管
+- **未**交付：Flyway、Java entity / CRUD、菜单与 API seed、真实通道 SDK、密钥托管
+- 账单表见 §21（v18+）
 
 ---
 
-## 21. 不在本任务范围
+## 21. 支付/提现账单 (`sys_pay_bill` / `sys_withdraw_bill`，v18+；来源与套餐 v19)
+
+### 21.1 为什么拆两张表
+
+- 支付（入金）与提现（出金）状态机不同，列也不同（提现有手续费、收款账户、审核）
+- **不**用一张「资金流水」兼两套状态；对账流水、退款子单本波不做
+
+### 21.2 共同约定
+
+- **不是核心表**：无 `is_enabled` / `deleted_at` / `created_by` / `updated_by`；只保留 `remark` + `created_at` + `updated_at`
+- `bill_no`：应用层生成；`UNIQUE(bill_no)`（硬唯一，删单不复用号）
+- `user_id`：业务用户软引用，`0`=未知；本波不绑定 `sys_user` 或其它用户表
+- `pay_method_id`：软引用 `sys_pay_method.id`，`0`=未关联；**不**建 FK
+- `channel`：下单/申请时的通道类型快照，与方式配置解耦
+- 金额：`DECIMAL(18,2)`，配 `currency`（默认 `CNY`）；更高精度（如链上）进 `metadata`
+- 生命周期以 `status` 为准（关单 / 拒绝 / 取消）；**禁止**物理 `DELETE` 账单行
+- 扩展与通道回包进 `metadata`；`third_trade_no` 可空串，**不** UNIQUE（空串会互撞）
+
+### 21.2.1 后台 vs 用户充值/提现（`source` + `package_id`，v19+）
+
+两张账单都必须写 `source`，**不要**用「有没有 `package_id`」反推来源。
+
+| 表                  | `source`   | 含义                | `package_id`                                     | `pay_method_id` |
+| ------------------- | ---------- | ------------------- | ------------------------------------------------ | --------------- |
+| `sys_pay_bill`      | `ADMIN`    | 后台调账 / 人工入金 | **必须为 0**（不绑充值套餐）                     | 常为 0          |
+| `sys_pay_bill`      | `RECHARGE` | 用户按充值套餐付款  | 软引用 `sys_recharge_package.id`；未选套餐可为 0 | 用户所选通道    |
+| `sys_withdraw_bill` | `ADMIN`    | 后台出金 / 人工扣款 | **必须为 0**（不绑提现套餐）                     | 常为 0          |
+| `sys_withdraw_bill` | `WITHDRAW` | 用户按提现套餐申请  | 软引用 `sys_withdraw_package.id`；未选套餐可为 0 | 用户所选通道    |
+
+- **禁止**交叉：支付账单不得引用 `sys_withdraw_package`，提现账单不得引用 `sys_recharge_package`
+- `ADMIN` 时 `channel` 可用 `OTHER`；`third_trade_no` 常为空串
+- 账单金额是成交快照；套餐日后改价**不**回写历史账单；建议 `metadata.package_code` 存下单时编码
+
+### 21.3 支付账单状态
+
+| 值         | 含义     |
+| ---------- | -------- |
+| `PENDING`  | 待支付   |
+| `PAYING`   | 支付中   |
+| `SUCCESS`  | 支付成功 |
+| `FAILED`   | 支付失败 |
+| `CLOSED`   | 已关闭   |
+| `REFUNDED` | 已退款   |
+
+`paid_at` / `expired_at`：`NULL`=事件未发生。退款明细不拆子表，摘要可进 `metadata.refund_amount`。
+
+### 21.4 提现账单状态
+
+| 值           | 含义         |
+| ------------ | ------------ |
+| `PENDING`    | 待审核       |
+| `APPROVED`   | 已通过待出款 |
+| `REJECTED`   | 已拒绝       |
+| `PROCESSING` | 出款中       |
+| `SUCCESS`    | 出款成功     |
+| `FAILED`     | 出款失败     |
+| `CANCELLED`  | 已取消       |
+
+- `actual_amount` 一般为 `amount - fee_amount`，由应用层写入；DB **不**校验等式
+- `reject_reason` 对用户可见；内部备注走 `remark`
+- `reviewed_by=0` 且 `reviewed_at IS NULL` 表示未审
+
+### 21.5 本波边界
+
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
+- **未**交付：Flyway、Java entity / CRUD、账单号生成、通道下单/回调、审核流、对账流水、退款子单
+
+---
+
+## 22. 充值/提现套餐 (`sys_recharge_package` / `sys_withdraw_package`，v19+)
+
+### 22.1 为什么拆两张表
+
+- 充值档是「实付 / 到账 / 赠送」，提现档是「申请额 / 手续费 / 到账」，列语义不同
+- 后台调账**不**建套餐行，也不写 `package_id`
+
+### 22.2 共同约定
+
+- 核心表：7 字段齐全；`UNIQUE(code, deleted_at)`
+- 金额 `DECIMAL(18,2)` + `currency`（默认 `CNY`）
+- 充值：`pay_amount`（实付）/ `grant_amount`（到账）/ `bonus_amount`（赠送，默认 0；一般为 `grant - pay`，DB 不校验）
+- 提现：`amount` / `fee_amount` / `actual_amount`（一般为 `amount - fee`，DB 不校验）
+- **不**在套餐上绑死 `pay_method_id`：通道在下单时选，落账单
+
+### 22.3 本波边界
+
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
+- **未**交付：Flyway、Java entity / CRUD、套餐上下架运营、限购规则实现
+
+---
+
+## 23. 不在本任务范围
 
 - ORM model 代码（Go struct / Java entity）
 - 迁移工具集成（仅交付独立 .sql；`schema.sql` + `schema_data.sql` 可独立执行）
@@ -666,5 +774,7 @@ UNIQUE (code, deleted_at)
 - `sys_blacklist` 运行时拦截（见 §18.6；管理 CRUD 与 Flyway 由 java-admin 交付）
 - `sys_material` 的 Flyway / ORM / 上传与业务绑定（见 §19.4）
 - `sys_pay_method` 的 Flyway / ORM / 管理 CRUD / 真实通道接入（见 §20.4）
+- `sys_pay_bill` / `sys_withdraw_bill` 的 Flyway / ORM / 下单回调 / 审核流（见 §21.5）
+- `sys_recharge_package` / `sys_withdraw_package` 的 Flyway / ORM / 套餐运营（见 §22.3）
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

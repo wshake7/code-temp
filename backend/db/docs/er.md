@@ -1,4 +1,4 @@
-# ER 关系与基数 (v17)
+# ER 关系与基数 (v19)
 
 > 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 
@@ -63,6 +63,18 @@
 │   │ code+channel   │  channel=ALIPAY/WECHAT/BANK/CRYPTO/OTHER               │
 │   │ scene+metadata │  UNIQUE(code, deleted_at)；同通道可多实例              │
 │   └────────────────┘                                                        │
+│            │ 软引用 pay_method_id                                           │
+│            ├──────────────► sys_pay_bill      source=ADMIN|RECHARGE         │
+│            └──────────────► sys_withdraw_bill source=ADMIN|WITHDRAW         │
+│                                                                             │
+│                       套餐 (v19；仅用户档位，后台调账不绑)                    │
+│                                                                             │
+│   ┌─────────────────────┐  package_id(RECHARGE)  ┌──────────────┐          │
+│   │sys_recharge_package │ ······················►│ sys_pay_bill │          │
+│   └─────────────────────┘  ADMIN 时必须 0        └──────────────┘          │
+│   ┌─────────────────────┐  package_id(WITHDRAW)  ┌──────────────────┐      │
+│   │sys_withdraw_package │ ······················►│sys_withdraw_bill │      │
+│   └─────────────────────┘  ADMIN 时必须 0        └──────────────────┘      │
 │                                                                             │
 │                          I18n                                               │
 │                                                                             │
@@ -134,6 +146,10 @@
 | `sys_user`             | `sys_data_permission`     | `subject_id`（当 `subject_type='USER'`）      | **软关联**                           |
 | `sys_user`             | `sys_blacklist`           | `target_value`（当 `target_type='SYS_USER'`） | **软关联**（字符串 id）              |
 | `sys_user`             | `sys_material`            | `target_id`（当 `target_type='SYS_USER'`）    | **软关联**（v14+；`GENERAL` 时为 0） |
+| `sys_pay_method`       | `sys_pay_bill`            | `pay_method_id`                               | **软关联**（v18+；`0`=未关联）       |
+| `sys_pay_method`       | `sys_withdraw_bill`       | `pay_method_id`                               | **软关联**（v18+；`0`=未关联）       |
+| `sys_recharge_package` | `sys_pay_bill`            | `package_id`                                  | **软关联**（v19+；`ADMIN` 必须 0）   |
+| `sys_withdraw_package` | `sys_withdraw_bill`       | `package_id`                                  | **软关联**（v19+；`ADMIN` 必须 0）   |
 
 ### 2.3 1:1 / 0..1
 
@@ -145,13 +161,18 @@
 
 | 字段                        | 表                          | 类型                 | 软引用目标                     | 原因                                                          |
 | --------------------------- | --------------------------- | -------------------- | ------------------------------ | ------------------------------------------------------------- |
-| `created_by` / `updated_by` | 所有 13 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）    | 用户删除时不应级联清空历史                                    |
+| `created_by` / `updated_by` | 所有 15 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）    | 用户删除时不应级联清空历史                                    |
 | `language_code`             | `sys_user`                  | `NULL`               | `i18n_locale.code`             | i18n_locale.code 软引用                                       |
 | `subject_id`                | `sys_data_permission`       | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id`  | 多态主体（`ANY_*` 时为 0）                                    |
 | `target_value`              | `sys_blacklist`             | `VARCHAR(128)`       | `sys_user.id`（仅 `SYS_USER`） | 多态 target；IP/DEVICE 无实体引用（v11+；v15 改名）           |
 | `target_id`                 | `sys_material`              | `NOT NULL DEFAULT 0` | `sys_user.id`（仅 `SYS_USER`） | 多态归属；`GENERAL` 时为 0；`DEPT` 预留（v14+）               |
 | `config_id`                 | `temporal_task_execution`   | `NULL`               | `temporal_task_config.id`      | 执行可能先于配置存在                                          |
 | `sys_user_id`               | `api_log` / `sys_login_log` | `NULL`               | `sys_user.id`                  | 日志保留用户删除前痕迹（v5+；`operation_log` 仍为 `user_id`） |
+| `pay_method_id`             | 两张账单表                  | `NOT NULL DEFAULT 0` | `sys_pay_method.id`            | 账单保留方式删除后的历史；另有 `channel` 快照（v18+）         |
+| `package_id`                | `sys_pay_bill`              | `NOT NULL DEFAULT 0` | `sys_recharge_package.id`      | `ADMIN` 必须 0（v19+）                                        |
+| `package_id`                | `sys_withdraw_bill`         | `NOT NULL DEFAULT 0` | `sys_withdraw_package.id`      | `ADMIN` 必须 0（v19+）                                        |
+| `user_id`                   | 两张账单表                  | `NOT NULL DEFAULT 0` | 业务用户（无实体表）           | 本波不绑定用户表（v18+）                                      |
+| `reviewed_by`               | `sys_withdraw_bill`         | `NOT NULL DEFAULT 0` | `sys_user.id`                  | 0=未审/系统（v18+）                                           |
 
 ---
 
@@ -321,7 +342,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 
 ## 10. 软删时间戳 `deleted_at` 模式
 
-所有核心表（13 张，含 v11 `sys_blacklist`、v13+ `sys_material`、v17 `sys_pay_method`）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
+所有核心表（15 张，含 v11 `sys_blacklist`、v13+ `sys_material`、v17 `sys_pay_method`、v19 两张套餐）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删。账单表（v18 `sys_pay_bill` / `sys_withdraw_bill`）**无** `deleted_at`，关单走 `status`。
 
 - `0` = 活跃行
 - `> 0` = 软删时刻（毫秒 Unix 时间戳）
@@ -333,7 +354,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 - 复活：`UPDATE ... SET deleted_at = 0`（仅限授权场景）
 - 重建同名记录：直接 `INSERT` 即可，无需硬删旧行
 
-**软删感知唯一**：11 张表的 UNIQUE 全部把 `deleted_at` 纳入键（v17 增 `sys_pay_method.code`）：
+**软删感知唯一**：13 张表的 UNIQUE 全部把 `deleted_at` 纳入键（v19 增两张套餐 `code`；账单 `bill_no` 为硬 UNIQUE，不在此列）：
 
 - `UNIQUE(col, deleted_at)` —— 0 与非 0 视为不同值，活跃行与软删行可共存
 

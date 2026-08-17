@@ -1,12 +1,13 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER + v16 content + v17 sys_pay_method)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER + v16 content + v17 sys_pay_method + v18 bills + v19 packages)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_unicode_ci
 -- 引擎:       InnoDB
 -- 版本要求:   MySQL 5.7.8+ 及兼容发行版（prod 不用 utf8mb4_0900_ai_ci；该 collation 仅官方 MySQL 8.0+）
--- 表数:       25 张
---             核心 13（含 sys_data_permission / sys_blacklist / sys_material / sys_pay_method）
+-- 表数:       29 张
+--             核心 15（含 sys_data_permission / sys_blacklist / sys_material / sys_pay_method / sys_recharge_package / sys_withdraw_package）
+--             账单 2（sys_pay_bill / sys_withdraw_bill；无 is_enabled / deleted_at / created_by / updated_by）
 --             关联 4（sys_user_role / sys_role_api / sys_role_menu / sys_menu_api）
 --             记录 4（3 张日志 + temporal_task_execution）
 --             归档 3（api_log_archive / sys_login_log_archive / operation_log_archive）
@@ -84,6 +85,16 @@
 --   1. 新增核心表 sys_pay_method：支付/提现方式配置
 --        scene=PAY/WITHDRAW/BOTH；channel=ALIPAY/WECHAT/BANK/CRYPTO/OTHER
 --        通道专属进 metadata JSON（与 sys_material.metadata 同名约定）；UNIQUE(code, deleted_at)
+-- v18 (sys_pay_bill / sys_withdraw_bill):
+--   1. 新增账单表 sys_pay_bill：支付账单；UNIQUE(bill_no)（非软删）
+--   2. 新增账单表 sys_withdraw_bill：提现账单；UNIQUE(bill_no)（非软删）
+--        金额 DECIMAL(18,2)；pay_method_id / user_id 软引用不建 FK；通道快照落列；其余进 metadata
+--        无 is_enabled / deleted_at / created_by / updated_by；生命周期走 status
+-- v19 (套餐 + 账单来源):
+--   1. 新增核心表 sys_recharge_package / sys_withdraw_package：充值/提现套餐；UNIQUE(code, deleted_at)
+--   2. 账单加 source + package_id
+--        source=ADMIN 后台调账(package_id 必须为 0)
+--        source=RECHARGE/WITHDRAW 用户套餐单(package_id 软引用对应套餐;0=未选套餐)
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -607,6 +618,162 @@ CREATE TABLE sys_pay_method (
 
 
 -- ============================================================
+-- Section 16c2: 充值套餐 — sys_recharge_package (v19)
+-- 用户充值档位; 后台调账不走本表
+-- pay_amount=实付; grant_amount=到账; bonus_amount=赠送(展示/对账;等式由应用层维护)
+-- ============================================================
+CREATE TABLE sys_recharge_package (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    code            VARCHAR(32)     NOT NULL  COMMENT '套餐编码(如 recharge_100);软删感知唯一',
+    name            VARCHAR(64)     NOT NULL  COMMENT '展示名',
+    pay_amount      DECIMAL(18,2)   NOT NULL  COMMENT '用户实付',
+    grant_amount    DECIMAL(18,2)   NOT NULL  COMMENT '到账金额',
+    bonus_amount    DECIMAL(18,2)   NOT NULL DEFAULT 0.00  COMMENT '赠送金额(一般为 grant_amount-pay_amount)',
+    currency        VARCHAR(16)     NOT NULL DEFAULT 'CNY'  COMMENT '币种',
+    icon            VARCHAR(255)    NOT NULL DEFAULT ''  COMMENT '展示图标(可空串)',
+    sort            INT             NOT NULL DEFAULT 0  COMMENT '排序(升序)',
+    metadata        JSON            DEFAULT NULL
+                                    COMMENT '扩展: tag/first_only/limit_per_user 等;无则为 NULL',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
+    is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用',
+    deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '创建人(0=系统操作;非0=软引用 sys_user.id)',
+    updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_sys_recharge_package_code (code, deleted_at),
+    INDEX idx_sys_recharge_package_is_enabled (is_enabled),
+    INDEX idx_sys_recharge_package_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='充值套餐(仅用户充值档位;后台调账不走本表)';
+
+
+-- ============================================================
+-- Section 16c3: 提现套餐 — sys_withdraw_package (v19)
+-- 用户提现档位; 后台调账/人工出金不走本表
+-- amount=申请额; fee_amount=手续费; actual_amount=到账(等式由应用层维护)
+-- ============================================================
+CREATE TABLE sys_withdraw_package (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    code            VARCHAR(32)     NOT NULL  COMMENT '套餐编码(如 withdraw_100);软删感知唯一',
+    name            VARCHAR(64)     NOT NULL  COMMENT '展示名',
+    amount          DECIMAL(18,2)   NOT NULL  COMMENT '提现申请额',
+    fee_amount      DECIMAL(18,2)   NOT NULL DEFAULT 0.00  COMMENT '手续费',
+    actual_amount   DECIMAL(18,2)   NOT NULL  COMMENT '实际到账(一般为 amount-fee_amount)',
+    currency        VARCHAR(16)     NOT NULL DEFAULT 'CNY'  COMMENT '币种',
+    icon            VARCHAR(255)    NOT NULL DEFAULT ''  COMMENT '展示图标(可空串)',
+    sort            INT             NOT NULL DEFAULT 0  COMMENT '排序(升序)',
+    metadata        JSON            DEFAULT NULL
+                                    COMMENT '扩展: min_vip/daily_limit 等;无则为 NULL',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
+    is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用',
+    deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '创建人(0=系统操作;非0=软引用 sys_user.id)',
+    updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_sys_withdraw_package_code (code, deleted_at),
+    INDEX idx_sys_withdraw_package_is_enabled (is_enabled),
+    INDEX idx_sys_withdraw_package_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='提现套餐(仅用户提现档位;后台调账不走本表)';
+
+
+-- ============================================================
+-- Section 16d: 支付账单 — sys_pay_bill (v18; v19 加 source/package_id)
+-- 一笔支付/充值一单; bill_no 为自然键(硬 UNIQUE,无软删)
+-- 非核心表: 无 is_enabled / deleted_at / created_by / updated_by
+-- 生命周期走 status; 关单/失败不物理删; 通道回包/扩展进 metadata
+-- source=ADMIN 后台调账(package_id 必须 0); source=RECHARGE 用户充值(package_id→sys_recharge_package)
+-- ============================================================
+CREATE TABLE sys_pay_bill (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    bill_no         VARCHAR(64)     NOT NULL  COMMENT '账单号(应用层生成;全局唯一)',
+    source          VARCHAR(16)     NOT NULL
+                                    COMMENT '来源: ADMIN=后台调账 / RECHARGE=用户充值套餐',
+    user_id         BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '业务用户 ID(软引用;本波不绑定具体用户表;0=未知)',
+    pay_method_id   BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '支付方式(软引用 sys_pay_method.id;0=未关联;ADMIN 常为 0)',
+    package_id      BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '充值套餐(软引用 sys_recharge_package.id;ADMIN 必须为 0;RECHARGE 选套餐时>0)',
+    channel         VARCHAR(32)     NOT NULL
+                                    COMMENT '下单时通道快照: ALIPAY / WECHAT / BANK / CRYPTO / OTHER;ADMIN 可用 OTHER',
+    title           VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '账单标题/商品摘要',
+    amount          DECIMAL(18,2)   NOT NULL  COMMENT '应付/调账金额(精确小数;禁止 FLOAT)',
+    currency        VARCHAR(16)     NOT NULL DEFAULT 'CNY'  COMMENT '币种(ISO 4217 或约定码)',
+    status          VARCHAR(32)     NOT NULL DEFAULT 'PENDING'
+                                    COMMENT 'PENDING / PAYING / SUCCESS / FAILED / CLOSED / REFUNDED',
+    third_trade_no  VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '第三方交易号(回调对账;可空串;ADMIN 常为空串)',
+    paid_at         TIMESTAMP       NULL DEFAULT NULL  COMMENT '支付成功时刻;NULL=未成功',
+    expired_at      TIMESTAMP       NULL DEFAULT NULL  COMMENT '支付过期时刻;NULL=未设过期',
+    metadata        JSON            DEFAULT NULL
+                                    COMMENT '回包与扩展: method_code/package_code/grant_amount/notify_payload 等;无则为 NULL',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_sys_pay_bill_bill_no (bill_no),
+    INDEX idx_sys_pay_bill_user_id_created_at (user_id, created_at),
+    INDEX idx_sys_pay_bill_source_status_created_at (source, status, created_at),
+    INDEX idx_sys_pay_bill_package_id (package_id),
+    INDEX idx_sys_pay_bill_third_trade_no (third_trade_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='支付账单(ADMIN 调账 vs RECHARGE 套餐;无软删;运行时接入本波未实现)';
+
+
+-- ============================================================
+-- Section 16e: 提现账单 — sys_withdraw_bill (v18; v19 加 source/package_id)
+-- 一笔提现/出款一单; bill_no 为自然键(硬 UNIQUE,无软删)
+-- 非核心表: 无 is_enabled / deleted_at / created_by / updated_by
+-- source=ADMIN 后台出金(package_id 必须 0); source=WITHDRAW 用户提现(package_id→sys_withdraw_package)
+-- 收款户名/账号落列便于列表; 审核人软引用 sys_user; 其余进 metadata
+-- ============================================================
+CREATE TABLE sys_withdraw_bill (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    bill_no         VARCHAR(64)     NOT NULL  COMMENT '账单号(应用层生成;全局唯一)',
+    source          VARCHAR(16)     NOT NULL
+                                    COMMENT '来源: ADMIN=后台出金 / WITHDRAW=用户提现套餐',
+    user_id         BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '业务用户 ID(软引用;本波不绑定具体用户表;0=未知)',
+    pay_method_id   BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '提现方式(软引用 sys_pay_method.id;0=未关联;ADMIN 常为 0)',
+    package_id      BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '提现套餐(软引用 sys_withdraw_package.id;ADMIN 必须为 0;WITHDRAW 选套餐时>0)',
+    channel         VARCHAR(32)     NOT NULL
+                                    COMMENT '申请时通道快照: ALIPAY / WECHAT / BANK / CRYPTO / OTHER;ADMIN 可用 OTHER',
+    amount          DECIMAL(18,2)   NOT NULL  COMMENT '申请金额(精确小数;禁止 FLOAT)',
+    fee_amount      DECIMAL(18,2)   NOT NULL DEFAULT 0.00  COMMENT '手续费',
+    actual_amount   DECIMAL(18,2)   NOT NULL  COMMENT '实际到账(一般为 amount-fee_amount)',
+    currency        VARCHAR(16)     NOT NULL DEFAULT 'CNY'  COMMENT '币种(ISO 4217 或约定码)',
+    status          VARCHAR(32)     NOT NULL DEFAULT 'PENDING'
+                                    COMMENT 'PENDING / APPROVED / REJECTED / PROCESSING / SUCCESS / FAILED / CANCELLED',
+    account_name    VARCHAR(64)     NOT NULL DEFAULT ''  COMMENT '收款户名',
+    account_no      VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '收款账号(卡号/钱包地址等)',
+    third_trade_no  VARCHAR(128)    NOT NULL DEFAULT ''  COMMENT '第三方出款单号(可空串)',
+    reject_reason   VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '拒绝原因(对用户可见;可空串)',
+    reviewed_by     BIGINT UNSIGNED NOT NULL DEFAULT 0
+                                    COMMENT '审核人(0=未审/系统;非0=软引用 sys_user.id)',
+    reviewed_at     TIMESTAMP       NULL DEFAULT NULL  COMMENT '审核时刻;NULL=未审',
+    finished_at     TIMESTAMP       NULL DEFAULT NULL  COMMENT '出款终态时刻(成功/失败);NULL=未结束',
+    metadata        JSON            DEFAULT NULL
+                                    COMMENT '扩展: method_code/bank_name/branch/notify_payload 等;无则为 NULL',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_sys_withdraw_bill_bill_no (bill_no),
+    INDEX idx_sys_withdraw_bill_user_id_created_at (user_id, created_at),
+    INDEX idx_sys_withdraw_bill_source_status_created_at (source, status, created_at),
+    INDEX idx_sys_withdraw_bill_package_id (package_id),
+    INDEX idx_sys_withdraw_bill_third_trade_no (third_trade_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='提现账单(ADMIN 出金 vs WITHDRAW 套餐;无软删;审核与出款本波未实现)';
+
+
+-- ============================================================
 -- Section 17: API 调用日志 — api_log (v5: 字段扩充对齐 PG sys_api_log)
 -- request_id 全链路串联 api_log ↔ operation_log ↔ 链路追踪
 -- 新增: 客户端指纹 / UA 解析 / IP 解析 / 变更前后 / 头信息
@@ -901,5 +1068,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER + v16 content + v17 sys_pay_method)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER + v16 content + v17 sys_pay_method + v18 bills + v19 packages)
 -- ============================================================
