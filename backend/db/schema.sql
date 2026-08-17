@@ -1,12 +1,12 @@
 -- ============================================================
--- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER + v16 content)
+-- 后台管理系统 MySQL Schema  (v5 基线 + v11 blacklist + v12 sys_user.account_expires_at + v13 sys_material + v14 target + v15 SYS_USER + v16 content + v17 sys_pay_method)
 -- 文件:       backend/db/schema.sql
 -- 数据库:     <admin_db> （由各 admin 后端自行创建与配置）
 -- 字符集:     utf8mb4 / utf8mb4_unicode_ci
 -- 引擎:       InnoDB
 -- 版本要求:   MySQL 5.7.8+ 及兼容发行版（prod 不用 utf8mb4_0900_ai_ci；该 collation 仅官方 MySQL 8.0+）
--- 表数:       24 张
---             核心 12（含 sys_data_permission / sys_blacklist / sys_material）
+-- 表数:       25 张
+--             核心 13（含 sys_data_permission / sys_blacklist / sys_material / sys_pay_method）
 --             关联 4（sys_user_role / sys_role_api / sys_role_menu / sys_menu_api）
 --             记录 4（3 张日志 + temporal_task_execution）
 --             归档 3（api_log_archive / sys_login_log_archive / operation_log_archive）
@@ -80,6 +80,10 @@
 -- v16 (仅 sys_material):
 --   1. sys_material.storage_type：LOCAL / OSS / COS / S3 → LOCAL / S3 / DB
 --   2. sys_material: 加 content TEXT（DB=正文/文件体文本；LOCAL/S3=对象地址）
+-- v17 (仅 sys_pay_method):
+--   1. 新增核心表 sys_pay_method：支付/提现方式配置
+--        scene=PAY/WITHDRAW/BOTH；channel=ALIPAY/WECHAT/BANK/CRYPTO/OTHER
+--        通道专属进 metadata JSON（与 sys_material.metadata 同名约定）；UNIQUE(code, deleted_at)
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -567,6 +571,42 @@ CREATE TABLE sys_material (
 
 
 -- ============================================================
+-- Section 16c: 支付方式配置 — sys_pay_method (v17)
+-- 一张表覆盖支付与提现; scene 区分方向; channel 区分通道类型
+-- 实例以 code 为自然键(软删感知 UNIQUE); 同通道可多实例(alipay_app / alipay_backup)
+-- 通道专属(商户号/密钥引用/回调/费率/限额/币种)一律进 metadata; 不按通道拆列
+-- 密钥只存 secret_ref 或应用层密文,不在约定里鼓励明文
+-- ============================================================
+CREATE TABLE sys_pay_method (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    code            VARCHAR(32)     NOT NULL  COMMENT '实例编码(如 alipay_app / wechat_native / bank_card);软删感知唯一',
+    name            VARCHAR(64)     NOT NULL  COMMENT '展示名',
+    scene           VARCHAR(16)     NOT NULL DEFAULT 'BOTH'
+                                    COMMENT '场景: PAY=仅支付 / WITHDRAW=仅提现 / BOTH=两者',
+    channel         VARCHAR(32)     NOT NULL
+                                    COMMENT '通道类型: ALIPAY / WECHAT / BANK / CRYPTO / OTHER',
+    icon            VARCHAR(255)    NOT NULL DEFAULT ''
+                                    COMMENT '展示图标(URL 或对象地址;可空串)',
+    metadata        JSON            DEFAULT NULL
+                                    COMMENT '通道扩展: merchant_id/app_id/secret_ref/notify_url/return_url/fee_rate/min_amount/max_amount/daily_limit/currency 等;无则为 NULL',
+    sort            INT             NOT NULL DEFAULT 0  COMMENT '排序(升序)',
+    remark          VARCHAR(512)    NOT NULL DEFAULT ''  COMMENT '管理员备注',
+    is_enabled      TINYINT(1)      NOT NULL DEFAULT 1  COMMENT '启用/禁用',
+    deleted_at      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '软删时间戳(毫秒);0=未删;非0=删除时刻',
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '创建人(0=系统操作;非0=软引用 sys_user.id)',
+    updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '最后修改人(0=系统操作;非0=软引用 sys_user.id)',
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_sys_pay_method_code (code, deleted_at),
+    INDEX idx_sys_pay_method_channel_scene (channel, scene),
+    INDEX idx_sys_pay_method_is_enabled (is_enabled),
+    INDEX idx_sys_pay_method_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='支付/提现方式配置(通道差异进 metadata;运行时接入本波未实现)';
+
+
+-- ============================================================
 -- Section 17: API 调用日志 — api_log (v5: 字段扩充对齐 PG sys_api_log)
 -- request_id 全链路串联 api_log ↔ operation_log ↔ 链路追踪
 -- 新增: 客户端指纹 / UA 解析 / IP 解析 / 变更前后 / 头信息
@@ -861,5 +901,5 @@ ALTER TABLE sys_role
 
 
 -- ============================================================
--- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER + v16 content)
+-- End of schema.sql (v5 基线 + dict_data v8/v9/v10 + sys_blacklist v11 + sys_user.account_expires_at v12 + sys_material v13 + v14 target + v15 SYS_USER + v16 content + v17 sys_pay_method)
 -- ============================================================

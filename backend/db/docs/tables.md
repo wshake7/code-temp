@@ -1,8 +1,8 @@
-# 表字段速查 (v16)
+# 表字段速查 (v17)
 
 > 本文件是 `backend/db/schema.sql` 的**逐表字段速查**。本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 >
-> 共 24 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16。
+> 共 25 张表，按模块分组。对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16 + `sys_pay_method` v17。
 
 ---
 
@@ -374,6 +374,36 @@
 **外键**：无（多态归属，软引用）
 
 > `content`：`DB` 存正文/文件体文本；`LOCAL`/`S3` 存对象地址（路径或 URL）。`metadata` 建议键：`mime_type` / `file_ext` / `original_name` / `storage_key` / `url` / `size_bytes` / `width` / `height` / `duration_ms` / `checksum`。无业务 UNIQUE。`GENERAL` 时 `target_id=0`。详见 `db-conventions.md` §19。
+
+---
+
+## 6d. 支付方式配置（v17）
+
+### 6d.1 `sys_pay_method` — 支付/提现方式
+
+| 字段         | 类型            | 必填 | 默认           | 说明                                              |
+| ------------ | --------------- | ---- | -------------- | ------------------------------------------------- |
+| `id`         | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                              |
+| `code`       | VARCHAR(32)     | 是   | -              | 实例编码（如 `alipay_app`）；软删感知唯一         |
+| `name`       | VARCHAR(64)     | 是   | -              | 展示名                                            |
+| `scene`      | VARCHAR(16)     | 是   | `'BOTH'`       | `PAY` / `WITHDRAW` / `BOTH`                       |
+| `channel`    | VARCHAR(32)     | 是   | -              | `ALIPAY` / `WECHAT` / `BANK` / `CRYPTO` / `OTHER` |
+| `icon`       | VARCHAR(255)    | 是   | `''`           | 展示图标（URL 或对象地址）                        |
+| `metadata`   | JSON            | 否   | NULL           | 通道扩展；建议键见下                              |
+| `sort`       | INT             | 是   | 0              | 排序（升序）                                      |
+| `remark`     | VARCHAR(512)    | 是   | `''`           | 管理员备注                                        |
+| `is_enabled` | TINYINT(1)      | 是   | 1              | 启用/禁用                                         |
+| `deleted_at` | BIGINT UNSIGNED | 是   | 0              | 软删时间戳（毫秒）                                |
+| `created_at` | TIMESTAMP       | 是   | NOW()          |                                                   |
+| `updated_at` | TIMESTAMP       | 是   | NOW()          |                                                   |
+| `created_by` | BIGINT UNSIGNED | 是   | 0              | 0=系统操作；非0=软引用 `sys_user.id`              |
+| `updated_by` | BIGINT UNSIGNED | 是   | 0              |                                                   |
+
+**索引**：`PRIMARY(id)` / `UNIQUE(code, deleted_at)` / `idx_channel_scene(channel, scene)` / `idx_is_enabled` / `idx_deleted_at`
+
+**外键**：无
+
+> `metadata` 建议键：`merchant_id` / `app_id` / `secret_ref` / `notify_url` / `return_url` / `fee_rate` / `min_amount` / `max_amount` / `daily_limit` / `currency`。密钥只存引用或密文。详见 `db-conventions.md` §20。
 
 ---
 

@@ -1,8 +1,8 @@
-# 后台管理 DB 约定 (v16)
+# 后台管理 DB 约定 (v17)
 
 > 本文件是 `backend/db/schema.sql` 的**配套约定文档**。开发者写 admin 后端代码（model / repository / service）时请遵守。
 >
-> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
+> 对齐 schema 当前态：v5 基线 + `dict_data` v8/v9/v10 + `sys_blacklist` v11 + `sys_user.account_expires_at` v12 + `sys_material` v13 + `target_type`/`target_id` v14 + `sys_blacklist.target_type` `SYS_USER` v15 + `sys_material.storage_type`/`content` v16 + `sys_pay_method` v17。本文件**不**修改 `.trellis/spec/backend/database-guidelines.md`——那是 `00-bootstrap-guidelines` 任务的职责。
 
 ---
 
@@ -47,7 +47,7 @@
 
 ## 4. 审计 + 启停 + 软删字段（核心表）
 
-每张**核心表**（共 12 张）必须包含以下 **7 个字段**，**顺序固定**：
+每张**核心表**（共 13 张）必须包含以下 **7 个字段**，**顺序固定**：
 
 ```sql
 remark          VARCHAR(512)    NOT NULL DEFAULT ''                -- 管理员备注
@@ -91,12 +91,12 @@ updated_by      BIGINT UNSIGNED NOT NULL DEFAULT 0                  -- 0=系统�
 
 ### 4.4 不同表的覆盖
 
-| 表类                                                                                                                                                                                                                  | 字段                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 核心表 12 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist` / `sys_material`） | 上述 7 字段全有                                                                                                                  |
-| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                                    | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
-| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                                 | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
-| 归档表 3 张（`*_archive`）                                                                                                                                                                                            | 镜像热表（多 `archived_at`）                                                                                                     |
+| 表类                                                                                                                                                                                                                                     | 字段                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 核心表 13 张（`sys_user` / `sys_role` / `sys_api` / `sys_menu` / `i18n_locale` / `i18n_translation` / `dict_type` / `dict_data` / `temporal_task_config` / `sys_data_permission` / `sys_blacklist` / `sys_material` / `sys_pay_method`） | 上述 7 字段全有                                                                                                                  |
+| 关联表 4 张（`sys_user_role` / `sys_role_api` / `sys_role_menu` / `sys_menu_api`）                                                                                                                                                       | **只**加 `created_at`（`sys_menu_api` 额外加 `created_by`，其余关联表也不加 `created_by` / `updated_by`——"解绑"= `DELETE` 整行） |
+| 记录型表 4 张（3 张日志 + `temporal_task_execution`）                                                                                                                                                                                    | **只**加 `created_at`——只增不改，写入人即操作人，已被日志主体（`user_id` / `username`）记录                                      |
+| 归档表 3 张（`*_archive`）                                                                                                                                                                                                               | 镜像热表（多 `archived_at`）                                                                                                     |
 
 ---
 
@@ -138,6 +138,7 @@ UNIQUE KEY uniq_sys_user_username (username, deleted_at)
 - `temporal_task_config.code`
 - `sys_data_permission.(subject_type, subject_id, resource_table, action_key)`
 - `sys_blacklist.(target_type, target_value, scope, starts_at, expires_at)`（v11+；弱唯一，见 §18；允许多条不同时间窗）
+- `sys_pay_method.code`（v17+）
 
 ---
 
@@ -247,6 +248,8 @@ ALTER TABLE sys_role
 - 素材类型（`sys_material.type`，v13+）：`IMAGE` / `VIDEO` / `AUDIO` / `DOCUMENT` / `OTHER`
 - 素材存储（`sys_material.storage_type`，v13+；v16 收窄）：`LOCAL` / `S3` / `DB`
 - 素材归属（`sys_material.target_type`，v14+）：`GENERAL` / `SYS_USER` / `DEPT`
+- 支付方式场景（`sys_pay_method.scene`，v17+）：`PAY` / `WITHDRAW` / `BOTH`
+- 支付通道类型（`sys_pay_method.channel`，v17+）：`ALIPAY` / `WECHAT` / `BANK` / `CRYPTO` / `OTHER`
 
 ---
 
@@ -261,6 +264,7 @@ ALTER TABLE sys_role
 - `sys_data_permission.action` / `scope_values` / `conditions`
 - `sys_menu.metadata`（前端扩展字段）
 - `sys_material.metadata`（文件细节与类型扩展；无则为 `NULL`；v13+）
+- `sys_pay_method.metadata`（通道专属配置；无则为 `NULL`；v17+）
 
 **不**用 JSON：
 
@@ -617,7 +621,41 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 
 ---
 
-## 20. 不在本任务范围
+## 20. 支付方式配置 (`sys_pay_method`，v17+)
+
+### 20.1 一张表、支付与提现共用
+
+- `scene` 区分资金方向：`PAY`（仅收款/充值）/ `WITHDRAW`（仅出款/提现）/ `BOTH`（两者）
+- `channel` 区分通道类型：`ALIPAY` / `WECHAT` / `BANK` / `CRYPTO` / `OTHER`
+- `code` 是**实例**编码，不是通道类型：同一 `channel` 可有多条活跃行（如 `alipay_app` / `alipay_backup`）
+- 列上只留筛选/展示字段：`code` / `name` / `scene` / `channel` / `icon` / `sort` + 核心 7 字段
+- 通道专属一律进 `metadata` JSON，**不**按通道拆列、**不**另起 `config` / `extra` 列（与 `sys_material.metadata` 同名约定）
+
+### 20.2 `metadata` 建议键
+
+- 接入：`merchant_id` / `app_id` / `secret_ref` / `notify_url` / `return_url`
+- 限额与费用：`fee_rate` / `min_amount` / `max_amount` / `daily_limit` / `currency`
+- 其余通道专属键可同对象追加
+- **密钥**：只存 `secret_ref`（指向密钥管理）或应用层密文；**不要**把第三方私钥/API Secret 明文写入 `metadata`
+
+### 20.3 软删感知唯一
+
+```sql
+UNIQUE (code, deleted_at)
+```
+
+- 活跃行（`deleted_at=0`）同 `code` 至多一条
+- 软删后可直接 `INSERT` 同 `code` 重建
+- **不**对 `(channel, scene)` 建 UNIQUE：同通道多实例、同实例 `BOTH` 是合法形态
+
+### 20.4 本波边界
+
+- 已交付：`schema.sql` + 本约定 + `tables.md` / `er.md`
+- **未**交付：Flyway、Java entity / CRUD、菜单与 API seed、支付/提现订单与流水、真实通道 SDK、密钥托管
+
+---
+
+## 21. 不在本任务范围
 
 - ORM model 代码（Go struct / Java entity）
 - 迁移工具集成（仅交付独立 .sql；`schema.sql` + `schema_data.sql` 可独立执行）
@@ -627,5 +665,6 @@ UNIQUE (target_type, target_value, scope, starts_at, expires_at, deleted_at)
 - 数据库 Docker 编排
 - `sys_blacklist` 运行时拦截（见 §18.6；管理 CRUD 与 Flyway 由 java-admin 交付）
 - `sys_material` 的 Flyway / ORM / 上传与业务绑定（见 §19.4）
+- `sys_pay_method` 的 Flyway / ORM / 管理 CRUD / 真实通道接入（见 §20.4）
 
 以上均**不**在 `backend/db/` 内以 ORM / 迁移框架形式交付。

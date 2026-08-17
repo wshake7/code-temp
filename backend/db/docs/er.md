@@ -1,4 +1,4 @@
-# ER 关系与基数 (v16)
+# ER 关系与基数 (v17)
 
 > 本文件是 `backend/db/schema.sql` 的**关系总览**。本文件**不**解释字段——字段速查见 `tables.md`；本文件**不**解释为什么这样设计——设计动机见 `db-conventions.md`。
 
@@ -54,6 +54,14 @@
 │   │ sys_material   │  type=IMAGE/VIDEO/AUDIO/DOCUMENT/OTHER                 │
 │   │ name+type+存储  │  storage=LOCAL/S3/DB；细节进 metadata                 │
 │   │ target_type/id │  GENERAL/0；SYS_USER/DEPT 软引用预留                   │
+│   └────────────────┘                                                        │
+│                                                                             │
+│                       支付方式 (v17)                                         │
+│                                                                             │
+│   ┌────────────────┐  无 FK；通道差异进 metadata                            │
+│   │ sys_pay_method │  scene=PAY/WITHDRAW/BOTH                               │
+│   │ code+channel   │  channel=ALIPAY/WECHAT/BANK/CRYPTO/OTHER               │
+│   │ scene+metadata │  UNIQUE(code, deleted_at)；同通道可多实例              │
 │   └────────────────┘                                                        │
 │                                                                             │
 │                          I18n                                               │
@@ -137,7 +145,7 @@
 
 | 字段                        | 表                          | 类型                 | 软引用目标                     | 原因                                                          |
 | --------------------------- | --------------------------- | -------------------- | ------------------------------ | ------------------------------------------------------------- |
-| `created_by` / `updated_by` | 所有 12 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）    | 用户删除时不应级联清空历史                                    |
+| `created_by` / `updated_by` | 所有 13 张核心表            | `NOT NULL DEFAULT 0` | `sys_user.id`（0=系统操作）    | 用户删除时不应级联清空历史                                    |
 | `language_code`             | `sys_user`                  | `NULL`               | `i18n_locale.code`             | i18n_locale.code 软引用                                       |
 | `subject_id`                | `sys_data_permission`       | `NOT NULL DEFAULT 0` | `sys_user.id` / `sys_role.id`  | 多态主体（`ANY_*` 时为 0）                                    |
 | `target_value`              | `sys_blacklist`             | `VARCHAR(128)`       | `sys_user.id`（仅 `SYS_USER`） | 多态 target；IP/DEVICE 无实体引用（v11+；v15 改名）           |
@@ -313,7 +321,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 
 ## 10. 软删时间戳 `deleted_at` 模式
 
-所有核心表（12 张，含 v11 `sys_blacklist`、v13+ `sys_material`）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
+所有核心表（13 张，含 v11 `sys_blacklist`、v13+ `sys_material`、v17 `sys_pay_method`）通过 `deleted_at BIGINT UNSIGNED NOT NULL DEFAULT 0` 实现软删：
 
 - `0` = 活跃行
 - `> 0` = 软删时刻（毫秒 Unix 时间戳）
@@ -325,7 +333,7 @@ v4+ 起 `sys_menu` 增加 `tree_path VARCHAR(1024)` 字段，存全路径字符�
 - 复活：`UPDATE ... SET deleted_at = 0`（仅限授权场景）
 - 重建同名记录：直接 `INSERT` 即可，无需硬删旧行
 
-**软删感知唯一**：10 张表的 UNIQUE 全部把 `deleted_at` 纳入键：
+**软删感知唯一**：11 张表的 UNIQUE 全部把 `deleted_at` 纳入键（v17 增 `sys_pay_method.code`）：
 
 - `UNIQUE(col, deleted_at)` —— 0 与非 0 视为不同值，活跃行与软删行可共存
 
