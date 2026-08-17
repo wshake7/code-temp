@@ -107,6 +107,21 @@ altcha:
 
 # 请求安全中间件：Timestamp / Encrypt / Nonce / Sign / Language 独立开关；dev 默认全开
 app:
+  # 对象存储：local 默认；s3 对接 compose MinIO（127.0.0.1:4900）
+  storage:
+    type: ${STORAGE_TYPE:local}
+    local:
+      base-path: ${STORAGE_LOCAL_BASE_PATH:./data/storage}
+      public-base-url: ${STORAGE_LOCAL_PUBLIC_BASE_URL:}
+    s3:
+      endpoint: ${STORAGE_S3_ENDPOINT:http://127.0.0.1:4900}
+      region: ${STORAGE_S3_REGION:us-east-1}
+      bucket: ${STORAGE_S3_BUCKET:java-admin}
+      access-key: ${STORAGE_S3_ACCESS_KEY:}
+      secret-key: ${STORAGE_S3_SECRET_KEY:}
+      public-base-url: ${STORAGE_S3_PUBLIC_BASE_URL:}
+      path-style: ${STORAGE_S3_PATH_STYLE:true}
+      presign-expire-seconds: ${STORAGE_S3_PRESIGN_EXPIRE_SECONDS:900}
   # 平台墙钟（仅 Asia/Shanghai，见 ADR 0004）
   time:
     zone: Asia/Shanghai
