@@ -1,5 +1,6 @@
 package com.wshake.service.user;
 
+import com.wshake.common.constant.PageLimits;
 import com.wshake.service.entity.SysUser;
 import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
@@ -19,8 +20,8 @@ public final class UserManageModels {
 
         public static UserListQuery of(
                 Integer page, Integer pageSize, String username, String nickname, Integer status, Long roleId) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             return new UserListQuery(pageNo, size, trimToNull(username), trimToNull(nickname), status, roleId);
         }
 

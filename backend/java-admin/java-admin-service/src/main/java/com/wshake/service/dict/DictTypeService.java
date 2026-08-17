@@ -1,6 +1,7 @@
 package com.wshake.service.dict;
 
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.common.constant.BatchActions;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
@@ -17,7 +18,6 @@ import io.github.linpeilie.Converter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -131,8 +131,8 @@ public class DictTypeService {
 
     public DictBatchResult batch(DictBatchCommand cmd) {
         String action = cmd.action() == null ? "" : cmd.action().trim();
-        if (!Set.of("enable", "disable", "delete").contains(action)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete");
+        if (!BatchActions.CRUD.contains(action)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be " + BatchActions.CRUD_HINT);
         }
         List<Long> ids = normalizeIds(cmd.ids());
         if (ids.isEmpty()) {
@@ -143,7 +143,7 @@ public class DictTypeService {
             throw BizException.of(ResultCode.PARAM_INVALID, "no active dict-type found for given ids");
         }
 
-        if ("delete".equals(action)) {
+        if (BatchActions.DELETE.equals(action)) {
             for (DictType t : targets) {
                 if (dictDataRepository.existsActiveByTypeId(t.getId())) {
                     throw BizException.of(ResultCode.PARAM_INVALID, "字典类型 " + t.getCode() + " 仍有字典项，请先清空");
@@ -157,7 +157,7 @@ public class DictTypeService {
             return new DictBatchResult(action, deleted.size(), deleted);
         }
 
-        int enabled = "enable".equals(action) ? 1 : 0;
+        int enabled = BatchActions.enabledFlag(action);
         List<Long> affected = new ArrayList<>();
         for (DictType t : targets) {
             dictTypeRepository.updateIsEnabled(t.getId(), enabled);

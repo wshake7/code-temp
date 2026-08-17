@@ -2,6 +2,7 @@ package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.service.dict.DictManageModels;
 import com.wshake.service.entity.DictData;
 import java.util.Collection;
 import java.util.List;
@@ -75,10 +76,10 @@ public class DictDataRepository {
                     d.value().like(value != null, value);
                     d.isEnabled().eq(status != null, status);
                     if (platform != null && !platform.isEmpty()) {
-                        if ("general".equals(platform) || !includeGeneral) {
+                        if (DictManageModels.PLATFORM_GENERAL.equals(platform) || !includeGeneral) {
                             d.platform().eq(platform);
                         } else {
-                            d.platform().in(List.of(platform, "general"));
+                            d.platform().in(List.of(platform, DictManageModels.PLATFORM_GENERAL));
                         }
                     }
                 })

@@ -1,5 +1,6 @@
 package com.wshake.service.log;
 
+import com.wshake.common.constant.PageLimits;
 import com.wshake.common.time.DateTimes;
 import com.wshake.service.entity.ApiLog;
 import com.wshake.service.entity.ApiLogArchive;
@@ -233,11 +234,11 @@ public final class LogManageModels {
             String userAgent) {}
 
     static int normalizePage(Integer page) {
-        return page == null || page < 1 ? 1 : page;
+        return PageLimits.page(page);
     }
 
     static int normalizePageSize(Integer pageSize) {
-        return pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+        return PageLimits.size(pageSize);
     }
 
     static boolean isArchive(String source) {

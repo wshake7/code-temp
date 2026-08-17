@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.wshake.api.dto.LoginRequest;
 import com.wshake.api.vo.LoginResponse;
 import com.wshake.api.vo.UserInfoVO;
+import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.request.RequestContext;
 import com.wshake.common.result.Result;
@@ -160,11 +161,11 @@ public class AuthController {
             return fromCtx;
         }
         return ClientIpUtils.resolve(
-                request.getHeader("X-Forwarded-For"),
-                request.getHeader("X-Real-IP"),
+                request.getHeader(SecurityHeaders.FORWARDED_FOR),
+                request.getHeader(SecurityHeaders.REAL_IP),
                 request.getRemoteAddr(),
-                request.getHeader("Proxy-Client-IP"),
-                request.getHeader("WL-Proxy-Client-IP"));
+                request.getHeader(SecurityHeaders.PROXY_CLIENT_IP),
+                request.getHeader(SecurityHeaders.WL_PROXY_CLIENT_IP));
     }
 
     private static String userAgent(HttpServletRequest request) {

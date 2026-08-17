@@ -1,5 +1,6 @@
 package com.wshake.service.blacklist;
 
+import com.wshake.common.constant.PageLimits;
 import com.wshake.service.entity.SysBlacklist;
 import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
@@ -16,16 +17,23 @@ public final class BlacklistManageModels {
 
     private BlacklistManageModels() {}
 
-    public static final Set<String> TARGET_TYPES = Set.of("IP", "SYS_USER", "DEVICE");
-    public static final Set<String> SCOPES = Set.of("LOGIN", "API", "ALL");
+    public static final String TARGET_IP = "IP";
+    public static final String TARGET_SYS_USER = "SYS_USER";
+    public static final String TARGET_DEVICE = "DEVICE";
+    public static final Set<String> TARGET_TYPES = Set.of(TARGET_IP, TARGET_SYS_USER, TARGET_DEVICE);
+
+    public static final String SCOPE_LOGIN = "LOGIN";
+    public static final String SCOPE_API = "API";
+    public static final String SCOPE_ALL = "ALL";
+    public static final Set<String> SCOPES = Set.of(SCOPE_LOGIN, SCOPE_API, SCOPE_ALL);
 
     public record BlacklistListQuery(
             int page, int pageSize, String targetType, String targetValue, String scope, Integer status) {
 
         public static BlacklistListQuery of(
                 Integer page, Integer pageSize, String targetType, String targetValue, String scope, Integer status) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             return new BlacklistListQuery(
                     pageNo,
                     size,
@@ -133,7 +141,7 @@ public final class BlacklistManageModels {
 
     static String normalizeScope(String raw) {
         if (raw == null || raw.isBlank()) {
-            return "ALL";
+            return SCOPE_ALL;
         }
         return raw.trim().toUpperCase(Locale.ROOT);
     }
@@ -149,7 +157,7 @@ public final class BlacklistManageModels {
         if (value.isEmpty()) {
             return null;
         }
-        if ("IP".equals(targetType)) {
+        if (TARGET_IP.equals(targetType)) {
             // 去可能的 :port（仅 IPv4 host:port；IPv6 带端口通常为 [addr]:port）
             if (value.startsWith("[") && value.contains("]:")) {
                 value = value.substring(1, value.indexOf("]:"));

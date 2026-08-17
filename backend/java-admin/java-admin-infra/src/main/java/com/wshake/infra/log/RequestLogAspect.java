@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.wshake.common.constant.MdcKeys;
+import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.request.RequestContext;
 import com.wshake.common.util.ClientIpUtils;
 import com.wshake.infra.satoken.SaTokenConfigure;
@@ -156,19 +157,19 @@ public class RequestLogAspect {
 
             String requestId = RequestContext.requestIdOrNull();
             if (requestId == null || requestId.isBlank()) {
-                requestId = request != null ? request.getHeader("X-Request-ID") : null;
+                requestId = request != null ? request.getHeader(SecurityHeaders.REQUEST_ID) : null;
             }
             String clientIp = RequestContext.clientIpOrNull();
             if ((clientIp == null || clientIp.isBlank()) && request != null) {
                 clientIp = ClientIpUtils.resolve(
-                        request.getHeader("X-Forwarded-For"),
-                        request.getHeader("X-Real-IP"),
+                        request.getHeader(SecurityHeaders.FORWARDED_FOR),
+                        request.getHeader(SecurityHeaders.REAL_IP),
                         request.getRemoteAddr(),
-                        request.getHeader("Proxy-Client-IP"),
-                        request.getHeader("WL-Proxy-Client-IP"));
+                        request.getHeader(SecurityHeaders.PROXY_CLIENT_IP),
+                        request.getHeader(SecurityHeaders.WL_PROXY_CLIENT_IP));
             }
-            String userAgent = request != null ? nullToEmpty(request.getHeader("User-Agent")) : "";
-            String referer = request != null ? nullToEmpty(request.getHeader("Referer")) : "";
+            String userAgent = request != null ? nullToEmpty(request.getHeader(SecurityHeaders.USER_AGENT)) : "";
+            String referer = request != null ? nullToEmpty(request.getHeader(SecurityHeaders.REFERER)) : "";
             String headersJson = request != null ? serializeHeaders(request) : "";
             String responseJson = error == null ? truncateForStore(safeToJsonForStore(result)) : "";
 

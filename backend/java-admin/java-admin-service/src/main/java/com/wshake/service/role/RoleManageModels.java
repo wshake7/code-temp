@@ -1,5 +1,7 @@
 package com.wshake.service.role;
 
+import com.wshake.common.constant.PageLimits;
+import com.wshake.common.constant.SecurityConstants;
 import com.wshake.service.entity.SysRole;
 import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
@@ -14,14 +16,14 @@ public final class RoleManageModels {
 
     private RoleManageModels() {}
 
-    public static final String ROOT_ROLE_CODE = "root";
+    public static final String ROOT_ROLE_CODE = SecurityConstants.ROLE_ROOT;
 
     /** 列表筛选条件。 */
     public record RoleListQuery(int page, int pageSize, String code, String name, Integer status) {
 
         public static RoleListQuery of(Integer page, Integer pageSize, String code, String name, Integer status) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             return new RoleListQuery(pageNo, size, trimToNull(code), trimToNull(name), status);
         }
 

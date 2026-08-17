@@ -2,6 +2,7 @@ package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.service.blacklist.BlacklistManageModels;
 import com.wshake.service.entity.SysBlacklist;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -110,7 +111,7 @@ public class SysBlacklistRepository {
                 .where(t -> {
                     t.targetType().eq(targetType);
                     t.targetValue().eq(targetValue);
-                    t.scope().in(List.of(requestScope, "ALL"));
+                    t.scope().in(List.of(requestScope, BlacklistManageModels.SCOPE_ALL));
                     t.isEnabled().eq(1);
                     t.startsAt().le(now);
                     t.or(() -> {

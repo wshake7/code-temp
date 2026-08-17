@@ -5,6 +5,7 @@ import com.wshake.common.request.RequestContext;
 import com.wshake.common.result.Result;
 import com.wshake.common.result.ResultCode;
 import com.wshake.infra.satoken.SaTokenConfigure;
+import com.wshake.service.blacklist.BlacklistManageModels;
 import com.wshake.service.blacklist.BlacklistService;
 import com.wshake.service.blacklist.BlacklistService.BlacklistHit;
 import jakarta.servlet.FilterChain;
@@ -68,13 +69,14 @@ public final class BlacklistFilter extends OncePerRequestFilter {
         }
 
         boolean loginScene = isLoginPath(path);
-        String requestScope = loginScene ? "LOGIN" : "API";
+        String requestScope = loginScene ? BlacklistManageModels.SCOPE_LOGIN : BlacklistManageModels.SCOPE_API;
         String clientIp = RequestContext.clientIpOrNull();
 
         if (clientIp != null && !clientIp.isBlank()) {
-            Optional<BlacklistHit> ipHit = blacklistService.findBlockingHit("IP", clientIp, requestScope, null);
+            Optional<BlacklistHit> ipHit =
+                    blacklistService.findBlockingHit(BlacklistManageModels.TARGET_IP, clientIp, requestScope, null);
             if (ipHit.isPresent()) {
-                writeAccessBlocked(response, "IP", clientIp, requestScope, ipHit.get());
+                writeAccessBlocked(response, BlacklistManageModels.TARGET_IP, clientIp, requestScope, ipHit.get());
                 return;
             }
         }
@@ -84,9 +86,15 @@ public final class BlacklistFilter extends OncePerRequestFilter {
             Long userId = SaTokenConfigure.currentUserIdOrNull();
             if (userId != null) {
                 String userValue = String.valueOf(userId);
-                Optional<BlacklistHit> userHit = blacklistService.findBlockingHit("SYS_USER", userValue, "API", null);
+                Optional<BlacklistHit> userHit = blacklistService.findBlockingHit(
+                        BlacklistManageModels.TARGET_SYS_USER, userValue, BlacklistManageModels.SCOPE_API, null);
                 if (userHit.isPresent()) {
-                    writeAccessBlocked(response, "SYS_USER", userValue, "API", userHit.get());
+                    writeAccessBlocked(
+                            response,
+                            BlacklistManageModels.TARGET_SYS_USER,
+                            userValue,
+                            BlacklistManageModels.SCOPE_API,
+                            userHit.get());
                     return;
                 }
             }

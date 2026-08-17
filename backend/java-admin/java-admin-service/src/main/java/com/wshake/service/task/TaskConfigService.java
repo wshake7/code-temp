@@ -1,6 +1,7 @@
 package com.wshake.service.task;
 
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.common.constant.BatchActions;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
@@ -186,7 +187,7 @@ public class TaskConfigService {
     public TaskBatchResult batch(TaskBatchCommand cmd) {
         String action = cmd.action() == null ? "" : cmd.action().trim();
         if (!TaskManageModels.BATCH_ACTIONS.contains(action)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete|trigger");
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be " + BatchActions.CRUD_WITH_TRIGGER_HINT);
         }
         List<Long> ids = normalizeIds(cmd.ids());
         if (ids.isEmpty()) {
@@ -197,7 +198,7 @@ public class TaskConfigService {
             throw BizException.of(ResultCode.PARAM_INVALID, "no active task-config found for given ids");
         }
 
-        if ("delete".equals(action)) {
+        if (BatchActions.DELETE.equals(action)) {
             List<Long> deleted = new ArrayList<>();
             for (TemporalTaskConfig t : targets) {
                 configRepository.softDeleteById(t.getId());
@@ -209,7 +210,7 @@ public class TaskConfigService {
             return new TaskBatchResult(action, deleted.size(), deleted, List.of(), List.of());
         }
 
-        if ("trigger".equals(action)) {
+        if (BatchActions.TRIGGER.equals(action)) {
             List<TemporalTaskConfig> enabled = targets.stream()
                     .filter(t -> t.getIsEnabled() != null && t.getIsEnabled() == 1)
                     .toList();
@@ -232,7 +233,7 @@ public class TaskConfigService {
             return new TaskBatchResult(action, triggered.size(), triggered, executionIds, skipped);
         }
 
-        int enabled = "enable".equals(action) ? 1 : 0;
+        int enabled = BatchActions.enabledFlag(action);
         List<Long> affected = new ArrayList<>();
         for (TemporalTaskConfig t : targets) {
             configRepository.updateIsEnabled(t.getId(), enabled);
@@ -287,7 +288,7 @@ public class TaskConfigService {
         row.setRunId(started.runId());
         row.setWorkflowType(config.getWorkflowType());
         row.setTaskQueue(config.getTaskQueue());
-        row.setStatus("PENDING");
+        row.setStatus(TaskManageModels.STATUS_PENDING);
         row.setPendingAt(null);
         row.setStartedAt(null);
         row.setClosedAt(null);
@@ -306,7 +307,7 @@ public class TaskConfigService {
                 started.runId(),
                 config.getWorkflowType(),
                 config.getTaskQueue(),
-                "PENDING",
+                TaskManageModels.STATUS_PENDING,
                 null,
                 null,
                 null,

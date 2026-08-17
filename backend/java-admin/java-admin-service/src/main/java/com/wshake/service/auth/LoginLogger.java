@@ -1,5 +1,6 @@
 package com.wshake.service.auth;
 
+import com.wshake.common.constant.ClientIds;
 import com.wshake.common.time.TimeZones;
 import com.wshake.common.util.UserAgentParser;
 import com.wshake.service.entity.SysLoginLog;
@@ -23,7 +24,7 @@ import org.springframework.stereotype.Service;
 public class LoginLogger {
 
     /** 与 Go admin Web 端一致的客户端 ID 占位；可后续按多端扩展。 */
-    public static final String DEFAULT_CLIENT_ID = "web-admin";
+    public static final String DEFAULT_CLIENT_ID = ClientIds.WEB_ADMIN;
 
     private final SysLoginLogRepository sysLoginLogRepository;
     private final IpLocationResolver ipLocationResolver;

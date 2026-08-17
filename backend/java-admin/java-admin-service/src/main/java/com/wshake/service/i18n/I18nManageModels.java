@@ -1,6 +1,7 @@
 package com.wshake.service.i18n;
 
 import com.google.common.base.Splitter;
+import com.wshake.common.constant.PageLimits;
 import com.wshake.service.entity.I18nLocale;
 import com.wshake.service.entity.I18nTranslation;
 import io.github.linpeilie.annotations.AutoMapper;
@@ -31,8 +32,8 @@ public final class I18nManageModels {
 
         public static LocaleListQuery of(
                 Integer page, Integer pageSize, List<String> code, String name, Integer status) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             CodeFilter filter = parseCodeFilter(code);
             return new LocaleListQuery(pageNo, size, filter.exact(), filter.like(), trimToNull(name), status);
         }
@@ -89,8 +90,8 @@ public final class I18nManageModels {
                 String value,
                 Integer status,
                 String byKey) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             boolean keyMode = "true".equalsIgnoreCase(byKey) || "1".equals(byKey);
             return new TranslationListQuery(
                     pageNo, size, localeId, trimToNull(localeCode), trimToNull(value), status, keyMode);

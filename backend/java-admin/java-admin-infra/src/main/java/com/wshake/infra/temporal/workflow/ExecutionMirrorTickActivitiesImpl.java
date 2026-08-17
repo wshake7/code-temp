@@ -7,6 +7,7 @@ import com.wshake.service.entity.TemporalTaskExecution;
 import com.wshake.service.repository.TemporalTaskConfigRepository;
 import com.wshake.service.repository.TemporalTaskExecutionRepository;
 import com.wshake.service.task.TaskJsonSupport;
+import com.wshake.service.task.TaskManageModels;
 import com.wshake.service.task.TemporalTaskQueue;
 import com.wshake.service.task.TemporalWorkflowType;
 import io.temporal.api.common.v1.Payloads;
@@ -253,7 +254,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         // 后续 describe 若库内已有 pendingAt 则不覆盖；有 scheduled_time 且库内为空才精化
         LocalDateTime queueStart = temporalStart != null ? temporalStart : now;
         row.setPendingAt(queueStart);
-        if ("PENDING".equals(status)) {
+        if (TaskManageModels.STATUS_PENDING.equals(status)) {
             row.setStartedAt(null);
         } else {
             row.setStartedAt(queueStart);
@@ -394,7 +395,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         if (row.getStartedAt() != null) {
             return row.getStartedAt();
         }
-        if ("PENDING".equals(status)) {
+        if (TaskManageModels.STATUS_PENDING.equals(status)) {
             return null;
         }
         LocalDateTime lastStarted = retry != null ? retry.earliestLastStartedAt() : null;
@@ -414,7 +415,9 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      * @return resultJson 与 failureReason，均可为 null
      */
     private ResultAndFailure tryFetchResult(String workflowId, String runId, String workflowType, String status) {
-        if (!"COMPLETED".equals(status) && !"FAILED".equals(status) && !"TIMED_OUT".equals(status)) {
+        if (!TaskManageModels.STATUS_COMPLETED.equals(status)
+                && !TaskManageModels.STATUS_FAILED.equals(status)
+                && !TaskManageModels.STATUS_TIMED_OUT.equals(status)) {
             return new ResultAndFailure(null, null, null);
         }
         try {
@@ -425,7 +428,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             return new ResultAndFailure(toResultJson(result), null, result);
         } catch (Exception ex) {
             String msg = rootMessage(ex);
-            if ("COMPLETED".equals(status)) {
+            if (TaskManageModels.STATUS_COMPLETED.equals(status)) {
                 // void 结果或无法反序列化：不记 failure
                 return new ResultAndFailure(null, null, null);
             }
@@ -556,17 +559,17 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      */
     static String mapStatus(WorkflowExecutionStatus status) {
         if (status == null) {
-            return "RUNNING";
+            return TaskManageModels.STATUS_RUNNING;
         }
         return switch (status) {
-            case WORKFLOW_EXECUTION_STATUS_COMPLETED -> "COMPLETED";
-            case WORKFLOW_EXECUTION_STATUS_FAILED -> "FAILED";
-            case WORKFLOW_EXECUTION_STATUS_CANCELED -> "CANCELLED";
-            case WORKFLOW_EXECUTION_STATUS_TERMINATED -> "TERMINATED";
-            case WORKFLOW_EXECUTION_STATUS_TIMED_OUT -> "TIMED_OUT";
-            case WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW -> "CONTINUED_AS_NEW";
-            case WORKFLOW_EXECUTION_STATUS_RUNNING, WORKFLOW_EXECUTION_STATUS_PAUSED -> "RUNNING";
-            default -> "RUNNING";
+            case WORKFLOW_EXECUTION_STATUS_COMPLETED -> TaskManageModels.STATUS_COMPLETED;
+            case WORKFLOW_EXECUTION_STATUS_FAILED -> TaskManageModels.STATUS_FAILED;
+            case WORKFLOW_EXECUTION_STATUS_CANCELED -> TaskManageModels.STATUS_CANCELLED;
+            case WORKFLOW_EXECUTION_STATUS_TERMINATED -> TaskManageModels.STATUS_TERMINATED;
+            case WORKFLOW_EXECUTION_STATUS_TIMED_OUT -> TaskManageModels.STATUS_TIMED_OUT;
+            case WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW -> TaskManageModels.STATUS_CONTINUED_AS_NEW;
+            case WORKFLOW_EXECUTION_STATUS_RUNNING, WORKFLOW_EXECUTION_STATUS_PAUSED -> TaskManageModels.STATUS_RUNNING;
+            default -> TaskManageModels.STATUS_RUNNING;
         };
     }
 
@@ -582,14 +585,14 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         if (retry == null || !retry.known()) {
             return baseStatus;
         }
-        if (!"RUNNING".equals(baseStatus)) {
+        if (!TaskManageModels.STATUS_RUNNING.equals(baseStatus)) {
             return baseStatus;
         }
         if (retry.activityRetrying()) {
-            return "RETRYING";
+            return TaskManageModels.STATUS_RETRYING;
         }
         if (retry.activityWaiting()) {
-            return "PENDING";
+            return TaskManageModels.STATUS_PENDING;
         }
         return baseStatus;
     }
@@ -695,7 +698,9 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      * @param status 镜像 status 字符串
      */
     static boolean isTerminal(String status) {
-        return status != null && !TemporalTaskExecutionRepository.isOpenStatus(status) && !"PENDING".equals(status);
+        return status != null
+                && !TemporalTaskExecutionRepository.isOpenStatus(status)
+                && !TaskManageModels.STATUS_PENDING.equals(status);
     }
 
     /**

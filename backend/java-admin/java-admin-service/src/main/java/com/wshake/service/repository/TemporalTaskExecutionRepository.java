@@ -3,6 +3,7 @@ package com.wshake.service.repository;
 import com.easy.query.api.proxy.client.EasyEntityQuery;
 import com.easy.query.core.api.pagination.EasyPageResult;
 import com.wshake.service.entity.TemporalTaskExecution;
+import com.wshake.service.task.TaskManageModels;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Component;
 public class TemporalTaskExecutionRepository {
 
     /** 未终态：镜像 tick 优先 describe 推进。 */
-    public static final List<String> OPEN_STATUSES = List.of("PENDING", "RUNNING", "RETRYING");
+    public static final List<String> OPEN_STATUSES = TaskManageModels.OPEN_STATUSES;
 
     private final EasyEntityQuery easyEntityQuery;
 

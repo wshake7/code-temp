@@ -49,10 +49,10 @@ public final class RequestContextFilter extends OncePerRequestFilter {
     /** 多代理头 + 合法性校验，见 {@link ClientIpUtils}。 */
     private static String resolveClientIp(HttpServletRequest request) {
         return ClientIpUtils.resolve(
-                request.getHeader("X-Forwarded-For"),
-                request.getHeader("X-Real-IP"),
+                request.getHeader(SecurityHeaders.FORWARDED_FOR),
+                request.getHeader(SecurityHeaders.REAL_IP),
                 request.getRemoteAddr(),
-                request.getHeader("Proxy-Client-IP"),
-                request.getHeader("WL-Proxy-Client-IP"));
+                request.getHeader(SecurityHeaders.PROXY_CLIENT_IP),
+                request.getHeader(SecurityHeaders.WL_PROXY_CLIENT_IP));
     }
 }

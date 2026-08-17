@@ -1,5 +1,6 @@
 package com.wshake.service.log;
 
+import com.wshake.common.constant.ClientIds;
 import com.wshake.common.time.TimeZones;
 import com.wshake.common.util.UserAgentParser;
 import com.wshake.service.entity.ApiLog;
@@ -28,7 +29,7 @@ import org.springframework.stereotype.Service;
 public class ApiLogWriter {
 
     /** 与登录日志一致的客户端 ID 占位。 */
-    public static final String DEFAULT_CLIENT_ID = "web-admin";
+    public static final String DEFAULT_CLIENT_ID = ClientIds.WEB_ADMIN;
 
     private final ApiLogRepository apiLogRepository;
     private final SysUserRepository sysUserRepository;

@@ -1,5 +1,6 @@
 package com.wshake.service.menu;
 
+import com.wshake.common.constant.BatchActions;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.ResultCode;
 import com.wshake.service.entity.SysApi;
@@ -296,8 +297,8 @@ public class SysMenuService {
 
     public MenuBatchResult batch(MenuBatchCommand cmd) {
         String action = cmd.action() == null ? "" : cmd.action().trim();
-        if (!Set.of("enable", "disable", "delete").contains(action)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete");
+        if (!BatchActions.CRUD.contains(action)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be " + BatchActions.CRUD_HINT);
         }
         List<Long> ids = normalizeIds(cmd.ids());
         if (ids.isEmpty()) {
@@ -308,7 +309,7 @@ public class SysMenuService {
             throw BizException.of(ResultCode.PARAM_INVALID, "no active menu found for given ids");
         }
 
-        if ("delete".equals(action)) {
+        if (BatchActions.DELETE.equals(action)) {
             for (SysMenu t : targets) {
                 if (menuRepository.hasChildren(t.getId())) {
                     throw BizException.of(ResultCode.PARAM_INVALID, "菜单 " + t.getName() + " 存在子菜单，无法删除");
@@ -324,7 +325,7 @@ public class SysMenuService {
             return new MenuBatchResult(action, deleted.size(), deleted);
         }
 
-        int enabled = "enable".equals(action) ? 1 : 0;
+        int enabled = BatchActions.enabledFlag(action);
         List<Long> affected = new ArrayList<>();
         for (SysMenu t : targets) {
             menuRepository.updateIsEnabled(t.getId(), enabled);

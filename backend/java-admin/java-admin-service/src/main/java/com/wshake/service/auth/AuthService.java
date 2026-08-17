@@ -2,6 +2,7 @@ package com.wshake.service.auth;
 
 import com.wshake.common.exception.AuthException;
 import com.wshake.common.result.ResultCode;
+import com.wshake.service.blacklist.BlacklistManageModels;
 import com.wshake.service.blacklist.BlacklistService;
 import com.wshake.service.blacklist.BlacklistService.BlacklistHit;
 import com.wshake.service.entity.SysUser;
@@ -167,8 +168,11 @@ public class AuthService {
      * <p>Filter 不解析登录 body，故 SYS_USER 拦截落在本链路；IP 由 BlacklistFilter 在 LOGIN 场景处理。
      */
     private void rejectIfUserBlacklisted(SysUser user, String username, LoginClientMeta meta) {
-        Optional<BlacklistHit> hit =
-                blacklistService.findBlockingHit("SYS_USER", String.valueOf(user.getId()), "LOGIN", null);
+        Optional<BlacklistHit> hit = blacklistService.findBlockingHit(
+                BlacklistManageModels.TARGET_SYS_USER,
+                String.valueOf(user.getId()),
+                BlacklistManageModels.SCOPE_LOGIN,
+                null);
         if (hit.isEmpty()) {
             return;
         }

@@ -1,5 +1,7 @@
 package com.wshake.service.task;
 
+import com.wshake.common.constant.BatchActions;
+import com.wshake.common.constant.PageLimits;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,18 +21,30 @@ public final class TaskManageModels {
     /** 任务编码：小写字母开头，后续可含数字与下划线，最长 64。 */
     public static final String CODE_PATTERN = "^[a-z][a-z0-9_]{0,63}$";
 
-    public static final Set<String> EXECUTION_STATUSES = Set.of(
-            "PENDING",
-            "RUNNING",
-            "RETRYING",
-            "COMPLETED",
-            "FAILED",
-            "CANCELLED",
-            "TERMINATED",
-            "TIMED_OUT",
-            "CONTINUED_AS_NEW");
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_RUNNING = "RUNNING";
+    public static final String STATUS_RETRYING = "RETRYING";
+    public static final String STATUS_COMPLETED = "COMPLETED";
+    public static final String STATUS_FAILED = "FAILED";
+    public static final String STATUS_CANCELLED = "CANCELLED";
+    public static final String STATUS_TERMINATED = "TERMINATED";
+    public static final String STATUS_TIMED_OUT = "TIMED_OUT";
+    public static final String STATUS_CONTINUED_AS_NEW = "CONTINUED_AS_NEW";
 
-    public static final Set<String> BATCH_ACTIONS = Set.of("enable", "disable", "delete", "trigger");
+    public static final Set<String> EXECUTION_STATUSES = Set.of(
+            STATUS_PENDING,
+            STATUS_RUNNING,
+            STATUS_RETRYING,
+            STATUS_COMPLETED,
+            STATUS_FAILED,
+            STATUS_CANCELLED,
+            STATUS_TERMINATED,
+            STATUS_TIMED_OUT,
+            STATUS_CONTINUED_AS_NEW);
+
+    public static final List<String> OPEN_STATUSES = List.of(STATUS_PENDING, STATUS_RUNNING, STATUS_RETRYING);
+
+    public static final Set<String> BATCH_ACTIONS = BatchActions.CRUD_WITH_TRIGGER;
 
     // ---------- task-config ----------
 
@@ -52,8 +66,8 @@ public final class TaskManageModels {
                 Integer status,
                 String workflowType,
                 String taskQueue) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             CodeFilter filter = parseCodeFilter(code);
             return new TaskConfigListQuery(
                     pageNo,
@@ -152,8 +166,8 @@ public final class TaskManageModels {
                 LocalDateTime startedAtFrom,
                 LocalDateTime startedAtTo,
                 String workflowType) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             String normalizedStatus = null;
             if (status != null && !status.isBlank()) {
                 normalizedStatus = status.trim().toUpperCase(Locale.ROOT);

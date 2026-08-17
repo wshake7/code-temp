@@ -1,5 +1,6 @@
 package com.wshake.service.dict;
 
+import com.wshake.common.constant.PageLimits;
 import com.wshake.service.entity.DictData;
 import com.wshake.service.entity.DictType;
 import io.github.linpeilie.annotations.AutoMapper;
@@ -18,10 +19,16 @@ public final class DictManageModels {
 
     private DictManageModels() {}
 
-    public static final Set<String> ALLOWED_PLATFORMS = Set.of("general", "react-admin", "vue-admin");
+    public static final String PLATFORM_GENERAL = "general";
+    public static final String PLATFORM_REACT_ADMIN = "react-admin";
+    public static final String PLATFORM_VUE_ADMIN = "vue-admin";
+    public static final Set<String> ALLOWED_PLATFORMS =
+            Set.of(PLATFORM_GENERAL, PLATFORM_REACT_ADMIN, PLATFORM_VUE_ADMIN);
+
+    public static final String TAG_DEFAULT = "default";
 
     public static final Set<String> ALLOWED_TAG_TYPES = Set.of(
-            "default",
+            TAG_DEFAULT,
             "primary",
             "success",
             "warning",
@@ -49,8 +56,8 @@ public final class DictManageModels {
 
         public static DictTypeListQuery of(
                 Integer page, Integer pageSize, List<String> code, String name, Integer status) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             CodeFilter filter = parseCodeFilter(code);
             return new DictTypeListQuery(pageNo, size, filter.exact(), filter.like(), trimToNull(name), status);
         }
@@ -113,8 +120,8 @@ public final class DictManageModels {
                 Integer status,
                 String platform,
                 Boolean includeGeneral) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             CodeFilter filter = parseCodeFilter(typeCode);
             return new DictDataListQuery(
                     pageNo,
@@ -233,14 +240,14 @@ public final class DictManageModels {
 
     static String normalizePlatform(String platform) {
         if (platform == null || platform.isBlank()) {
-            return "general";
+            return PLATFORM_GENERAL;
         }
         return platform.trim();
     }
 
     static String normalizeTagType(String tagType) {
         if (tagType == null || tagType.isBlank()) {
-            return "default";
+            return TAG_DEFAULT;
         }
         return tagType.trim().toLowerCase(Locale.ROOT);
     }

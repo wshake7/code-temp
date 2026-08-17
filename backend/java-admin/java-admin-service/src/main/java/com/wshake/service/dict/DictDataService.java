@@ -1,6 +1,7 @@
 package com.wshake.service.dict;
 
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.common.constant.BatchActions;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
@@ -21,7 +22,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -178,8 +178,8 @@ public class DictDataService {
 
     public DictBatchResult batch(DictBatchCommand cmd) {
         String action = cmd.action() == null ? "" : cmd.action().trim();
-        if (!Set.of("enable", "disable", "delete").contains(action)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete");
+        if (!BatchActions.CRUD.contains(action)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be " + BatchActions.CRUD_HINT);
         }
         List<Long> ids = normalizeIds(cmd.ids());
         if (ids.isEmpty()) {
@@ -190,7 +190,7 @@ public class DictDataService {
             throw BizException.of(ResultCode.PARAM_INVALID, "no active dict-data found for given ids");
         }
 
-        if ("delete".equals(action)) {
+        if (BatchActions.DELETE.equals(action)) {
             List<Long> deleted = new ArrayList<>();
             for (DictData d : targets) {
                 dictDataRepository.softDeleteById(d.getId());
@@ -199,7 +199,7 @@ public class DictDataService {
             return new DictBatchResult(action, deleted.size(), deleted);
         }
 
-        int enabled = "enable".equals(action) ? 1 : 0;
+        int enabled = BatchActions.enabledFlag(action);
         List<Long> affected = new ArrayList<>();
         for (DictData d : targets) {
             dictDataRepository.updateIsEnabled(d.getId(), enabled);
@@ -242,7 +242,7 @@ public class DictDataService {
     private String requireAllowedPlatform(String platform, boolean allowDefault) {
         if (platform == null || platform.isBlank()) {
             if (allowDefault) {
-                return "general";
+                return DictManageModels.PLATFORM_GENERAL;
             }
             throw BizException.of(ResultCode.PARAM_INVALID, "platform must be one of general|react-admin|vue-admin");
         }
@@ -255,7 +255,7 @@ public class DictDataService {
     private String requireAllowedTagType(String tagType, boolean allowDefault) {
         if (tagType == null || tagType.isBlank()) {
             if (allowDefault) {
-                return "default";
+                return DictManageModels.TAG_DEFAULT;
             }
             throw BizException.of(ResultCode.PARAM_INVALID, "tagType is invalid");
         }

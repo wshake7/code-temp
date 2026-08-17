@@ -1,6 +1,7 @@
 package com.wshake.service.blacklist;
 
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.common.constant.BatchActions;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
@@ -19,7 +20,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -145,8 +145,8 @@ public class BlacklistService {
 
     public BlacklistBatchResult batch(BlacklistBatchCommand cmd) {
         String action = cmd.action() == null ? "" : cmd.action().trim();
-        if (!Set.of("enable", "disable", "delete").contains(action)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete");
+        if (!BatchActions.CRUD.contains(action)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be " + BatchActions.CRUD_HINT);
         }
         List<Long> ids = normalizeIds(cmd.ids());
         if (ids.isEmpty()) {
@@ -157,7 +157,7 @@ public class BlacklistService {
             throw BizException.of(ResultCode.PARAM_INVALID, "no active blacklist found for given ids");
         }
 
-        if ("delete".equals(action)) {
+        if (BatchActions.DELETE.equals(action)) {
             List<Long> deleted = new ArrayList<>();
             for (SysBlacklist t : targets) {
                 blacklistRepository.softDeleteById(t.getId());
@@ -166,7 +166,7 @@ public class BlacklistService {
             return new BlacklistBatchResult(action, deleted.size(), deleted);
         }
 
-        int enabled = "enable".equals(action) ? 1 : 0;
+        int enabled = BatchActions.enabledFlag(action);
         List<Long> affected = new ArrayList<>();
         for (SysBlacklist t : targets) {
             blacklistRepository.updateIsEnabled(t.getId(), enabled);
@@ -198,11 +198,11 @@ public class BlacklistService {
             return Optional.empty();
         }
         // DEVICE 本波不参与运行时拦截（数据可配置，命中判定跳过）
-        if ("DEVICE".equals(type)) {
+        if (BlacklistManageModels.TARGET_DEVICE.equals(type)) {
             return Optional.empty();
         }
         // 请求场景仅 LOGIN/API；容错 ALL
-        if (!Set.of("LOGIN", "API", "ALL").contains(scope)) {
+        if (!BlacklistManageModels.SCOPES.contains(scope)) {
             return Optional.empty();
         }
         LocalDateTime at = now == null ? TimeZones.now() : now;

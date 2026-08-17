@@ -1,5 +1,6 @@
 package com.wshake.service.menu;
 
+import com.wshake.common.constant.PageLimits;
 import com.wshake.service.entity.SysMenu;
 import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
@@ -25,8 +26,8 @@ public final class MenuManageModels {
 
         public static MenuListQuery of(
                 Integer page, Integer pageSize, String name, String type, String permissionCode, Integer status) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             String typeFilter = trimToNull(type);
             if (typeFilter != null && "全部".equals(typeFilter)) {
                 typeFilter = null;

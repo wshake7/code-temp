@@ -1,6 +1,7 @@
 package com.wshake.service.i18n;
 
 import com.easy.query.core.api.pagination.EasyPageResult;
+import com.wshake.common.constant.BatchActions;
 import com.wshake.common.exception.BizException;
 import com.wshake.common.result.PageData;
 import com.wshake.common.result.ResultCode;
@@ -308,8 +309,8 @@ public class I18nTranslationService {
 
     public BatchResult batch(BatchCommand cmd) {
         String action = cmd.action() == null ? "" : cmd.action().trim();
-        if (!Set.of("enable", "disable", "delete").contains(action)) {
-            throw BizException.of(ResultCode.PARAM_INVALID, "action must be enable|disable|delete");
+        if (!BatchActions.CRUD.contains(action)) {
+            throw BizException.of(ResultCode.PARAM_INVALID, "action must be " + BatchActions.CRUD_HINT);
         }
         List<Long> ids = normalizeIds(cmd.ids());
         if (ids.isEmpty()) {
@@ -319,7 +320,7 @@ public class I18nTranslationService {
         if (targets.isEmpty()) {
             throw BizException.of(ResultCode.PARAM_INVALID, "no active i18n-translation found for given ids");
         }
-        if ("delete".equals(action)) {
+        if (BatchActions.DELETE.equals(action)) {
             List<Long> deleted = new ArrayList<>();
             for (I18nTranslation t : targets) {
                 translationRepository.softDeleteById(t.getId());
@@ -327,7 +328,7 @@ public class I18nTranslationService {
             }
             return new BatchResult(action, deleted.size(), deleted);
         }
-        int enabled = "enable".equals(action) ? 1 : 0;
+        int enabled = BatchActions.enabledFlag(action);
         List<Long> affected = new ArrayList<>();
         for (I18nTranslation t : targets) {
             translationRepository.updateIsEnabled(t.getId(), enabled);

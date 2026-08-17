@@ -1,5 +1,6 @@
 package com.wshake.service.api;
 
+import com.wshake.common.constant.PageLimits;
 import com.wshake.service.entity.SysApi;
 import io.github.linpeilie.annotations.AutoMapper;
 import java.time.LocalDateTime;
@@ -25,8 +26,8 @@ public final class ApiManageModels {
 
         public static ApiListQuery of(
                 Integer page, Integer pageSize, String name, String path, String method, String group, Integer status) {
-            int pageNo = page == null || page < 1 ? 1 : page;
-            int size = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 200);
+            int pageNo = PageLimits.page(page);
+            int size = PageLimits.size(pageSize);
             String methodFilter = trimToNull(method);
             if (methodFilter != null && "全部".equals(methodFilter)) {
                 methodFilter = null;

@@ -1,6 +1,7 @@
 package com.wshake.service.repository;
 
 import com.easy.query.api.proxy.client.EasyEntityQuery;
+import com.wshake.common.constant.SecurityConstants;
 import com.wshake.common.time.TimeZones;
 import com.wshake.service.entity.SysApi;
 import com.wshake.service.entity.SysRole;
@@ -115,7 +116,7 @@ public class SysUserRoleRepository {
                 .queryable(SysRole.class)
                 .where(r -> {
                     r.id().in(roleIds);
-                    r.code().eq("root");
+                    r.code().eq(SecurityConstants.ROLE_ROOT);
                 })
                 .any();
     }

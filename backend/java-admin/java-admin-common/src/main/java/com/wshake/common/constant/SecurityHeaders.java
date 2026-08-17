@@ -20,5 +20,12 @@ public final class SecurityHeaders {
     public static final String RESPONSE_IS_ENCRYPT = "X-Response-Is-Encrypt";
     public static final String LANGUAGE = "X-Language";
 
+    public static final String FORWARDED_FOR = "X-Forwarded-For";
+    public static final String REAL_IP = "X-Real-IP";
+    public static final String PROXY_CLIENT_IP = "Proxy-Client-IP";
+    public static final String WL_PROXY_CLIENT_IP = "WL-Proxy-Client-IP";
+    public static final String USER_AGENT = "User-Agent";
+    public static final String REFERER = "Referer";
+
     private SecurityHeaders() {}
 }
