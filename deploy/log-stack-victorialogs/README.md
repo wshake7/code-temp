@@ -31,7 +31,7 @@
 ## 环境要求
 
 - Docker Desktop（Linux 容器）。
-- 内存远低于 Doris 栈；一般 **1 GB** 即可本地演示。
+- 内存远低于 Doris 栈；一般 **1 GB** 即可本地演示。compose 默认 VictoriaLogs `768m`（`GOMEMLIMIT=650MiB`）、Vector `256m`。
 - 与 `log-stack-doris` 可同时跑：端口互不占用（本栈 `9428` / Vector `8687`）。
 
 ## 启动

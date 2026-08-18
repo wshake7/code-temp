@@ -25,6 +25,9 @@ services:
     image: apache/doris:fe-${DORIS_VERSION:-4.0.1}
     hostname: fe
     restart: unless-stopped
+    # fe.conf 堆已降到 2g，硬顶 3g 留给 metaspace / 直接内存
+    mem_limit: ${DORIS_FE_MEM_LIMIT:-3072m}
+    memswap_limit: ${DORIS_FE_MEM_LIMIT:-3072m}
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       FE_SERVERS: fe1:172.28.80.2:9010
@@ -56,6 +59,8 @@ services:
     image: apache/doris:be-${DORIS_VERSION:-4.0.1}
     hostname: be
     restart: unless-stopped
+    mem_limit: ${DORIS_BE_MEM_LIMIT:-4096m}
+    memswap_limit: ${DORIS_BE_MEM_LIMIT:-4096m}
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       FE_SERVERS: fe1:172.28.80.2:9010
@@ -66,6 +71,8 @@ services:
       - "${BE_HEARTBEAT_PORT:-9050}:9050"
     volumes:
       - be_storage:/opt/apache-doris/be/storage
+      - ./scripts/patch-and-start-be.sh:/opt/log-stack/patch-and-start-be.sh:ro
+    entrypoint: ["/bin/bash", "/opt/log-stack/patch-and-start-be.sh"]
     depends_on:
       fe:
         condition: service_healthy
@@ -86,6 +93,8 @@ services:
   doris-init:
     image: ${MYSQL_CLIENT_IMAGE:-mysql:8.4}
     restart: "no"
+    mem_limit: ${DORIS_INIT_MEM_LIMIT:-256m}
+    memswap_limit: ${DORIS_INIT_MEM_LIMIT:-256m}
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       FE_HOST: fe
@@ -108,6 +117,8 @@ services:
     image: ${GRAFANA_IMAGE:-grafana/grafana:11.6.3}
     hostname: grafana
     restart: unless-stopped
+    mem_limit: ${GRAFANA_MEM_LIMIT:-256m}
+    memswap_limit: ${GRAFANA_MEM_LIMIT:-256m}
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}

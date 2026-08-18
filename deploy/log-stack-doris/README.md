@@ -26,7 +26,7 @@
 ## 环境要求
 
 - Docker Desktop（Linux 容器）。本机是 Windows 时不要用 host 网络。
-- 建议给 Docker **至少 8 GB 内存**。Windows Docker Desktop 上 FE 已关闭 JDK 容器感知（cgroup NPE）并把堆降到 2g。
+- 建议给 Docker **至少 8 GB 内存**。Windows Docker Desktop 上 FE 已关闭 JDK 容器感知（cgroup NPE）并把堆降到 2g。compose 默认 `mem_limit`：FE 3g / BE 4g（BE 进程预算 3G）/ Grafana 256m。
 - 官方 `apache/doris` 镜像要求 CPU 支持 **AVX2**。
 - 首次拉 FE/BE 镜像体积较大。
 

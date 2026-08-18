@@ -20,8 +20,11 @@ services:
     image: ${VICTORIALOGS_IMAGE:-victoriametrics/victoria-logs:v1.52.0}
     hostname: victorialogs
     restart: unless-stopped
+    mem_limit: ${VL_MEM_LIMIT:-768m}
+    memswap_limit: ${VL_MEM_LIMIT:-768m}
     environment:
       TZ: ${TZ:-Asia/Shanghai}
+      GOMEMLIMIT: ${VL_GOMEMLIMIT:-650MiB}
     command:
       - -storageDataPath=/victoria-logs-data
       - -retentionPeriod=${VL_RETENTION:-7d}
