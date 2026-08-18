@@ -24,7 +24,7 @@
     <property name="LOG_TOTAL_SIZE_CAP" value="10GB"/>
 
     <!--
-        普通 pattern（prod/test 控制台 + 文件；不带 ANSI 控制符）。
+        普通 pattern（仅作后备；prod/test 已改 StructuredLogEncoder JSON）。
         用 %highlight() 也能上色（logback 内置），但 %clr() 更细（可指定颜色名）。
     -->
     <property name="LOG_PATTERN"
@@ -57,12 +57,14 @@
     </springProfile>
 
     <!-- ──────────────────────────────────────────────
-         PROD / TEST：普通控制台 + 全量 / ERROR 文件滚动
+         PROD / TEST：Logstash JSON 控制台 + 全量 / ERROR / WARN 文件滚动
+         自定义 logback-spring.xml 时 logging.structured.format 不会自动生效，
+         必须在此使用 StructuredLogEncoder（SB 4 内置，无需 logstash-logback-encoder）。
          ────────────────────────────────────────────── -->
     <springProfile name="prod | test">
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>${LOG_PATTERN}</pattern>
+            <encoder class="org.springframework.boot.logging.logback.StructuredLogEncoder">
+                <format>logstash</format>
                 <charset>UTF-8</charset>
             </encoder>
         </appender>
@@ -74,8 +76,8 @@
                 <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
                 <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
             </rollingPolicy>
-            <encoder>
-                <pattern>${LOG_PATTERN}</pattern>
+            <encoder class="org.springframework.boot.logging.logback.StructuredLogEncoder">
+                <format>logstash</format>
                 <charset>UTF-8</charset>
             </encoder>
         </appender>
@@ -90,8 +92,8 @@
                 <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
                 <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
             </rollingPolicy>
-            <encoder>
-                <pattern>${LOG_PATTERN}</pattern>
+            <encoder class="org.springframework.boot.logging.logback.StructuredLogEncoder">
+                <format>logstash</format>
                 <charset>UTF-8</charset>
             </encoder>
         </appender>
@@ -106,8 +108,8 @@
                 <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
                 <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
             </rollingPolicy>
-            <encoder>
-                <pattern>${LOG_PATTERN}</pattern>
+            <encoder class="org.springframework.boot.logging.logback.StructuredLogEncoder">
+                <format>logstash</format>
                 <charset>UTF-8</charset>
             </encoder>
         </appender>

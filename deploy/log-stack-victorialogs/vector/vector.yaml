@@ -28,6 +28,7 @@ sources:
       timeout_ms: 10000
 
   # 容器路径，对应宿主机 JAVA_ADMIN_LOG_DIR（默认 /opt/java-admin/logs/java-admin.log）
+  # prod/test 为 Spring Boot Logstash JSON 单行，不再按时间戳拼多行
   java_admin_file:
     type: file
     include:
@@ -37,11 +38,6 @@ sources:
     ignore_older_secs: 0
     fingerprint:
       strategy: device_and_inode
-    multiline:
-      start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
-      mode: halt_before
-      condition_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
-      timeout_ms: 10000
 
 transforms:
   parse_log:
@@ -82,7 +78,8 @@ transforms:
         "message": message
       }
 
-  # logback：yyyy-MM-dd HH:mm:ss.SSS LEVEL [traceId] [userId] [thread] logger - msg
+  # prod/test logback：Spring Boot StructuredLogEncoder format=logstash
+  # {"@timestamp":"...","message":"...","logger_name":"...","thread_name":"...","level":"INFO",...,"traceId":"...","userId":"..."}
   parse_java_admin:
     type: remap
     inputs:
@@ -91,14 +88,28 @@ transforms:
       .type = "java-admin.log"
       .collect_time = format_timestamp!(.timestamp, format: "%Y-%m-%d %H:%M:%S", timezone: "Asia/Shanghai")
 
-      parsed, err = parse_regex(.message, r'(?s)^(?P<log_time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) +(?P<level>[A-Z]+) +\[(?P<trace_id>[^\]]*)\] \[(?P<user_id>[^\]]*)\] \[(?P<thread>[^\]]+)\] (?P<position>\S+) - (?P<content>.*)')
+      parsed, err = parse_json(.message)
       if err == null {
-        .log_time = slice!(parsed.log_time, 0, 19)
-        .level = parsed.level
-        .thread = parsed.thread
-        .position = parsed.position
-        .trace_id = parsed.trace_id
-        .user_id = parsed.user_id
+        ts = parsed."@timestamp"
+        if ts != null {
+          # @timestamp 形如 2024-01-01T10:15:00.111+08:00 → yyyy-MM-dd HH:mm:ss
+          .log_time = replace(slice!(to_string!(ts), 0, 19), "T", " ")
+        } else {
+          .log_time = .collect_time
+        }
+        .level = to_string(parsed.level) ?? "UNKNOWN"
+        .thread = to_string(parsed.thread_name) ?? ""
+        .position = to_string(parsed.logger_name) ?? ""
+        .trace_id = to_string(parsed.traceId) ?? ""
+        .user_id = to_string(parsed.userId) ?? ""
+        msg, msg_err = to_string(parsed.message)
+        if msg_err == null {
+          .message = msg
+        }
+        stack, stack_err = to_string(parsed.stack_trace)
+        if stack_err == null && stack != "" {
+          .message = to_string!(.message) + "\n" + stack
+        }
       } else {
         .log_time = .collect_time
         .level = "UNKNOWN"

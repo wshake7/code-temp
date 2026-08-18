@@ -31,6 +31,8 @@ knife4j:
   enable: ${KNIFE4J_ENABLE:false}
 
 logging:
+  # 格式（Logstash JSON）在 logback-spring.xml 的 prod|test profile；
+  # 自定义 logback 时 logging.structured.format 不会自动生效。
   level:
     root: INFO
     com.wshake: INFO
