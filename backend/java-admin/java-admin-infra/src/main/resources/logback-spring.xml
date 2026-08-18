@@ -28,7 +28,7 @@
         用 %highlight() 也能上色（logback 内置），但 %clr() 更细（可指定颜色名）。
     -->
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Shanghai} %-5level [%X{traceId}] [%X{userId}] [%thread] %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Shanghai} %-5level [%X{traceId}] [%X{userId}] [%thread] %logger{36} - %msg %kvp%n"/>
 
     <!--
         dev 彩色 pattern（用 %clr() + 显式颜色名）：
@@ -39,7 +39,7 @@
         - logger：%clr(%-40.40logger{39}){cyan}
     -->
     <property name="LOG_PATTERN_COLOR"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Shanghai} %clr(%-5level) %clr([%X{traceId}]){magenta} %clr([%X{userId}]){yellow} %clr([%thread]){blue} %clr(%-40.40logger{39}){cyan} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Shanghai} %clr(%-5level) %clr([%X{traceId}]){magenta} %clr([%X{userId}]){yellow} %clr([%thread]){blue} %clr(%-40.40logger{39}){cyan} - %msg %kvp%n"/>
 
     <!-- ──────────────────────────────────────────────
          DEV：彩色控制台

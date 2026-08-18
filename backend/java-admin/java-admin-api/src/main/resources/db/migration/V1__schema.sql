@@ -778,7 +778,7 @@ CREATE TABLE temporal_task_execution (
     closed_at       TIMESTAMP       NULL DEFAULT NULL  COMMENT '关闭时间(NULL=仍在运行/未启动)',
     input_summary   JSON            DEFAULT NULL  COMMENT '输入摘要(避免存大对象)',
     result_summary  JSON            DEFAULT NULL  COMMENT '结果摘要',
-    failure_reason  VARCHAR(1024)   DEFAULT NULL,
+    failure_reason  TEXT            DEFAULT NULL  COMMENT '失败原因全文(不截断)',
     retry_count     INT             NOT NULL DEFAULT 0  COMMENT '已发生重试次数(首次执行为0)',
     created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

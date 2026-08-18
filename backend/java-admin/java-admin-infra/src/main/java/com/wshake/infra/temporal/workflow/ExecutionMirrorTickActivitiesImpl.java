@@ -99,9 +99,6 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
      */
     private static final Duration LOOKBACK = Duration.ofMinutes(15);
 
-    /** {@code failure_reason} 列上限，与 schema VARCHAR(1024) 对齐。 */
-    private static final int FAILURE_REASON_MAX = 1024;
-
     private final WorkflowClient workflowClient;
     private final TemporalTaskExecutionRepository executionRepository;
     private final TemporalTaskConfigRepository configRepository;
@@ -308,7 +305,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             rawResult = rf.rawResult();
         } else if (!isTerminal(status) && !isBlank(retry.lastFailureMessage())) {
             // 重试中展示最近一次 Activity 失败原因，便于 UI 观察
-            failure = truncate(retry.lastFailureMessage(), FAILURE_REASON_MAX);
+            failure = retry.lastFailureMessage();
         }
 
         String inputJson = null;
@@ -441,7 +438,7 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                 // void 结果或无法反序列化：不记 failure
                 return new ResultAndFailure(null, null, null);
             }
-            return new ResultAndFailure(null, truncate(msg, FAILURE_REASON_MAX), null);
+            return new ResultAndFailure(null, blankToNull(msg), null);
         }
     }
 
@@ -842,16 +839,12 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
         return msg == null || msg.isBlank() ? error.toString() : msg;
     }
 
-    /**
-     * @param value 原始字符串
-     * @param max   最大长度（含）
-     */
-    private static String truncate(String value, int max) {
+    /** 空白视为无失败原因。 */
+    private static String blankToNull(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
-        String trimmed = value.trim();
-        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+        return value.trim();
     }
 
     /**

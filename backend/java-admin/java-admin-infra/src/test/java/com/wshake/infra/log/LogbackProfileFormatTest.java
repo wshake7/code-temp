@@ -56,7 +56,7 @@ class LogbackProfileFormatTest {
                         .addKeyValue("logType", "HTTP")
                         .addKeyValue("handler", "Foo.bar()")
                         .addKeyValue("costMs", 12)
-                        .log());
+                        .log(""));
         JsonNode json = parseJsonLine(out);
         assertThat(json.path("message").asText()).isEmpty();
         assertThat(json.path("logType").asText()).isEqualTo("HTTP");
@@ -77,6 +77,22 @@ class LogbackProfileFormatTest {
         String out = captureConsole("dev", "plain-format-probe");
         assertThat(out).contains("plain-format-probe");
         assertThat(out).containsPattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}");
+        assertThat(out).doesNotContain("\"@timestamp\"");
+    }
+
+    @Test
+    void devProfile_fluentKeyValuesAreRenderedAndMessageIsNotNull() {
+        String out = captureConsole(
+                "dev",
+                logger -> logger.atInfo()
+                        .addKeyValue("logType", "HTTP")
+                        .addKeyValue("handler", "Foo.bar()")
+                        .addKeyValue("costMs", 12)
+                        .log(""));
+        assertThat(out).contains("logType=\"HTTP\"");
+        assertThat(out).contains("handler=\"Foo.bar()\"");
+        assertThat(out).contains("costMs=\"12\"");
+        assertThat(out).doesNotContain(" - null");
         assertThat(out).doesNotContain("\"@timestamp\"");
     }
 

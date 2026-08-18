@@ -105,15 +105,17 @@ class RequestLogAspectTest {
     }
 
     @Test
-    void safeToJson_longPayload_isTruncated() {
+    void safeToJson_longPayload_isNotTruncated() throws Exception {
+        String username = "x".repeat(600);
         LoginLike req = new LoginLike();
-        req.setUsername("x".repeat(600));
+        req.setUsername(username);
         req.setPassword("hidden");
 
         String json = aspect.safeToJson(new Object[] {req});
 
-        assertThat(json).endsWith("...(truncated)");
-        assertThat(json.length()).isLessThanOrEqualTo(500 + "...(truncated)".length());
+        assertThat(json).contains(username);
+        assertThat(json).doesNotContain("...(truncated)");
+        new ObjectMapper().readTree(json);
     }
 
     @Data

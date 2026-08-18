@@ -58,6 +58,7 @@ public class TemporalTaskExecution implements ProxyEntityAvailable<TemporalTaskE
     /** 结果摘要 JSON。 */
     private String resultSummary;
 
+    /** 失败原因全文；无失败时为 null。 */
     private String failureReason;
 
     /**

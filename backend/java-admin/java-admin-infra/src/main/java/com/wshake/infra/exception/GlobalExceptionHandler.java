@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
                 .addKeyValue("logType", "BIZ")
                 .addKeyValue("code", ex.getCode())
                 .addKeyValue("msg", ex.getMessage())
-                .log();
+                .log("");
         HttpStatus status = ex.getCode() >= 4000 ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
         return ResponseEntity.status(status).body(Result.error(ex.getCode(), ex.getMessage()));
     }
@@ -63,7 +63,7 @@ public class GlobalExceptionHandler {
                 .addKeyValue("logType", "AUTH")
                 .addKeyValue("code", ex.getCode())
                 .addKeyValue("msg", ex.getMessage())
-                .log();
+                .log("");
         boolean forbidden = ex.getCode() == ResultCode.AUTH_FORBIDDEN.getCode()
                 || ex.getCode() == ResultCode.ACCESS_BLOCKED.getCode();
         HttpStatus status = forbidden ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED;
@@ -113,7 +113,7 @@ public class GlobalExceptionHandler {
         log.atWarn()
                 .addKeyValue("logType", "SA_TOKEN")
                 .addKeyValue("msg", ex.getMessage())
-                .log();
+                .log("");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Result.error(ResultCode.AUTH_NOT_LOGIN, ex.getMessage()));
     }
@@ -132,7 +132,7 @@ public class GlobalExceptionHandler {
         log.atWarn()
                 .addKeyValue("logType", "VALIDATION")
                 .addKeyValue("msg", msg)
-                .log();
+                .log("");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(ResultCode.PARAM_INVALID, msg));
     }
 
@@ -160,7 +160,7 @@ public class GlobalExceptionHandler {
                 .addKeyValue("logType", "UNEXPECTED")
                 .addKeyValue("exception", ex.getClass().getSimpleName())
                 .setCause(ex)
-                .log();
+                .log("");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Result.error(ResultCode.INTERNAL_ERROR, "内部错误"));
     }

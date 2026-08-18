@@ -45,7 +45,7 @@ import org.springframework.web.multipart.MultipartFile;
  * 失败再 {@code setCause} 附堆栈。
  *
  * <p>args 序列化时会跳过 Servlet/文件/流等不可 JSON 化参数，并对密码类字段脱敏。
- * 请求结束后将关键字段异步落入 {@code api_log}（字段对齐 schema；body/header/response 截断 64KB）。
+ * 请求结束后将关键字段异步落入 {@code api_log}（字段对齐 schema）。
  *
  * @author wshake
  */
@@ -55,11 +55,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class RequestLogAspect {
 
     private static final Splitter PATH_SEGMENTS = Splitter.on('/');
-
-    private static final int MAX_LOG_LENGTH = 500;
-
-    /** schema：request_body / response 应用层截断 64KB */
-    private static final int MAX_STORE_LENGTH = 64 * 1024;
 
     /** 匹配 JSON 中常见敏感字段的字符串值，替换为 "***"。 */
     private static final Pattern SENSITIVE_JSON_FIELD = Pattern.compile(
@@ -91,7 +86,7 @@ public class RequestLogAspect {
     @Pointcut("execution(* com.wshake.api.controller..*(..))")
     public void controllerPointcut() {}
 
-    /** 环绕 Controller 方法，记录 HTTP 路径、参数、耗时、返回值摘要，并异步写 api_log。 */
+    /** 环绕 Controller 方法，记录 HTTP 路径、参数、耗时、返回值，并异步写 api_log。 */
     @Around("controllerPointcut()")
     // CHECKSTYLE.OFF: IllegalThrows
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
@@ -123,7 +118,7 @@ public class RequestLogAspect {
                     .addKeyValue("costMs", cost)
                     .addKeyValue("args", argsJson)
                     .addKeyValue("result", safeToJson(result))
-                    .log();
+                    .log("");
             return result;
         } catch (Throwable t) {
             error = t;
@@ -135,7 +130,7 @@ public class RequestLogAspect {
                     .addKeyValue("costMs", cost)
                     .addKeyValue("args", argsJson)
                     .setCause(t)
-                    .log();
+                    .log("");
             throw t;
         } finally {
             long cost = System.currentTimeMillis() - start;
@@ -160,7 +155,7 @@ public class RequestLogAspect {
 
             int statusCode = error == null ? 200 : resolveErrorStatus(error);
             boolean success = statusCode >= 200 && statusCode < 300;
-            String reason = error == null ? "" : truncateForStore(nullToEmpty(error.getMessage()));
+            String reason = error == null ? "" : nullToEmpty(error.getMessage());
 
             String requestId = RequestContext.requestIdOrNull();
             if (requestId == null || requestId.isBlank()) {
@@ -178,7 +173,7 @@ public class RequestLogAspect {
             String userAgent = request != null ? nullToEmpty(request.getHeader(SecurityHeaders.USER_AGENT)) : "";
             String referer = request != null ? nullToEmpty(request.getHeader(SecurityHeaders.REFERER)) : "";
             String headersJson = request != null ? serializeHeaders(request) : "";
-            String responseJson = error == null ? truncateForStore(safeToJsonForStore(result)) : "";
+            String responseJson = error == null ? safeToJson(result) : "";
 
             apiLogWriter.record(new ApiLogWriteCommand(
                     method,
@@ -193,7 +188,7 @@ public class RequestLogAspect {
                     "",
                     requestUri,
                     query,
-                    truncateForStore(argsJson),
+                    argsJson,
                     headersJson,
                     referer,
                     responseJson,
@@ -267,7 +262,7 @@ public class RequestLogAspect {
             }
         }
         try {
-            return truncateForStore(objectMapper.writeValueAsString(headers));
+            return objectMapper.writeValueAsString(headers);
         } catch (JsonProcessingException e) {
             return "{}";
         }
@@ -304,17 +299,13 @@ public class RequestLogAspect {
     }
 
     /**
-     * 将对象安全格式化为日志用 JSON 摘要（包内可见，便于单测）。
+     * 将对象安全格式化为日志用 JSON（包内可见，便于单测）。
      *
      * @param obj 可为 null、POJO 或 Controller 方法参数数组
-     * @return 截断且脱敏后的字符串
+     * @return 脱敏后的字符串
      */
     String safeToJson(Object obj) {
-        return truncate(maskSensitive(rawJson(obj)), MAX_LOG_LENGTH);
-    }
-
-    private String safeToJsonForStore(Object obj) {
-        return truncate(maskSensitive(rawJson(obj)), MAX_STORE_LENGTH);
+        return maskSensitive(rawJson(obj));
     }
 
     private String rawJson(Object obj) {
@@ -382,20 +373,6 @@ public class RequestLogAspect {
 
     private static String maskSensitive(String json) {
         return SENSITIVE_JSON_FIELD.matcher(json).replaceAll("$1\"***\"");
-    }
-
-    private static String truncate(String json, int max) {
-        if (json == null) {
-            return "";
-        }
-        if (json.length() > max) {
-            return json.substring(0, max) + "...(truncated)";
-        }
-        return json;
-    }
-
-    private static String truncateForStore(String json) {
-        return truncate(json, MAX_STORE_LENGTH);
     }
 
     private static String nullToEmpty(String value) {
