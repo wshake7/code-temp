@@ -97,6 +97,7 @@ public class RequestLogAspect {
         Object[] args = pjp.getArgs();
         String httpLine = currentHttpLine();
         String argsJson = safeToJson(args);
+        String clientIp = resolveClientIp(currentRequest());
 
         // 优先 RequestContext（拦截器已写入），回退 Sa-Token
         Long userId = RequestContext.userIdOrNull();
@@ -115,6 +116,7 @@ public class RequestLogAspect {
             log.atInfo()
                     .addKeyValue("logType", "HTTP")
                     .addKeyValue("http", httpLine)
+                    .addKeyValue("clientIp", clientIp)
                     .addKeyValue("handler", handler)
                     .addKeyValue("costMs", cost)
                     .addKeyValue("args", argsJson)
@@ -127,6 +129,7 @@ public class RequestLogAspect {
             log.atError()
                     .addKeyValue("logType", "HTTP")
                     .addKeyValue("http", httpLine)
+                    .addKeyValue("clientIp", clientIp)
                     .addKeyValue("handler", handler)
                     .addKeyValue("costMs", cost)
                     .addKeyValue("args", argsJson)
@@ -162,15 +165,7 @@ public class RequestLogAspect {
             if (requestId == null || requestId.isBlank()) {
                 requestId = request != null ? request.getHeader(SecurityHeaders.REQUEST_ID) : null;
             }
-            String clientIp = RequestContext.clientIpOrNull();
-            if ((clientIp == null || clientIp.isBlank()) && request != null) {
-                clientIp = ClientIpUtils.resolve(
-                        request.getHeader(SecurityHeaders.FORWARDED_FOR),
-                        request.getHeader(SecurityHeaders.REAL_IP),
-                        request.getRemoteAddr(),
-                        request.getHeader(SecurityHeaders.PROXY_CLIENT_IP),
-                        request.getHeader(SecurityHeaders.WL_PROXY_CLIENT_IP));
-            }
+            String clientIp = resolveClientIp(request);
             String userAgent = request != null ? nullToEmpty(request.getHeader(SecurityHeaders.USER_AGENT)) : "";
             String referer = request != null ? nullToEmpty(request.getHeader(SecurityHeaders.REFERER)) : "";
             String headersJson = request != null ? serializeHeaders(request) : "";
@@ -289,6 +284,24 @@ public class RequestLogAspect {
 
     private static String currentHttpLine() {
         return formatHttpLine(currentRequest());
+    }
+
+    /**
+     * 优先 {@link RequestContext}（Filter 已写入），回退请求头 / remoteAddr。
+     *
+     * <p>包内可见，便于单测。
+     */
+    static String resolveClientIp(HttpServletRequest request) {
+        String clientIp = RequestContext.clientIpOrNull();
+        if ((clientIp == null || clientIp.isBlank()) && request != null) {
+            clientIp = ClientIpUtils.resolve(
+                    request.getHeader(SecurityHeaders.FORWARDED_FOR),
+                    request.getHeader(SecurityHeaders.REAL_IP),
+                    request.getRemoteAddr(),
+                    request.getHeader(SecurityHeaders.PROXY_CLIENT_IP),
+                    request.getHeader(SecurityHeaders.WL_PROXY_CLIENT_IP));
+        }
+        return nullToEmpty(clientIp);
     }
 
     private static HttpServletRequest currentRequest() {
