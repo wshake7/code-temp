@@ -1,0 +1,95 @@
+# Vector：采集 demo 文件日志 → VRL 解析 → Doris Stream Load
+# 参考：
+#   https://doris.apache.org/zh-CN/docs/4.x/connection-integration/data-integration/vector/
+#   https://vector.dev/docs/reference/configuration/sinks/doris
+
+data_dir: /var/lib/vector
+
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources:
+  demo_file:
+    type: file
+    include:
+      - /var/log/app/*.log
+    read_from: beginning
+    max_line_bytes: 102400
+    ignore_older_secs: 0
+    fingerprint:
+      strategy: device_and_inode
+    multiline:
+      start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+      mode: halt_before
+      condition_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+      timeout_ms: 10000
+
+transforms:
+  parse_log:
+    type: remap
+    inputs:
+      - demo_file
+    source: |-
+      .type = "demo.log"
+      .collect_time = format_timestamp!(.timestamp, format: "%Y-%m-%d %H:%M:%S", timezone: "Asia/Shanghai")
+
+      parsed, err = parse_regex(.message, r'(?s)^(?P<log_time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (?P<level>[A-Z]+) \((?P<thread>[^\)]+)\) \[(?P<position>[^\]]+)\] (?P<content>.*)')
+      if err == null {
+        .log_time = slice!(parsed.log_time, 0, 19)
+        .level = parsed.level
+        .thread = parsed.thread
+        .position = parsed.position
+      } else {
+        .log_time = .collect_time
+        .level = "UNKNOWN"
+        .thread = ""
+        .position = ""
+      }
+
+      host = .host
+      path = .file
+      message = .message
+      . = {
+        "log_time": .log_time,
+        "collect_time": .collect_time,
+        "host": host,
+        "path": path,
+        "type": .type,
+        "level": .level,
+        "thread": .thread,
+        "position": .position,
+        "message": message
+      }
+
+# timberio/vector 0.49 尚未内置 type=doris（文档页已有、发行包未合入）。
+# 改走官方 Stream Load HTTP，语义与 Doris Sink 相同。
+sinks:
+  doris:
+    type: http
+    inputs:
+      - parse_log
+    uri: "${DORIS_STREAM_LOAD_URI:-http://host.docker.internal:8040/api/log_db/doris_log/_stream_load}"
+    method: put
+    auth:
+      strategy: basic
+      user: "${DORIS_USER:-root}"
+      password: "${DORIS_PASSWORD:-}"
+    compression: none
+    encoding:
+      codec: json
+    framing:
+      method: newline_delimited
+    healthcheck:
+      enabled: false
+    request:
+      concurrency: 2
+      headers:
+        format: json
+        read_json_by_line: "true"
+        load_to_single_tablet: "true"
+        Expect: "100-continue"
+    batch:
+      max_events: 200
+      timeout_secs: 3
+      max_bytes: 10485760

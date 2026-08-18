@@ -1,0 +1,45 @@
+# ============================================================
+# Vector 采集端（部署在业务服务器）
+# 位置：deploy/log-stack-victorialogs/vector/docker-compose.yml
+# 启动：docker compose --env-file .env.example up -d
+# 本地联调加 --profile demo 会起日志发生器
+# ============================================================
+
+name: log-vector-victorialogs
+
+volumes:
+  vector_data:
+
+services:
+  vector:
+    image: ${VECTOR_IMAGE:-timberio/vector:0.49.0-debian}
+    hostname: vector
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      VL_ELASTICSEARCH_URL: http://${VL_HOST:-host.docker.internal}:${VL_HTTP_PORT:-9428}/insert/elasticsearch/
+      VL_AUTH_USERNAME: ${VL_AUTH_USERNAME:-admin}
+      VL_AUTH_PASSWORD: ${VL_AUTH_PASSWORD:-changeme}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${VECTOR_API_PORT:-8687}:8686"
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml:ro
+      - vector_data:/var/lib/vector
+      - ${LOG_HOST_DIR:-./logs}:/var/log/app:ro
+      - ${JAVA_ADMIN_LOG_DIR:-/opt/java-admin/logs}:/var/log/java-admin:ro
+    command: ["--config", "/etc/vector/vector.yaml"]
+
+  log-generator:
+    profiles: ["demo"]
+    image: alpine:3.21
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      LOG_DIR: /var/log/app
+      INTERVAL_SECS: "2"
+    volumes:
+      - ../log-generator/run.sh:/run.sh:ro
+      - ${LOG_HOST_DIR:-./logs}:/var/log/app
+    command: ["sh", "/run.sh"]

@@ -1,0 +1,130 @@
+# ============================================================
+# Doris + Grafana 存储/查询端（中心机）
+# 位置：deploy/log-stack-doris/docker-compose.yml
+# 启动：docker compose --env-file .env.example up -d
+# Vector 在业务机：见 vector/docker-compose.yml
+# 网络：对齐官方 start-doris.sh 的 Mac 模式（固定 IP bridge，避免 host 网络）
+# ============================================================
+
+name: log-stack-doris
+
+networks:
+  log-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.80.0/24
+
+volumes:
+  fe_meta:
+  be_storage:
+  grafana_data:
+
+services:
+  fe:
+    image: apache/doris:fe-${DORIS_VERSION:-4.0.1}
+    hostname: fe
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      FE_SERVERS: fe1:172.28.80.2:9010
+      FE_ID: "1"
+      JAVA_TOOL_OPTIONS: "-XX:-UseContainerSupport"
+    volumes:
+      - fe_meta:/opt/apache-doris/fe/doris-meta
+      - ./scripts/patch-and-start-fe.sh:/opt/log-stack/patch-and-start-fe.sh:ro
+    entrypoint: ["/bin/bash", "/opt/log-stack/patch-and-start-fe.sh"]
+    ports:
+      - "${FE_HTTP_PORT:-8030}:8030"
+      - "${FE_MYSQL_PORT:-9030}:9030"
+      - "${FE_EDIT_PORT:-9010}:9010"
+    networks:
+      log-net:
+        ipv4_address: 172.28.80.2
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/9030'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
+  be:
+    image: apache/doris:be-${DORIS_VERSION:-4.0.1}
+    hostname: be
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      FE_SERVERS: fe1:172.28.80.2:9010
+      BE_ADDR: 172.28.80.3:9050
+      JAVA_TOOL_OPTIONS: "-XX:-UseContainerSupport"
+    ports:
+      - "${BE_HTTP_PORT:-8040}:8040"
+      - "${BE_HEARTBEAT_PORT:-9050}:9050"
+    volumes:
+      - be_storage:/opt/apache-doris/be/storage
+    depends_on:
+      fe:
+        condition: service_healthy
+    networks:
+      log-net:
+        ipv4_address: 172.28.80.3
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8040'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+
+  doris-init:
+    image: ${MYSQL_CLIENT_IMAGE:-mysql:8.4}
+    restart: "no"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      FE_HOST: fe
+      FE_MYSQL_PORT: "9030"
+      DORIS_USER: ${DORIS_USER:-root}
+      DORIS_PASSWORD: ${DORIS_PASSWORD:-}
+    volumes:
+      - ./doris/init:/sql:ro
+      - ./scripts/wait-and-init.sh:/wait-and-init.sh:ro
+    depends_on:
+      fe:
+        condition: service_healthy
+      be:
+        condition: service_healthy
+    networks:
+      - log-net
+    entrypoint: ["/bin/bash", "/wait-and-init.sh"]
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:11.6.3}
+    hostname: grafana
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_DEFAULT_THEME: dark
+      GF_DATE_FORMATS_DEFAULT_TIMEZONE: Asia/Shanghai
+      DORIS_USER: ${DORIS_USER:-root}
+      DORIS_PASSWORD: ${DORIS_PASSWORD:-}
+      DORIS_DATABASE: ${DORIS_DATABASE:-log_db}
+    ports:
+      - "${GRAFANA_PORT:-4300}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      doris-init:
+        condition: service_completed_successfully
+    networks:
+      - log-net

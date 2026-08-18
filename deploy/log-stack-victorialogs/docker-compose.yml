@@ -1,0 +1,38 @@
+# ============================================================
+# VictoriaLogs 存储/查询端（中心机）
+# 位置：deploy/log-stack-victorialogs/docker-compose.yml
+# 启动：docker compose --env-file .env.example up -d
+# Vector 在业务机：见 vector/docker-compose.yml
+# 内置 UI：http://<中心机>:9428/select/vmui/ ；浏览器弹 Basic Auth（VL_AUTH_*）
+# ============================================================
+
+name: log-stack-victorialogs
+
+networks:
+  log-net:
+    driver: bridge
+
+volumes:
+  vl_data:
+
+services:
+  victorialogs:
+    image: ${VICTORIALOGS_IMAGE:-victoriametrics/victoria-logs:v1.52.0}
+    hostname: victorialogs
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=${VL_RETENTION:-7d}
+      - -httpListenAddr=:9428
+      - -loggerFormat=json
+      # 打开后浏览器进 /select/vmui/ 会弹 Basic Auth；/insert、/select、/health 同样要账号
+      - -httpAuth.username=${VL_AUTH_USERNAME:-admin}
+      - -httpAuth.password=${VL_AUTH_PASSWORD:-changeme}
+    ports:
+      - "${VL_HTTP_PORT:-9428}:9428"
+    volumes:
+      - vl_data:/victoria-logs-data
+    networks:
+      - log-net

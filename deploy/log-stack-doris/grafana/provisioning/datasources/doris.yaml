@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: Doris
+    uid: doris
+    type: mysql
+    access: proxy
+    url: fe:9030
+    user: $DORIS_USER
+    isDefault: true
+    editable: true
+    jsonData:
+      database: $DORIS_DATABASE
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+      timezone: Asia/Shanghai
+    secureJsonData:
+      password: $DORIS_PASSWORD

@@ -1,0 +1,159 @@
+# Vector：采集 demo 文件日志 → VRL 解析 → VictoriaLogs Elasticsearch bulk
+# 参考：
+#   https://docs.victoriametrics.com/victorialogs/data-ingestion/vector/
+#   https://github.com/VictoriaMetrics/VictoriaLogs/tree/master/deployment/docker/victorialogs/vector
+
+data_dir: /var/lib/vector
+
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources:
+  demo_file:
+    type: file
+    include:
+      - /var/log/app/*.log
+    exclude:
+      - /var/log/app/java-admin*.log
+    read_from: beginning
+    max_line_bytes: 102400
+    ignore_older_secs: 0
+    fingerprint:
+      strategy: device_and_inode
+    multiline:
+      start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+      mode: halt_before
+      condition_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+      timeout_ms: 10000
+
+  # 容器路径，对应宿主机 JAVA_ADMIN_LOG_DIR（默认 /opt/java-admin/logs/java-admin.log）
+  java_admin_file:
+    type: file
+    include:
+      - /var/log/java-admin/java-admin.log
+    read_from: beginning
+    max_line_bytes: 102400
+    ignore_older_secs: 0
+    fingerprint:
+      strategy: device_and_inode
+    multiline:
+      start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
+      mode: halt_before
+      condition_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
+      timeout_ms: 10000
+
+transforms:
+  parse_log:
+    type: remap
+    inputs:
+      - demo_file
+    source: |-
+      .type = "demo.log"
+      .collect_time = format_timestamp!(.timestamp, format: "%Y-%m-%d %H:%M:%S", timezone: "Asia/Shanghai")
+
+      parsed, err = parse_regex(.message, r'(?s)^(?P<log_time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (?P<level>[A-Z]+) \((?P<thread>[^\)]+)\) \[(?P<position>[^\]]+)\] (?P<content>.*)')
+      if err == null {
+        .log_time = slice!(parsed.log_time, 0, 19)
+        .level = parsed.level
+        .thread = parsed.thread
+        .position = parsed.position
+      } else {
+        .log_time = .collect_time
+        .level = "UNKNOWN"
+        .thread = ""
+        .position = ""
+      }
+
+      host = .host
+      path = .file
+      message = .message
+      ts = .timestamp
+      . = {
+        "timestamp": ts,
+        "log_time": .log_time,
+        "collect_time": .collect_time,
+        "host": host,
+        "path": path,
+        "type": .type,
+        "level": .level,
+        "thread": .thread,
+        "position": .position,
+        "message": message
+      }
+
+  # logback：yyyy-MM-dd HH:mm:ss.SSS LEVEL [traceId] [userId] [thread] logger - msg
+  parse_java_admin:
+    type: remap
+    inputs:
+      - java_admin_file
+    source: |-
+      .type = "java-admin.log"
+      .collect_time = format_timestamp!(.timestamp, format: "%Y-%m-%d %H:%M:%S", timezone: "Asia/Shanghai")
+
+      parsed, err = parse_regex(.message, r'(?s)^(?P<log_time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) +(?P<level>[A-Z]+) +\[(?P<trace_id>[^\]]*)\] \[(?P<user_id>[^\]]*)\] \[(?P<thread>[^\]]+)\] (?P<position>\S+) - (?P<content>.*)')
+      if err == null {
+        .log_time = slice!(parsed.log_time, 0, 19)
+        .level = parsed.level
+        .thread = parsed.thread
+        .position = parsed.position
+        .trace_id = parsed.trace_id
+        .user_id = parsed.user_id
+      } else {
+        .log_time = .collect_time
+        .level = "UNKNOWN"
+        .thread = ""
+        .position = ""
+        .trace_id = ""
+        .user_id = ""
+      }
+
+      host = .host
+      path = .file
+      message = .message
+      ts = .timestamp
+      . = {
+        "timestamp": ts,
+        "log_time": .log_time,
+        "collect_time": .collect_time,
+        "host": host,
+        "path": path,
+        "type": .type,
+        "level": .level,
+        "thread": .thread,
+        "position": .position,
+        "trace_id": .trace_id,
+        "user_id": .user_id,
+        "message": message
+      }
+
+# 官方首选 Elasticsearch 协议。healthcheck 会打 /_cluster/health，VictoriaLogs 没有该接口，必须关掉。
+sinks:
+  vlogs:
+    type: elasticsearch
+    inputs:
+      - parse_log
+      - parse_java_admin
+    endpoints:
+      - "${VL_ELASTICSEARCH_URL:-http://host.docker.internal:9428/insert/elasticsearch/}"
+    auth:
+      strategy: basic
+      user: "${VL_AUTH_USERNAME:-admin}"
+      password: "${VL_AUTH_PASSWORD:-changeme}"
+    mode: bulk
+    api_version: v8
+    compression: gzip
+    healthcheck:
+      enabled: false
+    query:
+      _msg_field: message
+      _time_field: timestamp
+      _stream_fields: host,path,type
+    request:
+      headers:
+        AccountID: "0"
+        ProjectID: "0"
+    batch:
+      max_events: 200
+      timeout_secs: 3
+      max_bytes: 10485760

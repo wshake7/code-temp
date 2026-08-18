@@ -27,6 +27,10 @@ logs/
 
 # Docker
 deploy/.env
+deploy/log-stack-doris/.env
+deploy/log-stack-doris/vector/.env
+deploy/log-stack-victorialogs/.env
+deploy/log-stack-victorialogs/vector/.env
 
 # 本地对象存储默认目录
 **/data/storage/
