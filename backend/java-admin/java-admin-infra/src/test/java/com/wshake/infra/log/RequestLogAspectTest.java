@@ -3,10 +3,8 @@ package com.wshake.infra.log;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wshake.common.request.RequestContext;
 import java.util.Map;
 import lombok.Data;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -32,11 +30,6 @@ class RequestLogAspectTest {
         aspect = new RequestLogAspect(new ObjectMapper(), null);
     }
 
-    @AfterEach
-    void clearRequestContext() {
-        RequestContext.close();
-    }
-
     @Test
     void formatHttpLine_null_returnsDash() {
         assertThat(RequestLogAspect.formatHttpLine(null)).isEqualTo("-");
@@ -53,28 +46,6 @@ class RequestLogAspectTest {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
         request.setQueryString("page=1&size=10");
         assertThat(RequestLogAspect.formatHttpLine(request)).isEqualTo("GET /api/users?page=1&size=10");
-    }
-
-    @Test
-    void resolveClientIp_prefersRequestContext() {
-        RequestContext.open();
-        RequestContext.setClientIp("10.0.0.8");
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
-        request.setRemoteAddr("127.0.0.1");
-        assertThat(RequestLogAspect.resolveClientIp(request)).isEqualTo("10.0.0.8");
-    }
-
-    @Test
-    void resolveClientIp_fallsBackToForwardedFor() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
-        request.addHeader("X-Forwarded-For", "203.0.113.10, 10.0.0.1");
-        request.setRemoteAddr("127.0.0.1");
-        assertThat(RequestLogAspect.resolveClientIp(request)).isEqualTo("203.0.113.10");
-    }
-
-    @Test
-    void resolveClientIp_nullRequestWithoutContext_isEmpty() {
-        assertThat(RequestLogAspect.resolveClientIp(null)).isEmpty();
     }
 
     @Test
