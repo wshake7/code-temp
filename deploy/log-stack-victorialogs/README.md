@@ -102,7 +102,7 @@ curl -u admin:changeme http://127.0.0.1:9428/select/logsql/query -d "query=level
 
 不要默认挂整个磁盘。`--profile demo` 会在 `LOG_HOST_DIR` 写演示日志（含少量 ERROR 堆栈，用于多行合并）。
 
-解析字段：`log_time` / `collect_time` / `host` / `path` / `type` / `level` / `thread` / `position` / `message`。java-admin 另外带 `trace_id`、`user_id`、`client_ip`。
+解析字段：`log_time` / `collect_time` / `host` / `path` / `type` / `level` / `thread` / `position` / `message`。java-admin 另外带 `trace_id`、`user_id`、`client_ip`、`location`。
 
 写入时：
 

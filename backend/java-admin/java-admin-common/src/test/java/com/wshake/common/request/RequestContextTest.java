@@ -25,12 +25,14 @@ class RequestContextTest {
         RequestContext.setRequestId("req-1");
         RequestContext.setRequestUri("/api/user/info");
         RequestContext.setClientIp("1.2.3.4");
+        RequestContext.setLocation("国家:美国|省:加利福尼亚|市:山景城|服务:谷歌");
 
         assertThat(RequestContext.userIdOrNull()).isEqualTo(42L);
         assertThat(RequestContext.languageOrNull()).isEqualTo("zh-CN");
         assertThat(RequestContext.requestIdOrNull()).isEqualTo("req-1");
         assertThat(RequestContext.requestUriOrNull()).isEqualTo("/api/user/info");
         assertThat(RequestContext.clientIpOrNull()).isEqualTo("1.2.3.4");
+        assertThat(RequestContext.locationOrNull()).isEqualTo("国家:美国|省:加利福尼亚|市:山景城|服务:谷歌");
         assertThat(RequestContext.get()).isNotNull();
         assertThat(RequestContext.get().getUserId()).isEqualTo(42L);
     }

@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.wshake.common.request.RequestContext;
 import com.wshake.service.entity.ApiLog;
 import com.wshake.service.entity.SysUser;
 import com.wshake.service.log.LogManageModels.ApiLogWriteCommand;
 import com.wshake.service.repository.ApiLogRepository;
 import com.wshake.service.repository.SysUserRepository;
 import com.wshake.service.support.geo.IpLocationResolver;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,11 @@ class ApiLogWriterTest {
     void init() {
         IpLocationResolver resolver = new IpLocationResolver(null, null);
         writer = new ApiLogWriter(apiLogRepository, sysUserRepository, resolver, Runnable::run);
+    }
+
+    @AfterEach
+    void clearRequestContext() {
+        RequestContext.close();
     }
 
     @Test
@@ -123,5 +130,37 @@ class ApiLogWriterTest {
         assertThat(row.getReason()).isEqualTo("boom");
         assertThat(row.getRequestId()).startsWith("req-");
         assertThat(row.getLocation()).isEqualTo("内网");
+    }
+
+    @Test
+    void record_reusesLocationFromRequestContext() {
+        RequestContext.open();
+        RequestContext.setLocation("国家:美国|省:加利福尼亚|市:山景城|服务:谷歌");
+
+        writer.record(new ApiLogWriteCommand(
+                "GET",
+                "/api/system/user/list",
+                "user",
+                200,
+                true,
+                "",
+                1L,
+                "req-loc",
+                null,
+                "",
+                "/api/system/user/list",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "8.8.8.8",
+                ""));
+
+        ArgumentCaptor<ApiLog> cap = ArgumentCaptor.forClass(ApiLog.class);
+        verify(apiLogRepository).insert(cap.capture());
+        assertThat(cap.getValue().getLocation()).isEqualTo("国家:美国|省:加利福尼亚|市:山景城|服务:谷歌");
     }
 }

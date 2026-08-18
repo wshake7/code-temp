@@ -1,6 +1,7 @@
 package com.wshake.service.log;
 
 import com.wshake.common.constant.ClientIds;
+import com.wshake.common.request.RequestContext;
 import com.wshake.common.time.TimeZones;
 import com.wshake.common.util.UserAgentParser;
 import com.wshake.service.entity.ApiLog;
@@ -57,14 +58,16 @@ public class ApiLogWriter {
             return;
         }
         LocalDateTime createdAt = TimeZones.now();
-        apiLogExecutor.execute(() -> insertQuietly(command, createdAt));
+        // Filter 已解析则快照带走；异步线程不继承 RequestContext
+        String location = RequestContext.locationOrNull();
+        apiLogExecutor.execute(() -> insertQuietly(command, createdAt, location));
     }
 
-    private void insertQuietly(ApiLogWriteCommand cmd, LocalDateTime createdAt) {
+    private void insertQuietly(ApiLogWriteCommand cmd, LocalDateTime createdAt, String locationHint) {
         try {
             String userAgent = nullToEmpty(cmd.userAgent());
             UserAgentParser.Parsed ua = UserAgentParser.parse(userAgent);
-            String location = ipLocationResolver.resolve(cmd.clientIp());
+            String location = locationHint != null ? locationHint : ipLocationResolver.resolve(cmd.clientIp());
             String clientName = nullToEmpty(cmd.clientName());
             if (clientName.isBlank()) {
                 clientName = ua.clientName();

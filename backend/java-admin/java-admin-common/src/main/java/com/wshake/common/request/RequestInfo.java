@@ -26,4 +26,7 @@ public class RequestInfo {
 
     /** 客户端 IP（若已解析）。 */
     private String clientIp;
+
+    /** IP 解析地理位置（Filter 写入；本机/内网/国家省市区，失败为空串）。 */
+    private String location;
 }

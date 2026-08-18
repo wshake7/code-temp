@@ -96,8 +96,9 @@ public class RequestLogAspect {
         Object[] args = pjp.getArgs();
         String httpLine = currentHttpLine();
         String argsJson = safeToJson(args);
-        // Filter 已写入；切面只读，不再重复解析代理头
+        // Filter 已写入；切面只读，不再重复解析代理头 / IP 归属地
         String clientIp = nullToEmpty(RequestContext.clientIpOrNull());
+        String location = nullToEmpty(RequestContext.locationOrNull());
 
         // 优先 RequestContext（拦截器已写入），回退 Sa-Token
         Long userId = RequestContext.userIdOrNull();
@@ -117,6 +118,7 @@ public class RequestLogAspect {
                     .addKeyValue("logType", "HTTP")
                     .addKeyValue("http", httpLine)
                     .addKeyValue("clientIp", clientIp)
+                    .addKeyValue("location", location)
                     .addKeyValue("handler", handler)
                     .addKeyValue("costMs", cost)
                     .addKeyValue("args", argsJson)
@@ -130,6 +132,7 @@ public class RequestLogAspect {
                     .addKeyValue("logType", "HTTP")
                     .addKeyValue("http", httpLine)
                     .addKeyValue("clientIp", clientIp)
+                    .addKeyValue("location", location)
                     .addKeyValue("handler", handler)
                     .addKeyValue("costMs", cost)
                     .addKeyValue("args", argsJson)

@@ -3,18 +3,20 @@ package com.wshake.infra.request;
 import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.request.RequestContext;
 import com.wshake.common.util.ClientIpUtils;
+import com.wshake.service.support.geo.IpLocationResolver;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * 请求 ThreadLocal 生命周期：入口 open，出口 close；并预填 requestId / URI / 客户端 IP。
+ * 请求 ThreadLocal 生命周期：入口 open，出口 close；并预填 requestId / URI / 客户端 IP / location。
  *
  * <p>顺序紧随 {@link com.wshake.infra.log.TraceIdFilter}（{@code HIGHEST_PRECEDENCE}），
  * 用户 id / language 由后续 Sa + Language 拦截器写入。
@@ -29,6 +31,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public final class RequestContextFilter extends OncePerRequestFilter {
 
+    /** 可空：单测可不注入。 */
+    private final IpLocationResolver ipLocationResolver;
+
+    public RequestContextFilter() {
+        this(null);
+    }
+
+    @Autowired
+    public RequestContextFilter(IpLocationResolver ipLocationResolver) {
+        this.ipLocationResolver = ipLocationResolver;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -39,7 +53,11 @@ public final class RequestContextFilter extends OncePerRequestFilter {
                 RequestContext.setRequestId(requestId);
             }
             RequestContext.setRequestUri(request.getRequestURI());
-            RequestContext.setClientIp(resolveClientIp(request));
+            String clientIp = resolveClientIp(request);
+            RequestContext.setClientIp(clientIp);
+            if (ipLocationResolver != null) {
+                RequestContext.setLocation(ipLocationResolver.resolve(clientIp));
+            }
             filterChain.doFilter(request, response);
         } finally {
             RequestContext.close();

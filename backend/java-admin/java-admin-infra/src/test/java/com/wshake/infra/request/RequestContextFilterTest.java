@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.wshake.common.constant.SecurityHeaders;
 import com.wshake.common.request.RequestContext;
+import com.wshake.service.support.geo.IpLocationResolver;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
  */
 class RequestContextFilterTest {
 
-    private final RequestContextFilter filter = new RequestContextFilter();
+    private final RequestContextFilter filter = new RequestContextFilter(new IpLocationResolver(null, null));
 
     @AfterEach
     void clearRequestContext() {
@@ -34,16 +35,19 @@ class RequestContextFilterTest {
         AtomicReference<String> seenId = new AtomicReference<>();
         AtomicReference<String> seenUri = new AtomicReference<>();
         AtomicReference<String> seenIp = new AtomicReference<>();
+        AtomicReference<String> seenLocation = new AtomicReference<>();
 
         filter.doFilter(req, resp, (r, s) -> {
             seenId.set(RequestContext.requestIdOrNull());
             seenUri.set(RequestContext.requestUriOrNull());
             seenIp.set(RequestContext.clientIpOrNull());
+            seenLocation.set(RequestContext.locationOrNull());
         });
 
         assertThat(seenId.get()).isEqualTo("nid-9");
         assertThat(seenUri.get()).isEqualTo("/api/user/info");
         assertThat(seenIp.get()).isEqualTo("10.0.0.8");
+        assertThat(seenLocation.get()).isEqualTo("内网");
         // finally 已清理
         assertThat(RequestContext.get()).isNull();
     }

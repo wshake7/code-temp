@@ -79,7 +79,7 @@ transforms:
       }
 
   # prod/test logback：Spring Boot StructuredLogEncoder format=logstash
-  # {"@timestamp":"...","message":"...","logger_name":"...","thread_name":"...","level":"INFO",...,"traceId":"...","userId":"...","clientIp":"..."}
+  # {"@timestamp":"...","message":"...","logger_name":"...","thread_name":"...","level":"INFO",...,"traceId":"...","userId":"...","clientIp":"...","location":"..."}
   parse_java_admin:
     type: remap
     inputs:
@@ -90,6 +90,7 @@ transforms:
       .collect_time = format_timestamp!(.timestamp, format: "%Y-%m-%d %H:%M:%S", timezone: "Asia/Shanghai")
       .http = ""
       .client_ip = ""
+      .location = ""
       .raw = raw_line
 
       parsed, err = parse_json(.message)
@@ -107,6 +108,7 @@ transforms:
         .trace_id = to_string(parsed.traceId) ?? ""
         .user_id = to_string(parsed.userId) ?? ""
         .client_ip = to_string(parsed.clientIp) ?? ""
+        .location = to_string(parsed.location) ?? ""
         .log_type = to_string(parsed.logType) ?? ""
         .http = to_string(parsed.http) ?? ""
         # _msg 只放 log 正文；整行 JSON 放 raw，供 VMUI 展开
@@ -133,6 +135,7 @@ transforms:
         .trace_id = ""
         .user_id = ""
         .client_ip = ""
+        .location = ""
         .log_type = ""
       }
 
@@ -153,6 +156,7 @@ transforms:
         "trace_id": .trace_id,
         "user_id": .user_id,
         "client_ip": .client_ip,
+        "location": .location,
         "log_type": .log_type,
         "http": .http,
         "raw": .raw,

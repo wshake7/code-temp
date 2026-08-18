@@ -35,6 +35,7 @@ class RequestLogAspectApiLogTest {
         RequestContext.open();
         RequestContext.setRequestId("req-test-1");
         RequestContext.setClientIp("10.0.0.8");
+        RequestContext.setLocation("内网");
         RequestContext.setUserId(11L);
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/system/user/list");

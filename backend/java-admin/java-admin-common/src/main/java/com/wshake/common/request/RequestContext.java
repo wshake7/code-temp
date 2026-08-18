@@ -10,6 +10,7 @@ package com.wshake.common.request;
  * <pre>{@code
  * Long userId = RequestContext.userIdOrNull();
  * String lang = RequestContext.languageOrNull();
+ * String location = RequestContext.locationOrNull();
  * }</pre>
  *
  * @author wshake
@@ -76,6 +77,11 @@ public final class RequestContext {
         return info == null ? null : info.getClientIp();
     }
 
+    public static String locationOrNull() {
+        RequestInfo info = HOLDER.get();
+        return info == null ? null : info.getLocation();
+    }
+
     public static void setUserId(Long userId) {
         getOrCreate().setUserId(userId);
     }
@@ -94,5 +100,9 @@ public final class RequestContext {
 
     public static void setClientIp(String clientIp) {
         getOrCreate().setClientIp(clientIp);
+    }
+
+    public static void setLocation(String location) {
+        getOrCreate().setLocation(location);
     }
 }
