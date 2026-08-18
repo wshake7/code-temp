@@ -3,9 +3,12 @@ package com.wshake.infra.log;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import lombok.Data;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -80,6 +83,23 @@ class RequestLogAspectTest {
     @Test
     void safeToJson_null_returnsNullLiteral() {
         assertThat(aspect.safeToJson(null)).isEqualTo("null");
+    }
+
+    @Test
+    void safeToJson_responseEntity_printsBodyOnly() {
+        ResponseEntity<Map<String, Object>> entity = ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Trace-Id", "trace-1")
+                .body(Map.of("code", 0, "msg", "ok"));
+
+        String json = aspect.safeToJson(entity);
+
+        assertThat(json).contains("\"code\":0");
+        assertThat(json).contains("\"msg\":\"ok\"");
+        assertThat(json).doesNotContain("headers");
+        assertThat(json).doesNotContain("X-Trace-Id");
+        assertThat(json).doesNotContain("statusCode");
+        assertThat(json).doesNotContain("trace-1");
     }
 
     @Test

@@ -31,6 +31,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
@@ -315,7 +316,16 @@ public class RequestLogAspect {
         if (obj instanceof Object[] arr) {
             return formatArgs(arr);
         }
-        return writeOrFallback(obj);
+        // ResponseEntity / HttpEntity 序列化会带 headers、status，日志只保留 body
+        return writeOrFallback(unwrapResponseBody(obj));
+    }
+
+    /** 剥掉 {@link HttpEntity} 包装，只留下响应体（递归处理嵌套包装）。 */
+    private static Object unwrapResponseBody(Object obj) {
+        if (obj instanceof HttpEntity<?> entity) {
+            return unwrapResponseBody(entity.getBody());
+        }
+        return obj;
     }
 
     private String formatArgs(Object[] args) {
