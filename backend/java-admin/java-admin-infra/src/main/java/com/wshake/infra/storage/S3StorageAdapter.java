@@ -68,7 +68,11 @@ public final class S3StorageAdapter implements StoragePort {
                 .build();
         try {
             s3Client.putObject(request, RequestBody.fromInputStream(command.content(), command.contentLength()));
-            log.info("[STORAGE] s3 put key={} size={}", key, command.contentLength());
+            log.atInfo()
+                    .addKeyValue("logType", "STORAGE")
+                    .addKeyValue("key", key)
+                    .addKeyValue("size", command.contentLength())
+                    .log("s3 put");
             return new StoredObject(key, command.contentLength(), contentType, url(key).orElse(null));
         } catch (SdkException ex) {
             throw wrapRemote("写入 S3 对象失败", ex);

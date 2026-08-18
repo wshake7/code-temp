@@ -33,7 +33,7 @@ public class EncryptKeyPairService {
         try {
             return OBJECT_MAPPER.readValue(json, EncryptKeyPair.class);
         } catch (Exception e) {
-            log.error("反序列化 encrypt key pair 失败", e);
+            log.atError().setCause(e).log("反序列化 encrypt key pair 失败");
             return null;
         }
     }
@@ -46,7 +46,7 @@ public class EncryptKeyPairService {
             redis.opsForValue().set(RedisKeys.GLOBAL_ENCRYPT_KEY_PAIR, json);
             log.info("全局 encrypt key pair 已写入 Redis");
         } catch (Exception e) {
-            log.error("序列化 encrypt key pair 到 Redis 失败", e);
+            log.atError().setCause(e).log("序列化 encrypt key pair 到 Redis 失败");
         }
     }
 

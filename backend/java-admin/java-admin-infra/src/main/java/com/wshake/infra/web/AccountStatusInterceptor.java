@@ -40,7 +40,11 @@ public final class AccountStatusInterceptor implements HandlerInterceptor {
                     StpUtil.logout();
                 }
             } catch (Exception logoutEx) {
-                log.debug("[AUTH] logout after account status reject failed userId={}", userId, logoutEx);
+                log.atDebug()
+                        .addKeyValue("logType", "AUTH")
+                        .addKeyValue("userId", userId)
+                        .setCause(logoutEx)
+                        .log("logout after account status reject failed");
             }
             throw ex;
         }

@@ -56,7 +56,10 @@ public class ExecutionMirrorScheduleBootstrap implements ApplicationRunner {
             ensureSchedule();
         } catch (RuntimeException ex) {
             // 不阻断启动：镜像可后续手动补 Schedule
-            log.warn("ExecutionMirror schedule bootstrap failed: {}", ex.getMessage(), ex);
+            log.atWarn()
+                    .addKeyValue("msg", ex.getMessage())
+                    .setCause(ex)
+                    .log("ExecutionMirror schedule bootstrap failed");
         }
     }
 
@@ -68,7 +71,10 @@ public class ExecutionMirrorScheduleBootstrap implements ApplicationRunner {
             if (isPaused(handle)) {
                 handle.unpause("execution mirror enabled");
             }
-            log.info("ExecutionMirror schedule updated: scheduleId={} interval={}s", SCHEDULE_ID, INTERVAL.toSeconds());
+            log.atInfo()
+                    .addKeyValue("scheduleId", SCHEDULE_ID)
+                    .addKeyValue("intervalSeconds", INTERVAL.toSeconds())
+                    .log("ExecutionMirror schedule updated");
             return;
         }
         try {
@@ -76,13 +82,18 @@ public class ExecutionMirrorScheduleBootstrap implements ApplicationRunner {
                     SCHEDULE_ID,
                     schedule,
                     ScheduleOptions.newBuilder().setTriggerImmediately(true).build());
-            log.info("ExecutionMirror schedule created: scheduleId={} interval={}s", SCHEDULE_ID, INTERVAL.toSeconds());
+            log.atInfo()
+                    .addKeyValue("scheduleId", SCHEDULE_ID)
+                    .addKeyValue("intervalSeconds", INTERVAL.toSeconds())
+                    .log("ExecutionMirror schedule created");
         } catch (ScheduleAlreadyRunningException ex) {
             handle.update(input -> new ScheduleUpdate(schedule));
             if (isPaused(handle)) {
                 handle.unpause("execution mirror enabled");
             }
-            log.info("ExecutionMirror schedule created-raced-then-updated: scheduleId={}", SCHEDULE_ID);
+            log.atInfo()
+                    .addKeyValue("scheduleId", SCHEDULE_ID)
+                    .log("ExecutionMirror schedule created-raced-then-updated");
         }
     }
 

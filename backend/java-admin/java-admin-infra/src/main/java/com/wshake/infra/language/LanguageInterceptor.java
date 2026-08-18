@@ -48,7 +48,7 @@ public final class LanguageInterceptor implements HandlerInterceptor {
         String language = resolveLanguage(request);
         if (language != null && !language.isEmpty()) {
             RequestContext.setLanguage(language);
-            log.debug("Request language: {}", language);
+            log.atDebug().addKeyValue("language", language).log("Request language");
 
             userLanguageSyncService.syncIfChanged(userId, language);
         }

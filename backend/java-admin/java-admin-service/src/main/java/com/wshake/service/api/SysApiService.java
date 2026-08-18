@@ -271,7 +271,12 @@ public class SysApiService {
             added += 1;
         }
         int total = apiRepository.listAll().size();
-        log.info("[API] sync complete added={} skipped={} total={}", added, skipped, total);
+        log.atInfo()
+                .addKeyValue("added", added)
+                .addKeyValue("skipped", skipped)
+                .addKeyValue("total", total)
+                .addKeyValue("logType", "API")
+                .log("sync complete");
         return new ApiSyncResult(added, skipped, total);
     }
 
@@ -322,7 +327,11 @@ public class SysApiService {
         for (Long userId : userIds) {
             sysUserService.syncCasbinForUser(userId);
         }
-        log.info("[API] casbin synced roles={} users={}", roleIds.size(), userIds.size());
+        log.atInfo()
+                .addKeyValue("roles", roleIds.size())
+                .addKeyValue("users", userIds.size())
+                .addKeyValue("logType", "API")
+                .log("casbin synced");
     }
 
     private ApiView loadView(Long id) {

@@ -62,7 +62,11 @@ public class AuthService {
 
         List<String> roles = authQueryRepository.findRoleCodesByUserId(user.getId());
         loginLogger.recordPwdLogin(safeUsername, user.getId(), 200, true, "", meta);
-        log.info("[AUTH] login success userId={} username={}", user.getId(), safeUsername);
+        log.atInfo()
+                .addKeyValue("logType", "AUTH")
+                .addKeyValue("userId", user.getId())
+                .addKeyValue("username", safeUsername)
+                .log("login success");
         return new LoginResult(user, roles, DEFAULT_HOME_PATH);
     }
 
@@ -111,17 +115,29 @@ public class AuthService {
     private SysUser requireActiveUser(String username, LoginClientMeta meta) {
         SysUser user = sysUserRepository.findByUsername(username);
         if (user == null) {
-            log.warn("[AUTH] login failed username={} reason=USER_NOT_FOUND", username);
+            log.atWarn()
+                    .addKeyValue("username", username)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "USER_NOT_FOUND")
+                    .log("login failed");
             loginLogger.recordPwdLogin(username, null, 401, false, "Username or password is incorrect", meta);
             throw AuthException.invalidCredentials();
         }
         if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
-            log.warn("[AUTH] login failed username={} reason=USER_DISABLED", username);
+            log.atWarn()
+                    .addKeyValue("username", username)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "USER_DISABLED")
+                    .log("login failed");
             loginLogger.recordPwdLogin(username, user.getId(), 403, false, "User disabled", meta);
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
         }
         if (user.isAccountExpired(null)) {
-            log.warn("[AUTH] login failed username={} reason=ACCOUNT_EXPIRED", username);
+            log.atWarn()
+                    .addKeyValue("username", username)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "ACCOUNT_EXPIRED")
+                    .log("login failed");
             loginLogger.recordPwdLogin(username, user.getId(), 403, false, "Account expired", meta);
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已过期");
         }
@@ -140,15 +156,27 @@ public class AuthService {
         }
         SysUser user = sysUserRepository.findById(userId);
         if (user == null) {
-            log.warn("[AUTH] request rejected userId={} reason=USER_NOT_FOUND", userId);
+            log.atWarn()
+                    .addKeyValue("userId", userId)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "USER_NOT_FOUND")
+                    .log("request rejected");
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号不可用");
         }
         if (user.getIsEnabled() == null || user.getIsEnabled() != 1) {
-            log.warn("[AUTH] request rejected userId={} reason=USER_DISABLED", userId);
+            log.atWarn()
+                    .addKeyValue("userId", userId)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "USER_DISABLED")
+                    .log("request rejected");
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已禁用");
         }
         if (user.isAccountExpired(null)) {
-            log.warn("[AUTH] request rejected userId={} reason=ACCOUNT_EXPIRED", userId);
+            log.atWarn()
+                    .addKeyValue("userId", userId)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "ACCOUNT_EXPIRED")
+                    .log("request rejected");
             throw new AuthException(ResultCode.AUTH_FORBIDDEN, "账号已过期");
         }
         return user;
@@ -156,7 +184,11 @@ public class AuthService {
 
     private void verifyPassword(String password, SysUser user, String username, LoginClientMeta meta) {
         if (!PASSWORD_ENCODER.matches(password, user.getPasswordHash())) {
-            log.warn("[AUTH] login failed username={} reason=BAD_PASSWORD", username);
+            log.atWarn()
+                    .addKeyValue("username", username)
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("reason", "BAD_PASSWORD")
+                    .log("login failed");
             loginLogger.recordPwdLogin(username, user.getId(), 401, false, "Username or password is incorrect", meta);
             throw AuthException.invalidCredentials();
         }
@@ -177,12 +209,13 @@ public class AuthService {
             return;
         }
         BlacklistHit h = hit.get();
-        log.warn(
-                "[AUTH] login Access Blocked username={} userId={} blacklistScope={} reason={}",
-                username,
-                user.getId(),
-                h.scope(),
-                h.reason());
+        log.atWarn()
+                .addKeyValue("logType", "AUTH")
+                .addKeyValue("username", username)
+                .addKeyValue("userId", user.getId())
+                .addKeyValue("blacklistScope", h.scope())
+                .addKeyValue("reason", h.reason())
+                .log("login Access Blocked");
         loginLogger.recordPwdLogin(username, user.getId(), 403, false, "Access blocked", meta);
         throw AuthException.accessBlocked();
     }

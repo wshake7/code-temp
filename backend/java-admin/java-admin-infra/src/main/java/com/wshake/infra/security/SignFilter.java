@@ -109,7 +109,7 @@ public final class SignFilter extends OncePerRequestFilter {
             String privateKeyPem = SessionEncryptKeys.resolvePrivateKeyPem(request, serverKeyPairProvider);
             return cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
         } catch (Exception e) {
-            log.debug("Sign 路径 RSA 解密 AES key 失败: {}", e.getMessage());
+            log.atDebug().addKeyValue("msg", e.getMessage()).log("Sign 路径 RSA 解密 AES key 失败");
             writeError(response, ResultCode.REQUEST_KEY_FAILED);
             return null;
         }

@@ -73,12 +73,12 @@ public class TemporalTaskTriggerPort implements TaskTriggerPort {
         try {
             WorkflowStub stub = workflowClient.newUntypedWorkflowStub(businessWorkflowType, options.build());
             WorkflowExecution execution = stub.start(businessInput);
-            log.info(
-                    "Temporal workflow started: type={} queue={} workflowId={} runId={}",
-                    businessWorkflowType,
-                    taskQueue,
-                    execution.getWorkflowId(),
-                    execution.getRunId());
+            log.atInfo()
+                    .addKeyValue("type", businessWorkflowType)
+                    .addKeyValue("queue", taskQueue)
+                    .addKeyValue("workflowId", execution.getWorkflowId())
+                    .addKeyValue("runId", execution.getRunId())
+                    .log("Temporal workflow started");
             return new TriggerResult(execution.getWorkflowId(), execution.getRunId());
         } catch (WorkflowServiceException ex) {
             throw BizException.of(ResultCode.REMOTE_CALL_FAILED, "Temporal start failed: " + ex.getMessage());

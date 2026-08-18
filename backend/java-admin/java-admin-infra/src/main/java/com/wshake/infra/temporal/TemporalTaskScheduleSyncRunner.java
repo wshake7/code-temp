@@ -30,13 +30,13 @@ public class TemporalTaskScheduleSyncRunner implements ApplicationRunner {
         try {
             TemporalTaskScheduleSync.SyncSummary summary = scheduleSync.syncAll();
             if (summary.failed() > 0) {
-                log.warn(
-                        "Temporal schedule sync finished with failures: failed={} total={}",
-                        summary.failed(),
-                        summary.total());
+                log.atWarn()
+                        .addKeyValue("failed", summary.failed())
+                        .addKeyValue("total", summary.total())
+                        .log("Temporal schedule sync finished with failures");
             }
         } catch (RuntimeException ex) {
-            log.error("Temporal schedule sync aborted: {}", ex.getMessage(), ex);
+            log.atError().addKeyValue("msg", ex.getMessage()).setCause(ex).log("Temporal schedule sync aborted");
         }
     }
 }

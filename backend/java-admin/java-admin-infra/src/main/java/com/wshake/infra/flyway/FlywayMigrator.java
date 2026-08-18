@@ -46,11 +46,12 @@ public class FlywayMigrator {
         String configuredTarget = flywayProperties.getTarget();
         String[] locations = resolveLocations(environment, configuredLocations);
         String target = resolveTarget(environment, configuredTarget);
-        log.info(
-                "[FLYWAY] starting migration: profiles={} locations={} target={}",
-                Arrays.toString(environment.getActiveProfiles()),
-                Arrays.toString(locations),
-                target == null || target.isBlank() ? "latest" : target);
+        log.atInfo()
+                .addKeyValue("profiles", Arrays.toString(environment.getActiveProfiles()))
+                .addKeyValue("locations", Arrays.toString(locations))
+                .addKeyValue("target", target == null || target.isBlank() ? "latest" : target)
+                .addKeyValue("logType", "FLYWAY")
+                .log("starting migration");
 
         try {
             FluentConfiguration cfg = Flyway.configure()
@@ -64,10 +65,17 @@ public class FlywayMigrator {
             }
             Flyway flyway = new Flyway(cfg);
             int applied = flyway.migrate().migrationsExecuted;
-            log.info("[FLYWAY] migration complete: {} migration(s) applied", applied);
+            log.atInfo()
+                    .addKeyValue("logType", "FLYWAY")
+                    .addKeyValue("applied", applied)
+                    .log("migration complete");
             return flyway;
         } catch (Exception e) {
-            log.error("[FLYWAY] migration FAILED: {}", e.getMessage(), e);
+            log.atError()
+                    .addKeyValue("logType", "FLYWAY")
+                    .addKeyValue("msg", e.getMessage())
+                    .setCause(e)
+                    .log("migration FAILED");
             throw e;
         }
     }

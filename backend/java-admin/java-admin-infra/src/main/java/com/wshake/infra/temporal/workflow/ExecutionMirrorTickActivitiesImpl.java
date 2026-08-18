@@ -135,11 +135,11 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                 }
                 seen.add(key(row.getWorkflowId(), row.getRunId()));
             } catch (RuntimeException ex) {
-                log.warn(
-                        "mirror open row failed: id={} workflowId={} reason={}",
-                        row.getId(),
-                        row.getWorkflowId(),
-                        ex.getMessage());
+                log.atWarn()
+                        .addKeyValue("id", row.getId())
+                        .addKeyValue("workflowId", row.getWorkflowId())
+                        .addKeyValue("reason", ex.getMessage())
+                        .log("mirror open row failed");
             }
         }
 
@@ -171,15 +171,24 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
                             touched++;
                         }
                     } catch (RuntimeException ex) {
-                        log.warn("mirror visibility row failed: workflowId={} reason={}", wfId, ex.getMessage());
+                        log.atWarn()
+                                .addKeyValue("workflowId", wfId)
+                                .addKeyValue("reason", ex.getMessage())
+                                .log("mirror visibility row failed");
                     }
                 }
             } catch (RuntimeException ex) {
-                log.warn("listExecutions failed: type={} reason={}", workflowType, ex.getMessage());
+                log.atWarn()
+                        .addKeyValue("type", workflowType)
+                        .addKeyValue("reason", ex.getMessage())
+                        .log("listExecutions failed");
             }
         }
 
-        log.info("ExecutionMirrorTick mirrorOnce touched={} scannedKeys={}", touched, seen.size());
+        log.atInfo()
+                .addKeyValue("touched", touched)
+                .addKeyValue("scannedKeys", seen.size())
+                .log("ExecutionMirrorTick mirrorOnce");
         return touched;
     }
 
@@ -456,11 +465,11 @@ public class ExecutionMirrorTickActivitiesImpl implements ExecutionMirrorTickAct
             }
             return decodeStartedInput(started.get().getWorkflowExecutionStartedEventAttributes(), dataConverter());
         } catch (Exception ex) {
-            log.debug(
-                    "fetch workflow input failed: workflowId={} runId={} reason={}",
-                    workflowId,
-                    effectiveRunId,
-                    ex.getMessage());
+            log.atDebug()
+                    .addKeyValue("workflowId", workflowId)
+                    .addKeyValue("runId", effectiveRunId)
+                    .addKeyValue("reason", ex.getMessage())
+                    .log("fetch workflow input failed");
             return null;
         }
     }

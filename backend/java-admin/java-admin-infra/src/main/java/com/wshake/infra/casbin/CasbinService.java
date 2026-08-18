@@ -56,7 +56,12 @@ public class CasbinService {
     public boolean addPolicy(String sub, String obj, String act) {
         boolean ok = enforcer.addPolicy(sub, obj, act);
         if (ok) {
-            log.info("[CASBIN] policy added: {} {} {}", sub, obj, act);
+            log.atInfo()
+                    .addKeyValue("sub", sub)
+                    .addKeyValue("obj", obj)
+                    .addKeyValue("act", act)
+                    .addKeyValue("logType", "CASBIN")
+                    .log("policy added");
         }
         return ok;
     }
@@ -72,7 +77,12 @@ public class CasbinService {
     public boolean removePolicy(String sub, String obj, String act) {
         boolean ok = enforcer.removePolicy(sub, obj, act);
         if (ok) {
-            log.info("[CASBIN] policy removed: {} {} {}", sub, obj, act);
+            log.atInfo()
+                    .addKeyValue("sub", sub)
+                    .addKeyValue("obj", obj)
+                    .addKeyValue("act", act)
+                    .addKeyValue("logType", "CASBIN")
+                    .log("policy removed");
         }
         return ok;
     }
@@ -106,7 +116,10 @@ public class CasbinService {
     public boolean removePoliciesForSubject(String subject) {
         boolean ok = enforcer.removeFilteredPolicy(0, subject);
         if (ok) {
-            log.info("[CASBIN] policies removed for subject={}", subject);
+            log.atInfo()
+                    .addKeyValue("logType", "CASBIN")
+                    .addKeyValue("subject", subject)
+                    .log("policies removed");
         }
         return ok;
     }
@@ -118,6 +131,6 @@ public class CasbinService {
      */
     public void reloadPolicy() {
         enforcer.loadPolicy();
-        log.info("[CASBIN] policy reloaded from DB");
+        log.atInfo().addKeyValue("logType", "CASBIN").log("policy reloaded from DB");
     }
 }

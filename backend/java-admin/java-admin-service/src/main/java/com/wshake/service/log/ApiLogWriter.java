@@ -122,12 +122,13 @@ public class ApiLogWriter {
             row.setCreatedAt(createdAt);
             apiLogRepository.insert(row);
         } catch (Exception e) {
-            log.error(
-                    "[API_LOG] write failed method={} path={} requestId={}",
-                    cmd.method(),
-                    cmd.path(),
-                    cmd.requestId(),
-                    e);
+            log.atError()
+                    .addKeyValue("method", cmd.method())
+                    .addKeyValue("path", cmd.path())
+                    .addKeyValue("requestId", cmd.requestId())
+                    .setCause(e)
+                    .addKeyValue("logType", "API_LOG")
+                    .log("write failed");
         }
     }
 

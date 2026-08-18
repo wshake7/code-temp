@@ -74,7 +74,7 @@ public final class IpLocationResolver {
             String region = searcher.search(queryIp);
             return formatRegion(region);
         } catch (Exception e) {
-            log.error("query login IP location fail ip={}", value, e);
+            log.atError().addKeyValue("ip", value).setCause(e).log("query login IP location fail");
             return "";
         }
     }
@@ -115,19 +115,26 @@ public final class IpLocationResolver {
     private static Searcher loadSearcher(Version version, String classpath) {
         try (InputStream in = IpLocationResolver.class.getClassLoader().getResourceAsStream(classpath)) {
             if (in == null) {
-                log.warn("ip2region xdb not found on classpath: {}; {} lookups disabled", classpath, version.name);
+                log.atWarn()
+                        .addKeyValue("classpath", classpath)
+                        .addKeyValue("version", version.name)
+                        .log("ip2region xdb not found on classpath");
                 return null;
             }
             LongByteArray content = Searcher.loadContentFromInputStream(in);
             Searcher searcher = Searcher.newWithBuffer(version, content);
-            log.info(
-                    "ip2region {} searcher loaded from classpath:{} size={}B",
-                    version.name,
-                    classpath,
-                    content.length());
+            log.atInfo()
+                    .addKeyValue("version", version.name)
+                    .addKeyValue("classpath", classpath)
+                    .addKeyValue("size", content.length())
+                    .log("ip2region searcher loaded");
             return searcher;
         } catch (Exception e) {
-            log.error("load ip2region xdb failed path={}; {} lookups disabled", classpath, version.name, e);
+            log.atError()
+                    .addKeyValue("path", classpath)
+                    .addKeyValue("version", version.name)
+                    .setCause(e)
+                    .log("load ip2region xdb failed");
             return null;
         }
     }
@@ -139,7 +146,7 @@ public final class IpLocationResolver {
         try {
             searcher.close();
         } catch (Exception e) {
-            log.warn("close ip2region {} searcher failed", label, e);
+            log.atWarn().addKeyValue("label", label).setCause(e).log("close ip2region searcher failed");
         }
     }
 

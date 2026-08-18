@@ -115,13 +115,14 @@ public final class BlacklistFilter extends OncePerRequestFilter {
     private static void writeAccessBlocked(
             HttpServletResponse response, String targetType, String targetValue, String scene, BlacklistHit hit)
             throws IOException {
-        log.warn(
-                "[BLACKLIST] Access Blocked targetType={} targetValue={} scene={} hitScope={} reason={}",
-                targetType,
-                targetValue,
-                scene,
-                hit.scope(),
-                hit.reason());
+        log.atWarn()
+                .addKeyValue("targetType", targetType)
+                .addKeyValue("targetValue", targetValue)
+                .addKeyValue("scene", scene)
+                .addKeyValue("hitScope", hit.scope())
+                .addKeyValue("reason", hit.reason())
+                .addKeyValue("logType", "BLACKLIST")
+                .log("Access Blocked");
         // 与 AuthException.accessBlocked() → GlobalExceptionHandler 一致：HTTP 403
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");

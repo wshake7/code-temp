@@ -8,9 +8,11 @@ import com.wshake.common.constant.MdcKeys;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.boot.logging.LoggingInitializationContext;
@@ -47,6 +49,22 @@ class LogbackProfileFormatTest {
     }
 
     @Test
+    void prodProfile_fluentKeyValuesAreJsonFields() throws Exception {
+        String out = captureConsole(
+                "prod",
+                logger -> logger.atInfo()
+                        .addKeyValue("logType", "HTTP")
+                        .addKeyValue("handler", "Foo.bar()")
+                        .addKeyValue("costMs", 12)
+                        .log());
+        JsonNode json = parseJsonLine(out);
+        assertThat(json.path("message").asText()).isEmpty();
+        assertThat(json.path("logType").asText()).isEqualTo("HTTP");
+        assertThat(json.path("handler").asText()).isEqualTo("Foo.bar()");
+        assertThat(json.path("costMs").asInt()).isEqualTo(12);
+    }
+
+    @Test
     void testProfile_consoleIsLogstashJson() throws Exception {
         JsonNode json = parseJsonLine(captureConsole("test", "json-format-probe-test"));
         assertThat(json.path("message").asText()).isEqualTo("json-format-probe-test");
@@ -72,6 +90,10 @@ class LogbackProfileFormatTest {
     }
 
     private String captureConsole(String profile, String message) {
+        return captureConsole(profile, logger -> logger.info(message));
+    }
+
+    private String captureConsole(String profile, Consumer<Logger> action) {
         MockEnvironment env = new MockEnvironment();
         env.setActiveProfiles(profile);
         env.setProperty("spring.application.name", "java-admin-log-probe");
@@ -83,7 +105,7 @@ class LogbackProfileFormatTest {
         try {
             system.beforeInitialize();
             system.initialize(new LoggingInitializationContext(env), null, null);
-            LoggerFactory.getLogger("com.wshake.infra.log.LogFormatProbe").info(message);
+            action.accept(LoggerFactory.getLogger("com.wshake.infra.log.LogFormatProbe"));
             capture.flush();
             return buf.toString(StandardCharsets.UTF_8);
         } finally {

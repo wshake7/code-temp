@@ -41,7 +41,7 @@ public class AltchaService {
                     .expiresInSeconds(altchaProperties.getExpiresSeconds());
             return Altcha.createChallenge(options);
         } catch (Exception e) {
-            log.error("[ALTCHA] createChallenge failed", e);
+            log.atError().addKeyValue("logType", "ALTCHA").setCause(e).log("createChallenge failed");
             throw new IllegalStateException("ALTCHA challenge 签发失败", e);
         }
     }
@@ -65,7 +65,10 @@ public class AltchaService {
             }
             String signature = payload.challenge().signature();
             if (consumedSignatures.contains(signature)) {
-                log.warn("[ALTCHA] replay detected signature={}", signature);
+                log.atWarn()
+                        .addKeyValue("logType", "ALTCHA")
+                        .addKeyValue("signature", signature)
+                        .log("replay detected");
                 return false;
             }
             Altcha.VerifySolutionResult result =
@@ -74,14 +77,19 @@ public class AltchaService {
                 consumedSignatures.add(signature);
                 return true;
             }
-            log.warn(
-                    "[ALTCHA] verify failed expired={} invalidSig={} invalidSol={}",
-                    result.expired(),
-                    result.invalidSignature(),
-                    result.invalidSolution());
+            log.atWarn()
+                    .addKeyValue("logType", "ALTCHA")
+                    .addKeyValue("expired", result.expired())
+                    .addKeyValue("invalidSig", result.invalidSignature())
+                    .addKeyValue("invalidSol", result.invalidSolution())
+                    .log("verify failed");
             return false;
         } catch (Exception e) {
-            log.warn("[ALTCHA] verify exception: {}", e.getMessage());
+            log.atWarn()
+                    .addKeyValue("logType", "ALTCHA")
+                    .addKeyValue("msg", e.getMessage())
+                    .setCause(e)
+                    .log("verify exception");
             return false;
         }
     }

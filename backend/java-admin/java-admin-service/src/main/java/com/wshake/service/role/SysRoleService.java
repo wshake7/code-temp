@@ -220,7 +220,11 @@ public class SysRoleService {
         for (Long userId : userIds) {
             sysUserService.syncCasbinForUser(userId);
         }
-        log.info("[ROLE] casbin synced for roleId={} userCount={}", roleId, userIds.size());
+        log.atInfo()
+                .addKeyValue("roleId", roleId)
+                .addKeyValue("userCount", userIds.size())
+                .addKeyValue("logType", "ROLE")
+                .log("casbin synced");
     }
 
     private List<RoleView> toViews(List<SysRole> rows) {

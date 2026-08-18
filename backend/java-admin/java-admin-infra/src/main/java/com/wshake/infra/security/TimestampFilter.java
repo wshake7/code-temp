@@ -51,12 +51,15 @@ public final class TimestampFilter extends OncePerRequestFilter {
                 long now = System.currentTimeMillis();
                 long expireMs = securityProperties.getTimestamp().getExpireMs();
                 if (Math.abs(now - timestamp) > expireMs) {
-                    log.debug("请求时间戳过期: {} (now: {})", timestamp, now);
+                    log.atDebug()
+                            .addKeyValue("timestamp", timestamp)
+                            .addKeyValue("now", now)
+                            .log("请求时间戳过期");
                     writeError(response, ResultCode.REQUEST_EXPIRED);
                     return;
                 }
             } catch (NumberFormatException e) {
-                log.debug("非法时间戳头: {}", timestampHeader);
+                log.atDebug().addKeyValue("header", timestampHeader).log("非法时间戳头");
                 writeError(response, ResultCode.REQUEST_ERROR);
                 return;
             }

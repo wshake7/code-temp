@@ -52,7 +52,11 @@ public final class LocalStorageAdapter implements StoragePort {
             }
             Files.copy(command.content(), target, StandardCopyOption.REPLACE_EXISTING);
             long size = Files.size(target);
-            log.info("[STORAGE] local put key={} size={}", key, size);
+            log.atInfo()
+                    .addKeyValue("logType", "STORAGE")
+                    .addKeyValue("key", key)
+                    .addKeyValue("size", size)
+                    .log("local put");
             return new StoredObject(key, size, contentType, url(key).orElse(null));
         } catch (IOException ex) {
             throw wrapIo("写入本地对象失败", ex);

@@ -39,10 +39,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Controller 请求日志切面：SLF4J {@code [HTTP]} 行 + 异步写入 {@code api_log}。
+ * Controller 请求日志切面：fluent API（{@code logType=HTTP}）+ 异步写入 {@code api_log}。
  *
- * <p>成功路径合并为单行 {@code [HTTP]}：HTTP method / URI(+query) / 方法签名 /
- * args 摘要 / 耗时 / 返回值摘要。失败路径同样用 {@code [HTTP]} 前缀 + ERROR 级别，并附带堆栈。
+ * <p>成功 / 失败字段走 {@code addKeyValue}（JSON 可检索），标签放 {@code logType} 不进 message；
+ * 失败再 {@code setCause} 附堆栈。
  *
  * <p>args 序列化时会跳过 Servlet/文件/流等不可 JSON 化参数，并对密码类字段脱敏。
  * 请求结束后将关键字段异步落入 {@code api_log}（字段对齐 schema；body/header/response 截断 64KB）。
@@ -116,19 +116,26 @@ public class RequestLogAspect {
         try {
             result = pjp.proceed();
             long cost = System.currentTimeMillis() - start;
-            log.info(
-                    "[HTTP] {} handler={} cost={}ms args={} result={}",
-                    httpLine,
-                    handler,
-                    cost,
-                    argsJson,
-                    safeToJson(result));
+            log.atInfo()
+                    .addKeyValue("logType", "HTTP")
+                    .addKeyValue("http", httpLine)
+                    .addKeyValue("handler", handler)
+                    .addKeyValue("costMs", cost)
+                    .addKeyValue("args", argsJson)
+                    .addKeyValue("result", safeToJson(result))
+                    .log();
             return result;
         } catch (Throwable t) {
             error = t;
             long cost = System.currentTimeMillis() - start;
-            // ERROR 级别已标识失败，消息与成功路径同结构，便于检索；最后参数为堆栈
-            log.error("[HTTP] {} handler={} cost={}ms args={}", httpLine, handler, cost, argsJson, t);
+            log.atError()
+                    .addKeyValue("logType", "HTTP")
+                    .addKeyValue("http", httpLine)
+                    .addKeyValue("handler", handler)
+                    .addKeyValue("costMs", cost)
+                    .addKeyValue("args", argsJson)
+                    .setCause(t)
+                    .log();
             throw t;
         } finally {
             long cost = System.currentTimeMillis() - start;
@@ -195,7 +202,10 @@ public class RequestLogAspect {
                     nullToEmpty(clientIp),
                     userAgent));
         } catch (Exception e) {
-            log.debug("[API_LOG] skip record: {}", e.toString());
+            log.atDebug()
+                    .addKeyValue("logType", "API_LOG")
+                    .addKeyValue("reason", e.toString())
+                    .log("skip record");
         }
     }
 

@@ -49,7 +49,7 @@ public class TemporalWorkerGracefulShutdownConfiguration {
 
     static void clearDestroyMethod(ConfigurableListableBeanFactory beanFactory, String beanName) {
         if (!beanFactory.containsBeanDefinition(beanName)) {
-            log.debug("Skip clear destroyMethod: bean '{}' not defined", beanName);
+            log.atDebug().addKeyValue("bean", beanName).log("Skip clear destroyMethod: bean not defined");
             return;
         }
         BeanDefinition definition = beanFactory.getBeanDefinition(beanName);
@@ -60,10 +60,10 @@ public class TemporalWorkerGracefulShutdownConfiguration {
         } else {
             definition.setDestroyMethodName("");
         }
-        log.info(
-                "Cleared destroyMethod on Temporal bean '{}' (was '{}') — owned by TemporalWorkerGracefulShutdown",
-                beanName,
-                previous);
+        log.atInfo()
+                .addKeyValue("bean", beanName)
+                .addKeyValue("previousDestroyMethod", previous)
+                .log("Cleared destroyMethod on Temporal bean");
     }
 
     /**

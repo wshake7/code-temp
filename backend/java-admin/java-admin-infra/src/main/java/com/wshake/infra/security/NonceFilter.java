@@ -54,12 +54,12 @@ public final class NonceFilter extends OncePerRequestFilter {
         long ttlMs = securityProperties.resolveNonceExpireMs();
         try {
             if (!nonceStore.tryAcquire(requestId, ttlMs)) {
-                log.debug("Nonce 冲突: {}", requestId);
+                log.atDebug().addKeyValue("requestId", requestId).log("Nonce 冲突");
                 writeError(response, ResultCode.REQUEST_NONCE_CONFLICT);
                 return;
             }
         } catch (Exception e) {
-            log.error("Nonce 存储失败: {}", e.getMessage());
+            log.atError().addKeyValue("msg", e.getMessage()).setCause(e).log("Nonce 存储失败");
             writeError(response, ResultCode.INTERNAL_ERROR);
             return;
         }

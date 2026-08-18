@@ -102,6 +102,7 @@ transforms:
         .position = to_string(parsed.logger_name) ?? ""
         .trace_id = to_string(parsed.traceId) ?? ""
         .user_id = to_string(parsed.userId) ?? ""
+        .log_type = to_string(parsed.logType) ?? ""
         msg, msg_err = to_string(parsed.message)
         if msg_err == null {
           .message = msg
@@ -117,6 +118,7 @@ transforms:
         .position = ""
         .trace_id = ""
         .user_id = ""
+        .log_type = ""
       }
 
       host = .host
@@ -135,6 +137,7 @@ transforms:
         "position": .position,
         "trace_id": .trace_id,
         "user_id": .user_id,
+        "log_type": .log_type,
         "message": message
       }
 

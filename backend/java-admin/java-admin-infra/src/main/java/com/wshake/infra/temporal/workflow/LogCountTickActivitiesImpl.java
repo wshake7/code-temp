@@ -44,7 +44,10 @@ public class LogCountTickActivitiesImpl implements LogCountTickActivities {
         }
 
         Map<String, Object> safeInput = input == null ? Map.of() : input;
-        log.info("log_count_tick count={} inputKeys={}", value, safeInput.size());
+        log.atInfo()
+                .addKeyValue("count", value)
+                .addKeyValue("inputKeys", safeInput.size())
+                .log("log_count_tick");
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("count", value);

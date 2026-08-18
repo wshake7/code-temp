@@ -32,11 +32,12 @@ public final class CasbinPolicyPortImpl implements CasbinPolicyPort {
         if (keepWildcard) {
             casbinService.addPolicy(subject, "/*", "*");
         }
-        log.info(
-                "[CASBIN] replaced policies subject={} count={} keepWildcard={}",
-                subject,
-                policies == null ? 0 : policies.size(),
-                keepWildcard);
+        log.atInfo()
+                .addKeyValue("subject", subject)
+                .addKeyValue("count", policies == null ? 0 : policies.size())
+                .addKeyValue("keepWildcard", keepWildcard)
+                .addKeyValue("logType", "CASBIN")
+                .log("replaced policies");
     }
 
     @Override

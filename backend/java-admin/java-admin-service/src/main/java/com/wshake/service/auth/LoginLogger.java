@@ -98,7 +98,11 @@ public class LoginLogger {
             row.setCreatedAt(loginTime);
             sysLoginLogRepository.insert(row);
         } catch (Exception e) {
-            log.error("[AUTH] write login log failed username={}", username, e);
+            log.atError()
+                    .addKeyValue("logType", "AUTH")
+                    .addKeyValue("username", username)
+                    .setCause(e)
+                    .log("write login log failed");
         }
     }
 }

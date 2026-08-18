@@ -50,9 +50,12 @@ public class UserLanguageSyncService {
                 return;
             }
             sysUserRepository.updateLanguageCode(userId, languageCode);
-            log.debug("异步更新用户 languageCode: userId={}, language={}", userId, languageCode);
+            log.atDebug()
+                    .addKeyValue("userId", userId)
+                    .addKeyValue("language", languageCode)
+                    .log("异步更新用户 languageCode");
         } catch (Exception e) {
-            log.error("异步更新用户 languageCode 失败 userId={}", userId, e);
+            log.atError().addKeyValue("userId", userId).setCause(e).log("异步更新用户 languageCode 失败");
         }
     }
 }

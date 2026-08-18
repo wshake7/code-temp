@@ -72,7 +72,7 @@ public final class SessionEncryptKeys {
             String publicKey = publicObj instanceof String pub && !pub.isBlank() ? pub : "";
             return new KeyPairStrings(publicKey, privateKey);
         } catch (Exception e) {
-            log.debug("读取 token 会话加密密钥失败: {}", e.getMessage());
+            log.atDebug().addKeyValue("msg", e.getMessage()).log("读取 token 会话加密密钥失败");
             return null;
         }
     }

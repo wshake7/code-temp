@@ -72,11 +72,11 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
         // WorkerFactory 由 starter 的 WorkerFactoryStarter 在 ApplicationReady 时 start。
         // 这里只标记生命周期，确保 stop 会被调度；真正停机不依赖 start 是否成功。
         running.set(true);
-        log.info(
-                "TemporalWorkerGracefulShutdown registered (awaitSeconds={}, hasFactory={}, hasStubs={})",
-                awaitSeconds,
-                workerFactory != null,
-                serviceStubs != null);
+        log.atInfo()
+                .addKeyValue("awaitSeconds", awaitSeconds)
+                .addKeyValue("hasFactory", workerFactory != null)
+                .addKeyValue("hasStubs", serviceStubs != null)
+                .log("TemporalWorkerGracefulShutdown registered");
     }
 
     @Override
@@ -102,21 +102,27 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
     private void doStop(String trigger) {
         running.set(false);
         if (!stopped.compareAndSet(false, true)) {
-            log.debug("Temporal graceful shutdown already done, skip ({})", trigger);
+            log.atDebug().addKeyValue("trigger", trigger).log("Temporal graceful shutdown already done, skip");
             return;
         }
-        log.info("Temporal graceful shutdown begin ({})", trigger);
+        log.atInfo().addKeyValue("trigger", trigger).log("Temporal graceful shutdown begin");
         try {
             shutdownWorkerFactory();
         } catch (RuntimeException ex) {
-            log.warn("Error shutting down Temporal WorkerFactory: {}", ex.getMessage(), ex);
+            log.atWarn()
+                    .addKeyValue("msg", ex.getMessage())
+                    .setCause(ex)
+                    .log("Error shutting down Temporal WorkerFactory");
         }
         try {
             shutdownServiceStubs();
         } catch (RuntimeException ex) {
-            log.warn("Error shutting down Temporal WorkflowServiceStubs: {}", ex.getMessage(), ex);
+            log.atWarn()
+                    .addKeyValue("msg", ex.getMessage())
+                    .setCause(ex)
+                    .log("Error shutting down Temporal WorkflowServiceStubs");
         }
-        log.info("Temporal graceful shutdown end ({})", trigger);
+        log.atInfo().addKeyValue("trigger", trigger).log("Temporal graceful shutdown end");
     }
 
     private void shutdownWorkerFactory() {
@@ -131,7 +137,9 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
         }
         awaitWorkerFactory();
         if (!workerFactory.isTerminated()) {
-            log.warn("Temporal WorkerFactory not terminated within {}s, calling shutdownNow", awaitSeconds);
+            log.atWarn()
+                    .addKeyValue("awaitSeconds", awaitSeconds)
+                    .log("Temporal WorkerFactory not terminated, calling shutdownNow");
             workerFactory.shutdownNow();
             awaitWorkerFactory();
         }
@@ -161,7 +169,9 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
         serviceStubs.shutdown();
         awaitServiceStubs();
         if (!serviceStubs.isTerminated()) {
-            log.warn("Temporal WorkflowServiceStubs not terminated within {}s, calling shutdownNow", awaitSeconds);
+            log.atWarn()
+                    .addKeyValue("awaitSeconds", awaitSeconds)
+                    .log("Temporal WorkflowServiceStubs not terminated, calling shutdownNow");
             serviceStubs.shutdownNow();
             awaitServiceStubs();
         }
@@ -179,7 +189,9 @@ public class TemporalWorkerGracefulShutdown implements SmartLifecycle, Disposabl
         // WorkflowServiceStubs.awaitTermination 返回 boolean，不抛 InterruptedException 到受检
         boolean ok = serviceStubs.awaitTermination(awaitSeconds, TimeUnit.SECONDS);
         if (!ok) {
-            log.debug("WorkflowServiceStubs.awaitTermination timed out ({}s)", awaitSeconds);
+            log.atDebug()
+                    .addKeyValue("awaitSeconds", awaitSeconds)
+                    .log("WorkflowServiceStubs.awaitTermination timed out");
         }
     }
 

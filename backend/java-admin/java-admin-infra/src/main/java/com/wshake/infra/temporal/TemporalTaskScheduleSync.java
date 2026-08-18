@@ -89,23 +89,23 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                 }
             } catch (RuntimeException ex) {
                 failed++;
-                log.warn(
-                        "Temporal schedule sync failed: code={} id={} reason={}",
-                        config.getCode(),
-                        config.getId(),
-                        ex.getMessage(),
-                        ex);
+                log.atWarn()
+                        .addKeyValue("code", config.getCode())
+                        .addKeyValue("id", config.getId())
+                        .addKeyValue("reason", ex.getMessage())
+                        .setCause(ex)
+                        .log("Temporal schedule sync failed");
             }
         }
 
         SyncSummary summary = new SyncSummary(configs.size(), upserted, paused, skipped, failed);
-        log.info(
-                "Temporal schedule sync done: total={} upserted={} paused={} skipped={} failed={}",
-                summary.total(),
-                summary.upserted(),
-                summary.paused(),
-                summary.skipped(),
-                summary.failed());
+        log.atInfo()
+                .addKeyValue("total", summary.total())
+                .addKeyValue("upserted", summary.upserted())
+                .addKeyValue("paused", summary.paused())
+                .addKeyValue("skipped", summary.skipped())
+                .addKeyValue("failed", summary.failed())
+                .log("Temporal schedule sync done");
         return summary;
     }
 
@@ -116,10 +116,10 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
     public void apply(TemporalTaskConfig config) {
         try {
             SyncAction action = syncOne(config);
-            log.info(
-                    "Temporal schedule applied from CRUD: code={} action={}",
-                    config == null ? null : config.getCode(),
-                    action);
+            log.atInfo()
+                    .addKeyValue("code", config == null ? null : config.getCode())
+                    .addKeyValue("action", action)
+                    .log("Temporal schedule applied from CRUD");
         } catch (BizException ex) {
             throw ex;
         } catch (RuntimeException ex) {
@@ -199,12 +199,12 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
             if (isPaused(handle)) {
                 handle.unpause("enabled in DB on startup sync");
             }
-            log.info(
-                    "Temporal schedule updated: scheduleId={} code={} {} businessType={}",
-                    scheduleId,
-                    config.getCode(),
-                    cadence,
-                    config.getWorkflowType());
+            log.atInfo()
+                    .addKeyValue("scheduleId", scheduleId)
+                    .addKeyValue("code", config.getCode())
+                    .addKeyValue("cadence", cadence)
+                    .addKeyValue("businessType", config.getWorkflowType())
+                    .log("Temporal schedule updated");
             return;
         }
 
@@ -214,22 +214,22 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
                     scheduleId,
                     schedule,
                     ScheduleOptions.newBuilder().setTriggerImmediately(true).build());
-            log.info(
-                    "Temporal schedule created: scheduleId={} code={} {} businessType={}",
-                    scheduleId,
-                    config.getCode(),
-                    cadence,
-                    config.getWorkflowType());
+            log.atInfo()
+                    .addKeyValue("scheduleId", scheduleId)
+                    .addKeyValue("code", config.getCode())
+                    .addKeyValue("cadence", cadence)
+                    .addKeyValue("businessType", config.getWorkflowType())
+                    .log("Temporal schedule created");
         } catch (ScheduleAlreadyRunningException ex) {
             // 并发启动竞态：改 update
             handle.update(input -> new ScheduleUpdate(schedule));
             if (isPaused(handle)) {
                 handle.unpause("enabled in DB on startup sync");
             }
-            log.info(
-                    "Temporal schedule created-raced-then-updated: scheduleId={} code={}",
-                    scheduleId,
-                    config.getCode());
+            log.atInfo()
+                    .addKeyValue("scheduleId", scheduleId)
+                    .addKeyValue("code", config.getCode())
+                    .log("Temporal schedule created-raced-then-updated");
         }
     }
 
@@ -240,7 +240,10 @@ public class TemporalTaskScheduleSync implements TaskSchedulePort {
         }
         if (!isPaused(handle)) {
             handle.pause(note);
-            log.info("Temporal schedule paused: scheduleId={} note={}", scheduleId, note);
+            log.atInfo()
+                    .addKeyValue("scheduleId", scheduleId)
+                    .addKeyValue("note", note)
+                    .log("Temporal schedule paused");
         }
         return true;
     }

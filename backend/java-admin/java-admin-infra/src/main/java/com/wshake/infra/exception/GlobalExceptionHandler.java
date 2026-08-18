@@ -42,7 +42,11 @@ public class GlobalExceptionHandler {
             description = "业务异常 Result(code != 0)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleBiz(BizException ex) {
-        log.warn("[BIZ] code={} msg={}", ex.getCode(), ex.getMessage());
+        log.atWarn()
+                .addKeyValue("logType", "BIZ")
+                .addKeyValue("code", ex.getCode())
+                .addKeyValue("msg", ex.getMessage())
+                .log();
         HttpStatus status = ex.getCode() >= 4000 ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
         return ResponseEntity.status(status).body(Result.error(ex.getCode(), ex.getMessage()));
     }
@@ -55,7 +59,11 @@ public class GlobalExceptionHandler {
             description = "鉴权异常 Result(code 2xxx)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleAuth(AuthException ex) {
-        log.warn("[AUTH] code={} msg={}", ex.getCode(), ex.getMessage());
+        log.atWarn()
+                .addKeyValue("logType", "AUTH")
+                .addKeyValue("code", ex.getCode())
+                .addKeyValue("msg", ex.getMessage())
+                .log();
         boolean forbidden = ex.getCode() == ResultCode.AUTH_FORBIDDEN.getCode()
                 || ex.getCode() == ResultCode.ACCESS_BLOCKED.getCode();
         HttpStatus status = forbidden ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED;
@@ -70,7 +78,11 @@ public class GlobalExceptionHandler {
             description = "未登录 Result(code=2001)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleNotLogin(NotLoginException ex) {
-        log.warn("[SA_TOKEN] notLogin type={} msg={}", ex.getType(), ex.getMessage());
+        log.atWarn()
+                .addKeyValue("logType", "SA_TOKEN")
+                .addKeyValue("type", ex.getType())
+                .addKeyValue("msg", ex.getMessage())
+                .log("notLogin");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(ResultCode.AUTH_NOT_LOGIN));
     }
 
@@ -82,7 +94,10 @@ public class GlobalExceptionHandler {
             description = "无权限 Result(code=2004)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleNotRole(NotRoleException ex) {
-        log.warn("[SA_TOKEN] notRole role={}", ex.getRole());
+        log.atWarn()
+                .addKeyValue("logType", "SA_TOKEN")
+                .addKeyValue("role", ex.getRole())
+                .log("notRole");
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Result.error(ResultCode.AUTH_FORBIDDEN, "无权限：" + ex.getRole()));
     }
@@ -95,7 +110,10 @@ public class GlobalExceptionHandler {
             description = "Sa-Token 异常 Result(code=2001)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleSaToken(SaTokenException ex) {
-        log.warn("[SA_TOKEN] {}", ex.getMessage());
+        log.atWarn()
+                .addKeyValue("logType", "SA_TOKEN")
+                .addKeyValue("msg", ex.getMessage())
+                .log();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Result.error(ResultCode.AUTH_NOT_LOGIN, ex.getMessage()));
     }
@@ -111,7 +129,10 @@ public class GlobalExceptionHandler {
         String msg = ex.getBindingResult().getFieldErrors().stream()
                 .map(fe -> fe.getField() + " " + fe.getDefaultMessage())
                 .collect(Collectors.joining("; "));
-        log.warn("[VALIDATION] {}", msg);
+        log.atWarn()
+                .addKeyValue("logType", "VALIDATION")
+                .addKeyValue("msg", msg)
+                .log();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(ResultCode.PARAM_INVALID, msg));
     }
 
@@ -123,7 +144,7 @@ public class GlobalExceptionHandler {
             description = "参数错误 Result(code=1001)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleNotReadable(HttpMessageNotReadableException ex) {
-        log.warn("[REQ_BODY] not readable");
+        log.atWarn().addKeyValue("logType", "REQ_BODY").log("not readable");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(ResultCode.PARAM_INVALID, "请求体格式错误"));
     }
 
@@ -135,7 +156,11 @@ public class GlobalExceptionHandler {
             description = "内部错误 Result(code=1003)",
             content = @Content(schema = @Schema(implementation = Result.class)))
     public ResponseEntity<Result<Object>> handleAny(Exception ex) {
-        log.error("[UNEXPECTED] {}", ex.getClass().getSimpleName(), ex);
+        log.atError()
+                .addKeyValue("logType", "UNEXPECTED")
+                .addKeyValue("exception", ex.getClass().getSimpleName())
+                .setCause(ex)
+                .log();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Result.error(ResultCode.INTERNAL_ERROR, "内部错误"));
     }

@@ -203,8 +203,12 @@ public class SysUserService {
         boolean keepWildcard = sysUserRoleRepository.userHasRootRole(userId);
         List<ApiPolicy> policies = keepWildcard ? List.of() : sysUserRoleRepository.findApiPoliciesByUserId(userId);
         casbinPolicyPort.replaceUserPolicies(String.valueOf(userId), policies, keepWildcard);
-        log.info(
-                "[USER] casbin synced userId={} keepWildcard={} policyCount={}", userId, keepWildcard, policies.size());
+        log.atInfo()
+                .addKeyValue("userId", userId)
+                .addKeyValue("keepWildcard", keepWildcard)
+                .addKeyValue("policyCount", policies.size())
+                .addKeyValue("logType", "USER")
+                .log("casbin synced");
     }
 
     private UserView loadView(Long userId) {

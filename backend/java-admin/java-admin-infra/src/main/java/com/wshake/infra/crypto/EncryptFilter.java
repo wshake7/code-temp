@@ -100,7 +100,9 @@ public final class EncryptFilter extends OncePerRequestFilter {
             return;
         }
         // 强制加密：缺头拒绝
-        log.debug("Encrypt 已开启且路径不在白名单，缺少 {}", SecurityHeaders.REQUEST_ENCRYPTED_KEY);
+        log.atDebug()
+                .addKeyValue("header", SecurityHeaders.REQUEST_ENCRYPTED_KEY)
+                .log("Encrypt 已开启且路径不在白名单，缺少加密密钥头");
         writeError(response, ResultCode.REQUEST_ERROR);
     }
 
@@ -111,7 +113,7 @@ public final class EncryptFilter extends OncePerRequestFilter {
         try {
             return cryptoService.rsaDecrypt(encryptedKey, CryptoService.parsePrivateKeyPem(privateKeyPem));
         } catch (Exception e) {
-            log.debug("RSA 解密 AES key 失败: {}", e.getMessage());
+            log.atDebug().addKeyValue("msg", e.getMessage()).log("RSA 解密 AES key 失败");
             writeError(response, ResultCode.REQUEST_KEY_FAILED);
             return null;
         }
@@ -130,7 +132,9 @@ public final class EncryptFilter extends OncePerRequestFilter {
         String sign = firstHeader(request, SecurityHeaders.REQUEST_SIGNATURE, SecurityHeaders.SIGN_LEGACY);
         if (sign == null || sign.isEmpty()) {
             // Encrypt 开启时有 body 必须带签名并 AES-GCM 解密，避免明文 body 绕过
-            log.debug("Encrypt 已开启且请求体非空，缺少 {}", SecurityHeaders.REQUEST_SIGNATURE);
+            log.atDebug()
+                    .addKeyValue("header", SecurityHeaders.REQUEST_SIGNATURE)
+                    .log("Encrypt 已开启且请求体非空，缺少签名头");
             writeError(response, ResultCode.REQUEST_ERROR);
             return null;
         }
@@ -139,7 +143,7 @@ public final class EncryptFilter extends OncePerRequestFilter {
             byte[] decrypted = cryptoService.aesDecryptCiphertextAndTag(ciphertextBody, sign, aesKeyBase64, aad);
             return new CachedBodyRequestWrapper(request, decrypted);
         } catch (Exception e) {
-            log.debug("请求体解密失败: {}", e.getMessage());
+            log.atDebug().addKeyValue("msg", e.getMessage()).log("请求体解密失败");
             writeError(response, ResultCode.REQUEST_KEY_FAILED);
             return null;
         }
@@ -175,7 +179,7 @@ public final class EncryptFilter extends OncePerRequestFilter {
             wrappedResponse.setContentLength(encryptedResponse.length);
             wrappedResponse.getOutputStream().write(encryptedResponse);
         } catch (Exception e) {
-            log.error("响应加密失败: {}", e.getMessage());
+            log.atError().addKeyValue("msg", e.getMessage()).setCause(e).log("响应加密失败");
             wrappedResponse.resetBuffer();
             writeError(wrappedResponse, ResultCode.INTERNAL_ERROR);
         }
