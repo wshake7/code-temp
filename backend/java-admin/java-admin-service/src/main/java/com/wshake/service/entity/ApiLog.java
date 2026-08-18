@@ -34,6 +34,7 @@ public class ApiLog implements ProxyEntityAvailable<ApiLog, ApiLogProxy> {
     /** 1=成功 0=失败（按 HTTP status 2xx 判定） */
     private Integer success;
 
+    /** 失败原因全文；无错时为空串。 */
     private String reason;
 
     /** 耗时毫秒 */

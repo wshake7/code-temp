@@ -546,38 +546,38 @@
 
 ### 7.1 `api_log` — API 调用日志（v5+ 字段扩充对齐 PG `sys_api_log`）
 
-| 字段              | 类型            | 必填 | 默认           | 说明                                                             |
-| ----------------- | --------------- | ---- | -------------- | ---------------------------------------------------------------- |
-| `id`              | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                             |
-| `method`          | VARCHAR(16)     | 是   | -              | HTTP method                                                      |
-| `module`          | VARCHAR(255)    | 是   | `''`           | 业务模块                                                         |
-| `path`            | VARCHAR(255)    | 是   | -              | 请求路径（不含 query）                                           |
-| `status_code`     | INT UNSIGNED    | 否   | NULL           | HTTP 状态码（早期失败可能未设置）                                |
-| `success`         | TINYINT(1)      | 是   | 0              | 业务级成功（中间件按 `status_code` 判定，2xx=1）                 |
-| `reason`          | VARCHAR(255)    | 是   | `''`           | 失败原因                                                         |
-| `cost_time`       | BIGINT UNSIGNED | 是   | 0              | 耗时（毫秒）                                                     |
-| `request_id`      | VARCHAR(128)    | 是   | -              | 请求唯一 ID（中间件生成；UNIQUE；v5 64→128）                     |
-| `sys_user_id`     | BIGINT UNSIGNED | 否   | NULL           | 操作用户（未登录为 NULL；v5 改名 `user_id`→`sys_user_id`）       |
-| `username`        | VARCHAR(64)     | 是   | `''`           | 冗余：用户删除前的痕迹                                           |
-| `request_uri`     | TEXT            | 是   | `''`           | 完整 URI（含 query；便于回放）                                   |
-| `request_query`   | TEXT            | 是   | `''`           | query string                                                     |
-| `request_body`    | MEDIUMTEXT      | 是   | `''`           | 请求 body（应用层截断 64KB）                                     |
-| `request_header`  | MEDIUMTEXT      | 是   | `''`           | 请求头（敏感字段脱敏后存储）                                     |
-| `referer`         | VARCHAR(2048)   | 是   | `''`           | 来源页                                                           |
-| `response`        | MEDIUMTEXT      | 是   | `''`           | 响应 body（应用层截断 64KB；v5 改名 `response_body`→`response`） |
-| `before_change`   | MEDIUMTEXT      | 是   | `''`           | 操作前数据快照（写操作场景）                                     |
-| `after_change`    | MEDIUMTEXT      | 是   | `''`           | 操作后数据快照                                                   |
-| `format_change`   | TEXT            | 是   | `''`           | 格式化变更摘要（人读）                                           |
-| `client_id`       | VARCHAR(128)    | 是   | `''`           | 客户端 ID                                                        |
-| `client_name`     | VARCHAR(128)    | 是   | `''`           | 客户端名                                                         |
-| `client_ip`       | VARCHAR(64)     | 是   | `''`           | 客户端 IP（IPv6 兼容；v5 45→64）                                 |
-| `user_agent`      | TEXT            | 是   | `''`           | User Agent（v5 VARCHAR(512)→TEXT）                               |
-| `browser_name`    | VARCHAR(128)    | 是   | `''`           | 浏览器名（由 UA 解析）                                           |
-| `browser_version` | VARCHAR(128)    | 是   | `''`           | 浏览器版本                                                       |
-| `os_name`         | VARCHAR(128)    | 是   | `''`           | 操作系统名                                                       |
-| `os_version`      | VARCHAR(128)    | 是   | `''`           | 操作系统版本                                                     |
-| `location`        | VARCHAR(255)    | 是   | `''`           | IP 解析地理位置                                                  |
-| `created_at`      | TIMESTAMP       | 是   | NOW()          |                                                                  |
+| 字段              | 类型            | 必填 | 默认           | 说明                                                          |
+| ----------------- | --------------- | ---- | -------------- | ------------------------------------------------------------- |
+| `id`              | BIGINT UNSIGNED | 是   | AUTO_INCREMENT | 主键                                                          |
+| `method`          | VARCHAR(16)     | 是   | -              | HTTP method                                                   |
+| `module`          | VARCHAR(255)    | 是   | `''`           | 业务模块                                                      |
+| `path`            | VARCHAR(255)    | 是   | -              | 请求路径（不含 query）                                        |
+| `status_code`     | INT UNSIGNED    | 否   | NULL           | HTTP 状态码（早期失败可能未设置）                             |
+| `success`         | TINYINT(1)      | 是   | 0              | 业务级成功（中间件按 `status_code` 判定，2xx=1）              |
+| `reason`          | TEXT            | 是   | `''`           | 失败原因全文（不截断）                                        |
+| `cost_time`       | BIGINT UNSIGNED | 是   | 0              | 耗时（毫秒）                                                  |
+| `request_id`      | VARCHAR(128)    | 是   | -              | 请求唯一 ID（中间件生成；UNIQUE；v5 64→128）                  |
+| `sys_user_id`     | BIGINT UNSIGNED | 否   | NULL           | 操作用户（未登录为 NULL；v5 改名 `user_id`→`sys_user_id`）    |
+| `username`        | VARCHAR(64)     | 是   | `''`           | 冗余：用户删除前的痕迹                                        |
+| `request_uri`     | TEXT            | 是   | `''`           | 完整 URI（含 query；便于回放）                                |
+| `request_query`   | TEXT            | 是   | `''`           | query string                                                  |
+| `request_body`    | MEDIUMTEXT      | 是   | `''`           | 请求 body（全文；敏感字段脱敏；不截断）                       |
+| `request_header`  | MEDIUMTEXT      | 是   | `''`           | 请求头（敏感字段脱敏后存储）                                  |
+| `referer`         | VARCHAR(2048)   | 是   | `''`           | 来源页                                                        |
+| `response`        | MEDIUMTEXT      | 是   | `''`           | 响应 body（全文；不截断；v5 改名 `response_body`→`response`） |
+| `before_change`   | MEDIUMTEXT      | 是   | `''`           | 操作前数据快照（写操作场景）                                  |
+| `after_change`    | MEDIUMTEXT      | 是   | `''`           | 操作后数据快照                                                |
+| `format_change`   | TEXT            | 是   | `''`           | 格式化变更摘要（人读）                                        |
+| `client_id`       | VARCHAR(128)    | 是   | `''`           | 客户端 ID                                                     |
+| `client_name`     | VARCHAR(128)    | 是   | `''`           | 客户端名                                                      |
+| `client_ip`       | VARCHAR(64)     | 是   | `''`           | 客户端 IP（IPv6 兼容；v5 45→64）                              |
+| `user_agent`      | TEXT            | 是   | `''`           | User Agent（v5 VARCHAR(512)→TEXT）                            |
+| `browser_name`    | VARCHAR(128)    | 是   | `''`           | 浏览器名（由 UA 解析）                                        |
+| `browser_version` | VARCHAR(128)    | 是   | `''`           | 浏览器版本                                                    |
+| `os_name`         | VARCHAR(128)    | 是   | `''`           | 操作系统名                                                    |
+| `os_version`      | VARCHAR(128)    | 是   | `''`           | 操作系统版本                                                  |
+| `location`        | VARCHAR(255)    | 是   | `''`           | IP 解析地理位置                                               |
+| `created_at`      | TIMESTAMP       | 是   | NOW()          |                                                               |
 
 **索引**：`PRIMARY(id)` / `UNIQUE(request_id)` / `idx_sys_user_id_created_at` / `idx_module_created_at` / `idx_path_created_at` / `idx_status_code_created_at` / `idx_success_created_at` / `idx_client_ip_created_at`
 
@@ -706,7 +706,7 @@
 | `closed_at`      | TIMESTAMP       | 否   | NULL           | 关闭时间（NULL=仍在运行/未启动）                        |
 | `input_summary`  | JSON            | 否   | NULL           |                                                         |
 | `result_summary` | JSON            | 否   | NULL           |                                                         |
-| `failure_reason` | VARCHAR(1024)   | 否   | NULL           |                                                         |
+| `failure_reason` | TEXT            | 否   | NULL           | 失败原因全文（不截断）                                  |
 | `retry_count`    | INT             | 是   | 0              | 已发生重试次数（首次执行为 0）                          |
 | `created_at`     | TIMESTAMP       | 是   | NOW()          |                                                         |
 

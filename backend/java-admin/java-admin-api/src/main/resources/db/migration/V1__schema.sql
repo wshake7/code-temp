@@ -525,7 +525,7 @@ CREATE TABLE api_log (
     path            VARCHAR(255)    NOT NULL  COMMENT '请求路径(不含 query)',
     status_code     INT UNSIGNED    DEFAULT NULL  COMMENT 'HTTP 状态码(连接早期失败时可能未设置)',
     success         TINYINT(1)      NOT NULL DEFAULT 0  COMMENT '业务级成功(由中间件按 status_code 判定,2xx=1)',
-    reason          VARCHAR(255)    NOT NULL DEFAULT ''  COMMENT '失败原因(若有;无错时为空串)',
+    reason          TEXT            NULL  COMMENT '失败原因全文(不截断;无错时写空串)',
     cost_time       BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '耗时(毫秒)',
 
     -- 关联
@@ -536,12 +536,12 @@ CREATE TABLE api_log (
     -- 请求侧
     request_uri     TEXT            NULL  COMMENT '完整 URI(含 query;便于回放)',
     request_query   TEXT            NULL  COMMENT 'query string',
-    request_body    MEDIUMTEXT      NULL  COMMENT '请求 body(应用层截断 64KB)',
+    request_body    MEDIUMTEXT      NULL  COMMENT '请求 body(全文;敏感字段脱敏;不截断)',
     request_header  MEDIUMTEXT      NULL  COMMENT '请求头(应用层序列化,敏感字段脱敏后存储)',
     referer         VARCHAR(2048)   NOT NULL DEFAULT ''  COMMENT '来源页',
 
     -- 响应侧 / 变更
-    response        MEDIUMTEXT      NULL  COMMENT '响应 body(应用层截断 64KB)',
+    response        MEDIUMTEXT      NULL  COMMENT '响应 body(全文;敏感字段脱敏;不截断)',
     before_change   MEDIUMTEXT      NULL  COMMENT '操作前数据快照(写操作场景;与应用层 before/after 钩子配合)',
     after_change    MEDIUMTEXT      NULL  COMMENT '操作后数据快照',
     format_change   TEXT            NULL  COMMENT '格式化变更摘要(人读;如 "name: A→B;status: 0→1")',
@@ -582,7 +582,7 @@ CREATE TABLE api_log_archive (
     path            VARCHAR(255)    NOT NULL,
     status_code     INT UNSIGNED    DEFAULT NULL,
     success         TINYINT(1)      NOT NULL DEFAULT 0,
-    reason          VARCHAR(255)    NOT NULL DEFAULT '',
+    reason          TEXT            NULL,
     cost_time       BIGINT UNSIGNED NOT NULL DEFAULT 0,
 
     request_id      VARCHAR(128)    NOT NULL,

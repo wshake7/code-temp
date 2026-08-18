@@ -271,7 +271,7 @@ ALTER TABLE sys_role
 
 **用 JSON 存储**：
 
-- `api_log.request_body` / `api_log.response`（限 64KB，应用层截断；`NOT NULL DEFAULT ('')`；v5+ 改名 `response_body`→`response`）
+- `api_log.request_body` / `api_log.response`（全文，不截断；`NOT NULL DEFAULT ('')`；v5+ 改名 `response_body`→`response`）
 - `temporal_task_config.retry_policy`
 - `temporal_task_execution.input_summary` / `result_summary`
 - `operation_log.before_value` / `after_value`（数据快照）
