@@ -2,6 +2,8 @@
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
+本仓库是**单上下文**：根目录 `CONTEXT.md` 是唯一术语表；系统级决策在 `docs/adr/`。没有 `CONTEXT-MAP.md`。表结构与字段约定在 `backend/db/docs/`，不要把 DB 约定写回 `CONTEXT.md`。
+
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root, or
