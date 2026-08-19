@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "2c6e3cdb99e80587401be472fea790d7f2e63238",
+    "indexed_at": "2026-08-19T08:02:57Z",
+    "project": "D-code-code-temp",
+    "nodes": 22896,
+    "edges": 67336,
+    "original_size": 39518208,
+    "compressed_size": 6366361,
+    "compression_level": 9
+}
