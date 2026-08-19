@@ -105,6 +105,9 @@
     "apps/vue-vben-admin",
     "apps/vue-vben-admin/**",
     "apps/react-admin",
-    "apps/react-admin/**"
+    "apps/react-admin/**",
+    ".agents/skills/**",
+    ".claude/skills/**",
+    ".grok/skills/**"
   ]
 }
